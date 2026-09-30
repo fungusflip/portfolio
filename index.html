@@ -1,0 +1,43 @@
+<!-- Talar om för webbläsaren att det här är modern HTML. -->
+<!doctype html>
+<!-- <html> omsluter hela sidan. lang anger sidans språk. -->
+<html lang="en">
+
+<!-- <head> = inställningar och filer som ska laddas. Inget här syns på själva sidan. -->
+<head>
+  <!-- Teckenkodning: utf-8 klarar alla tecken, t.ex. å, ä, ö. -->
+  <meta charset="utf-8">
+  <!-- Gör att sidan får rätt bredd och skala på mobiler. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Texten på webbläsarfliken. -->
+  <title>Portfolio</title>
+  <!-- Laddar utseendet från css/style.css. -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
+       import ... from 'three' slår webbläsaren upp 'three' här och hämtar
+       three.js från nätet (jsDelivr). Därför behövs ingen installation.
+       "three/addons/" är extra-delarna (t.ex. modell-laddare) för senare.
+       "gifuct-js" är ett litet bibliotek som packar upp gif-filer. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+        "gifuct-js": "https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm"
+      }
+    }
+  </script>
+</head>
+
+<!-- <body> = det som syns på sidan. -->
+<body>
+  <!-- En canvas är en tom rityta. three.js ritar 3D-scenen i den.
+       id="scene" är namnet som både style.css (#scene) och main.js letar efter. -->
+  <canvas id="scene"></canvas>
+
+  <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
+       Ligger sist i body så att canvasen redan finns när koden körs. -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
