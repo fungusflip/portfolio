@@ -5,7 +5,7 @@
    --bg används längre ner med var(--bg). Samma färg som PALETTE.background i js/main.js,
    så att sidan inte blinkar i en annan färg innan 3D-scenen hunnit laddas. */
 :root {
-  --bg: #fff3d6;
+  --bg: #3d3358;
 }
 
 /* * = alla element. Webbläsaren lägger själv på marginaler runt saker;

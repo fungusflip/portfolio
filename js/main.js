@@ -40,6 +40,11 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 // Ritytan ska vara lika stor som webbläsarfönstrets insida.
 renderer.setSize(window.innerWidth, window.innerHeight);
 
+// Skuggor är avstängda från början, eftersom de kostar en del. PCFSoftShadowMap
+// ger mjuka kanter på skuggorna i stället för hårda, taggiga.
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
 // ---------------------------------------------------------------------------
 // SCEN – behållaren. Allt som ska synas måste läggas till med scene.add(...).
 // ---------------------------------------------------------------------------
@@ -49,7 +54,14 @@ const scene = new THREE.Scene();
 // Hex-kod: #RRGGBB, två tecken var för rött, grönt, blått (00 = inget, ff = max).
 // Mycket rött + lagom grönt + lite blått = varm ton. Ju mindre grönt, desto rödare.
 const PALETTE = {
-  background: '#fff3d6', // Ljus grädde: det som syns utanför marken.
+  background: '#3d3358', // Skymningslila: det som syns utanför marken.
+  sun: '#ffb37a',        // Den låga kvällssolen: varmt orange.
+  skyLight: '#b9b4ff',   // Ljuset från himlen: svalt blålila. Det färgar skuggorna.
+  groundLight: '#ff9d6b', // Ljus som studsar upp från marken: varmt.
+  headlightBeam: '#fff1c4', // Ljuskäglorna från bilens strålkastare.
+  screenGlow: '#cfe0ff',    // Skenet från en projektskärm som är igång: svalt vitt, som en bioduk.
+  warmLamp: '#ffb45e',      // Lampan över garageporten och ljuset ur stugfönstret: varmt gult.
+  windowGlow: '#ffd27a',    // Själva fönsterrutan när det lyser inne.
   ground: '#ffd166',     // Marken: gyllengul.
   speckle: '#f79824',    // Prickarna på marken: orange.
   carPaint: '#c8321e',   // Bilens lack: djupröd.
@@ -110,14 +122,47 @@ const cameraLead = new THREE.Vector3(4, 0, 4);
 // ---------------------------------------------------------------------------
 // AmbientLight(färg, styrka): lyser lika mycket överallt, från alla håll.
 // Ger inga skuggsidor, men ser till att inget blir kolsvart.
-scene.add(new THREE.AmbientLight('#ffffff', 0.7));
+// (Skymning: i stället för ett vitt AmbientLight används ett HemisphereLight.)
+// HemisphereLight(himmelsfärg, markfärg, styrka): ytor som vetter uppåt får himlens
+// färg, ytor som vetter nedåt får markens. Det är det här ljuset som syns i
+// skuggorna, så den blålila himlen gör skuggorna svala medan solen är varm.
+// ÄNDRA styrkan (1.1) för mörkare eller ljusare skuggor och kväll.
+scene.add(new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.1));
 
 // DirectionalLight: parallella strålar som från solen. Ytor som vetter mot
 // ljuset blir ljusa, andra mörkare – det är det som ger form åt objekten.
-const keyLight = new THREE.DirectionalLight('#ffffff', 1.5);
-// Positionen bestämmer RIKTNINGEN: ljuset lyser från den här punkten mot origo (0, 0, 0).
-keyLight.position.set(3, 8, 5);
+// ÄNDRA styrkan (2.6) för starkare eller svagare sol.
+const keyLight = new THREE.DirectionalLight(PALETTE.sun, 2.6);
+
+// SUN_DIRECTION = åt vilket håll solen står, sett från marken. Den står lågt till
+// vänster på skärmen och lite åt kamerans håll, så att sidorna vi ser blir belysta
+// och skuggorna faller långa åt höger.
+//   y (0.6) = solens höjd. Mindre = lägre sol och längre skuggor. Större = mer mitt på dagen.
+// .normalize() gör pilen exakt 1 lång, så att bara riktningen spelar roll.
+const SUN_DIRECTION = new THREE.Vector3(0.35, 0.6, -1.06).normalize();
+const SUN_DISTANCE = 60; // Hur långt bort från bilen lampan hålls.
+
+// --- Skuggor ---
+// Lampan "fotograferar" scenen från sitt håll till en bild (skuggkartan). Det som
+// inte syns från lampan ligger i skugga. Bilden täcker bara en ruta runt bilen,
+// så lampan flyttas med bilen hela tiden (se renderloopen längst ner).
+keyLight.castShadow = true;
+const SHADOW_AREA = 48; // Rutans halva sida i enheter. Större = skuggor längre bort, men suddigare.
+keyLight.shadow.camera.left = -SHADOW_AREA;
+keyLight.shadow.camera.right = SHADOW_AREA;
+keyLight.shadow.camera.top = SHADOW_AREA;
+keyLight.shadow.camera.bottom = -SHADOW_AREA;
+keyLight.shadow.camera.near = 1;
+keyLight.shadow.camera.far = SUN_DISTANCE * 2.5;
+// Skuggkartans upplösning. 2048 är skarpt; sänk till 1024 om det hackar.
+keyLight.shadow.mapSize.set(2048, 2048);
+// Små förskjutningar som tar bort randiga "skuggfläckar" på ytor som borde vara belysta.
+keyLight.shadow.bias = -0.0004;
+keyLight.shadow.normalBias = 0.03;
+keyLight.position.copy(SUN_DIRECTION).multiplyScalar(SUN_DISTANCE);
 scene.add(keyLight);
+// En riktad lampa lyser mot sitt "target". Det måste ligga i scenen för att kunna flyttas.
+scene.add(keyLight.target);
 
 // ---------------------------------------------------------------------------
 // MARK
@@ -168,7 +213,9 @@ const ground = new THREE.Mesh(
   // MeshBasicMaterial bryr sig inte om lamporna: ytan får exakt färgerna i texturen.
   // (Bilen använder MeshStandardMaterial, som blir ljusare/mörkare av ljuset.)
   // map = texturen som ska klistras på ytan.
-  new THREE.MeshBasicMaterial({ map: groundTexture })
+  // (Skymning: marken använder nu MeshLambertMaterial, ett enkelt och snabbt material
+  // som blir ljusare och mörkare av lamporna och kan ta emot skuggor.)
+  new THREE.MeshLambertMaterial({ map: groundTexture })
 );
 // Ett plan skapas stående, som en vägg. Vrid det -90° runt X-axeln så det lägger sig ner.
 ground.rotation.x = -Math.PI / 2;
@@ -195,10 +242,10 @@ const fadePen = fadeImage.getContext('2d');
 // En rund toning (gradient) mellan två cirklar med samma mitt (256, 256):
 // den inre med radie 256 * 0.7 och den yttre med radie 256 (bildens kant).
 const gradient = fadePen.createRadialGradient(256, 256, 256 * FADE_START, 256, 256, 256);
-// rgba(rött, grönt, blått, täckning). 255, 243, 214 är bakgrundsfärgen #fff3d6.
-// Täckning 0 = helt genomskinlig, 1 = helt täckande.
-gradient.addColorStop(0, 'rgba(255, 243, 214, 0)');
-gradient.addColorStop(1, 'rgba(255, 243, 214, 1)');
+// En färgkod kan ha två extra tecken för täckning: 00 = helt genomskinlig, ff = helt täckande.
+// PALETTE.background + '00' blir alltså bakgrundsfärgen, men genomskinlig.
+gradient.addColorStop(0, PALETTE.background + '00');
+gradient.addColorStop(1, PALETTE.background + 'ff');
 fadePen.fillStyle = gradient;
 // Utanför den yttre cirkeln (bildens hörn) fortsätter sista färgen, alltså helt täckande.
 fadePen.fillRect(0, 0, 512, 512);
@@ -609,7 +656,7 @@ const bayTexture = new THREE.CanvasTexture(bayImage);
 bayTexture.colorSpace = THREE.SRGBColorSpace;
 bayTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 // depthTest/depthWrite: false = ett "lager på marken", se förklaringen vid MARK.
-const bayMaterial = new THREE.MeshBasicMaterial({ map: bayTexture, depthTest: false, depthWrite: false });
+const bayMaterial = new THREE.MeshLambertMaterial({ map: bayTexture, depthTest: false, depthWrite: false });
 
 // Ger en ny parkeringsficka, liggande på marken. Den som anropar bestämmer var den hamnar.
 function makeParkingBay() {
@@ -722,6 +769,7 @@ for (const project of PROJECTS) {
     // åt det håll skylten vetter. sin/cos gör om vinkeln till en riktning (som för bilen).
     padX: project.x + Math.sin(BILLBOARD_FACING) * PAD_DISTANCE,
     padZ: project.z + Math.cos(BILLBOARD_FACING) * PAD_DISTANCE,
+    glowY: baseY + height / 2, // Skärmens mitt i höjdled. Därifrån lyser skenet (se screenGlow).
     player: null,   // Spelaren. Finns bara medan bilen står i rutan, annars null.
     active: false,  // Står bilen i rutan just nu?
   });
@@ -747,6 +795,54 @@ function showGuide(project) {
   }
 }
 
+// --- Skärmens sken ---
+// En skärm som är igång lyser upp marken och bilen framför sig. Bara en skärm kan
+// vara igång åt gången, så det räcker med EN lampa som flyttas till den skärmen.
+// Styrka 0 = släckt tills bilen står i en ficka.
+// Styrkan är högre än övriga lampor eftersom skärmens medelfärg ofta är ganska mörk.
+const SCREEN_GLOW_STRENGTH = 450; // ÄNDRA för starkare/svagare sken.
+const screenGlow = new THREE.SpotLight(PALETTE.screenGlow, 0, 22, 0.75, 1);
+scene.add(screenGlow, screenGlow.target);
+let glowingBillboard = null; // Vilken skylt lampan sitter på just nu.
+
+// Skenets färg följer det som visas på skärmen: en grön skog ger grönt sken, ett
+// blått hav blått. För att få fram "skärmens färg" ritas hela skärmbilden ihoptryckt
+// till en enda pixel – den pixeln blir då medelvärdet av alla färger i bilden.
+const glowSampler = document.createElement('canvas');
+glowSampler.width = 1;
+glowSampler.height = 1;
+// willReadFrequently säger till webbläsaren att vi läser av pixlar ofta, så att den väljer det snabbaste sättet.
+const glowSamplerPen = glowSampler.getContext('2d', { willReadFrequently: true });
+const glowTargetColor = new THREE.Color(PALETTE.screenGlow); // Färgen skenet är på väg mot.
+const GLOW_SAMPLE_TIME = 0.15; // Sekunder mellan avläsningarna. Räcker gott och sparar arbete.
+let glowSampleWait = 0;
+let glowJustStarted = false; // true precis när bilen kört in, fram till första avläsningen.
+
+function updateScreenGlow(delta) {
+  if (!glowingBillboard) return; // Ingen skärm är igång.
+  glowSampleWait -= delta;
+  if (glowSampleWait <= 0) {
+    glowSampleWait = GLOW_SAMPLE_TIME;
+    // Rita skärmens hela bild i den enda pixeln och läs av den.
+    glowSamplerPen.drawImage(glowingBillboard.brush.canvas, 0, 0, 1, 1);
+    // getImageData ger pixelns färg som fyra tal 0–255: rött, grönt, blått, täckning.
+    const [red, green, blue] = glowSamplerPen.getImageData(0, 0, 1, 1).data;
+    // THREE.Color räknar 0–1, därav / 255. SRGBColorSpace = talen är vanliga skärmfärger.
+    glowTargetColor.setRGB(red / 255, green / 255, blue / 255, THREE.SRGBColorSpace);
+    // Första avläsningen: hoppa direkt till rätt färg. Annars skulle skenet börja i
+    // färgen från förra skärmen (eller startfärgen) och synas glida därifrån.
+    if (glowJustStarted) {
+      screenGlow.color.copy(glowTargetColor);
+      glowJustStarted = false;
+    }
+  }
+  // Skenet tonas in mjukt i stället för att slås på tvärt. damp(nu, mål, hastighet, delta)
+  // flyttar värdet mjukt mot målet; 4 = ungefär en halv sekund.
+  screenGlow.intensity = THREE.MathUtils.damp(screenGlow.intensity, SCREEN_GLOW_STRENGTH, 4, delta);
+  // Glid mjukt mot den nya färgen i stället för att hoppa: 8 % av vägen varje bild.
+  screenGlow.color.lerp(glowTargetColor, 0.08);
+}
+
 // Körs en gång per bild: kollar vilken ruta bilen står i och sköter skärmarna.
 function updateBillboards(delta) {
   for (const billboard of billboards) {
@@ -766,6 +862,20 @@ function updateBillboards(delta) {
       showGuide(near ? billboard.project : null);
       if (!near && panelProject === billboard.project) closePanel();
 
+      // Skärmens sken: flytta lampan till den här skärmens mitt och sikta på parkeringsfickan.
+      if (near) {
+        glowingBillboard = billboard;
+        screenGlow.position.set(billboard.project.x, billboard.glowY, billboard.project.z);
+        screenGlow.target.position.set(billboard.padX, 0, billboard.padZ);
+        screenGlow.intensity = 0;  // Börjar släckt och tonas in i updateScreenGlow.
+        glowSampleWait = 0;        // Läs av färgen direkt, vänta inte.
+        glowJustStarted = true;
+      } else if (glowingBillboard === billboard) {
+        // Släck bara om det är just den här skärmens sken som lyser.
+        glowingBillboard = null;
+        screenGlow.intensity = 0;
+      }
+
       if (near) {
         // Bilen körde in: skapa en spelare. Filen laddas alltså först nu, när den behövs.
         if (billboard.project.media) {
@@ -784,6 +894,7 @@ function updateBillboards(delta) {
     // Bara den skärm bilen står framför uppdateras. Resten står stilla och kostar ingenting.
     if (billboard.active && billboard.player) billboard.player.update(delta);
   }
+  updateScreenGlow(delta);
 }
 
 // ---------------------------------------------------------------------------
@@ -976,6 +1087,21 @@ const garageOpening = new THREE.Mesh(
 garageOpening.position.set(0, GARAGE_DOOR_HEIGHT / 2, GARAGE_Z + GARAGE_DEPTH / 2 + 0.005);
 homeGroup.add(garageOpening);
 
+// Lampa över garageporten: en liten lysande låda på väggen och en ljuskägla
+// som lyser ner på parkeringen framför porten.
+const garageLampBox = new THREE.Mesh(
+  new THREE.BoxGeometry(0.7, 0.18, 0.25),
+  new THREE.MeshBasicMaterial({ color: PALETTE.windowGlow }) // MeshBasicMaterial = alltid full färg, ser ut att lysa.
+);
+garageLampBox.position.set(0, GARAGE_DOOR_HEIGHT + 0.22, GARAGE_Z + GARAGE_DEPTH / 2 + 0.12);
+homeGroup.add(garageLampBox);
+// SpotLight(färg, styrka, räckvidd, vinkel, mjuk kant). ÄNDRA 70 för starkare/svagare lampa.
+const garageLamp = new THREE.SpotLight(PALETTE.warmLamp, 70, 14, 0.8, 0.8);
+garageLamp.position.set(0, GARAGE_DOOR_HEIGHT + 0.3, GARAGE_Z + GARAGE_DEPTH / 2 + 0.3);
+// Siktar på marken 3.5 enheter framför porten.
+garageLamp.target.position.set(0, 0, GARAGE_Z + GARAGE_DEPTH / 2 + 3.5);
+homeGroup.add(garageLamp, garageLamp.target);
+
 // --- Stugan, till höger om garaget ---
 const CABIN_X = 5.6;   // Stugans mitt i sidled.
 const CABIN_Z = 0;     // Samma djup som garaget, så att de står i rad.
@@ -1003,9 +1129,16 @@ homeGroup.add(chimney);
 const door = new THREE.Mesh(new THREE.BoxGeometry(1, 1.9, 0.1), postMaterial);
 door.position.set(CABIN_X + 1.1, 0.95, CABIN_Z + CABIN_SIZE / 2);
 homeGroup.add(door);
-const cabinWindow = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 0.1), glassMaterial);
+// Fönstret lyser varmt: någon är hemma. MeshBasicMaterial = alltid full färg.
+const cabinWindow = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 0.1), new THREE.MeshBasicMaterial({ color: PALETTE.windowGlow }));
 cabinWindow.position.set(CABIN_X - 1, 1.6, CABIN_Z + CABIN_SIZE / 2);
 homeGroup.add(cabinWindow);
+// Ljuset som faller ut genom fönstret och ner på marken framför stugan.
+// ÄNDRA 80 för starkare/svagare sken.
+const windowLight = new THREE.SpotLight(PALETTE.warmLamp, 80, 12, 0.85, 0.9);
+windowLight.position.set(CABIN_X - 1, 1.6, CABIN_Z + CABIN_SIZE / 2 + 0.2);      // Precis utanför rutan.
+windowLight.target.position.set(CABIN_X - 1, 0, CABIN_Z + CABIN_SIZE / 2 + 3.5); // Marken 3.5 enheter framför.
+homeGroup.add(windowLight, windowLight.target);
 
 // (Själva uppfarten är en av grusvägarna, se VÄGAR längre ner.)
 
@@ -1175,9 +1308,9 @@ gravelTexture.wrapS = THREE.RepeatWrapping;
 gravelTexture.wrapT = THREE.RepeatWrapping;
 gravelTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 // depthTest/depthWrite: false = ett "lager på marken", se förklaringen vid MARK.
-const gravelMaterial = new THREE.MeshBasicMaterial({ map: gravelTexture, depthTest: false, depthWrite: false });
+const gravelMaterial = new THREE.MeshLambertMaterial({ map: gravelTexture, depthTest: false, depthWrite: false });
 // Kantlinjen: en enfärgad, lite bredare väg som ligger under gruset och sticker ut på sidorna.
-const roadEdgeMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.gravelDark, depthTest: false, depthWrite: false });
+const roadEdgeMaterial = new THREE.MeshLambertMaterial({ color: PALETTE.gravelDark, depthTest: false, depthWrite: false });
 
 const ROAD_WIDTH = 5;     // Vägarnas bredd i enheter.
 const ROAD_EDGE = 0.2;    // Hur mycket kantlinjen sticker ut på varje sida.
@@ -1466,6 +1599,10 @@ const taillightMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.taillight
 // En liten platt låda: 0.28 bred, 0.14 hög, 0.06 tjock. Samma form till alla fyra lampor.
 const lampGeometry = new THREE.BoxGeometry(0.28, 0.14, 0.06);
 
+// Strålkastarnas ljuskäglor sparas här, så att de kan tändas när bilen har backat ut ur garaget.
+const HEADLIGHT_STRENGTH = 600; // ÄNDRA för starkare/svagare ljus.
+const headlightBeams = [];
+
 // x = vänster och höger sida.
 for (const x of [-0.4, 0.4]) {
   // Karossen är 2.4 lång, så fronten ligger på z = 1.2 och baken på z = -1.2.
@@ -1477,7 +1614,36 @@ for (const x of [-0.4, 0.4]) {
   const taillight = new THREE.Mesh(lampGeometry, taillightMaterial);
   taillight.position.set(x, 0.55, -1.2);
   car.add(taillight);
+
 }
+
+// --- Strålkastarnas ljus ---
+// En SpotLight är en ljuskägla, som en ficklampa. Det finns EN kägla mitt i fronten
+// (inte en per lampa), eftersom den kastar skuggor – och varje lampa med skuggor
+// kostar lika mycket som att rita scenen en extra gång.
+// SpotLight(färg, styrka, räckvidd, vinkel, mjuk kant):
+//   0    – styrka. Släckt från början; tänds med HEADLIGHT_STRENGTH efter introt (se updateCar).
+//   30   – hur långt ljuset når, i enheter.
+//   0.55 – käglans halva bredd i radianer (ca 32°).
+//   0.7  – hur mjuk käglans kant är: 0 = knivskarp, 1 = helt mjuk.
+const beam = new THREE.SpotLight(PALETTE.headlightBeam, 0, 30, 0.55, 0.7);
+headlightBeams.push(beam);
+// Fusk: lampan sitter en bit OVANFÖR bilen (y = 2.2) i stället för i själva
+// strålkastarna. Ljus som stryker nästan platt längs marken lyser knappt upp
+// den alls; snett uppifrån blir det en tydlig ljuspöl framför bilen.
+beam.position.set(0, 2.2, 1.3);
+// Käglan siktar på en punkt på marken 8 enheter framför bilen. Både lampan och
+// siktpunkten sitter på bilen, så ljuset följer med när bilen svänger.
+beam.target.position.set(0, 0, 8);
+// Skuggor: utan dem lyser ljuset rakt igenom hus och träd. Med skuggor stoppas
+// det av det första det träffar, och det som står bakom hamnar i skugga.
+beam.castShadow = true;
+beam.shadow.mapSize.set(1024, 1024); // Skuggkartans upplösning. Sänk till 512 om det hackar.
+beam.shadow.camera.near = 0.5;
+beam.shadow.camera.far = 30;
+beam.shadow.bias = -0.002;
+beam.shadow.normalBias = 0.03;
+car.add(beam, beam.target);
 
 // --- Hjul ---
 // Ett slätt runt hjul ser likadant ut hur det än snurrar. För att snurret ska
@@ -1624,8 +1790,11 @@ function updateCar(delta) {
     for (const spinner of spinners) {
       spinner.rotation.x -= step / WHEEL_RADIUS;
     }
-    // Framme: stäng porten. Från nästa bild styr tangenterna som vanligt.
-    if (introLeft <= 0) garageDoor.visible = true;
+    // Framme: stäng porten och tänd strålkastarna. Från nästa bild styr tangenterna som vanligt.
+    if (introLeft <= 0) {
+      garageDoor.visible = true;
+      for (const beam of headlightBeams) beam.intensity = HEADLIGHT_STRENGTH;
+    }
     return; // Hoppa över resten av funktionen.
   }
 
@@ -1704,6 +1873,19 @@ window.addEventListener('resize', () => {
 });
 
 // ---------------------------------------------------------------------------
+// SKUGGOR – vilka objekt som kastar och tar emot skuggor.
+// ---------------------------------------------------------------------------
+// scene.traverse kör funktionen en gång för varje objekt i hela scenen.
+// Regeln: allt TAR EMOT skuggor, och allt utom lagren på marken (mark, vägar,
+// asfalt – de med renderOrder under 0) KASTAR också skuggor.
+scene.traverse((object) => {
+  if (!object.isMesh) return;              // Grupper och lampor har inget att skugga.
+  if (object.material.transparent) return; // Genomskinliga plan (ENTER-text, kanttoningen) är inte med.
+  object.receiveShadow = true;
+  if (object.renderOrder >= 0) object.castShadow = true; // >= betyder "större än eller lika med".
+});
+
+// ---------------------------------------------------------------------------
 // RENDERLOOP – hjärtat i programmet.
 // ---------------------------------------------------------------------------
 // Timer mäter hur lång tid som gått mellan bilderna.
@@ -1728,6 +1910,11 @@ renderer.setAnimationLoop((time) => {
   // med bilen, så kameran tittar alltid från samma håll.
   camera.position.copy(target).addScaledVector(cameraOffset, cameraZoom); // addScaledVector = lägg till offset gånger zoom.
   camera.lookAt(target);
+
+  // Solen (och därmed rutan där skuggor räknas ut) följer med bilen: lampan hålls
+  // alltid på samma avstånd och åt samma håll från siktpunkten, och lyser mot den.
+  keyLight.position.copy(target).addScaledVector(SUN_DIRECTION, SUN_DISTANCE);
+  keyLight.target.position.copy(target);
 
   // Rita scenen sedd från kameran. Utan den här raden syns ingenting.
   renderer.render(scene, camera);
