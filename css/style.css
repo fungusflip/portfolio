@@ -29,3 +29,52 @@ body {
   height: 100%;
   display: block;  /* En canvas är "inline" från början, vilket ger en liten glipa under den. */
 }
+
+/* Guiden i nedre vänstra hörnet. */
+.guide {
+  position: fixed;  /* Sitter fast i fönstret, ovanpå canvasen. */
+  left: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column; /* Raderna staplas på höjden. */
+  gap: 10px;              /* Avstånd mellan raderna. */
+  padding: 14px 18px;
+  background: rgba(255, 243, 214, 0.92); /* Bakgrundsfärgen, lite genomskinlig. */
+  border-radius: 16px;                   /* Runda hörn = "bubbla". */
+  box-shadow: 0 6px 20px rgba(90, 40, 0, 0.18); /* Mjuk skugga: x, y, oskärpa, färg. */
+  color: #25323d;
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none; /* Klick går rakt igenom rutan till canvasen. */
+  user-select: none;    /* Texten går inte att markera av misstag. */
+}
+
+.guide-row {
+  display: flex;
+  align-items: center; /* Tangenter och text hamnar på samma linje. */
+  gap: 12px;
+}
+
+/* Elementet med attributet hidden ska vara helt borta.
+   (display: flex ovan skulle annars vinna över hidden.) */
+.guide-row[hidden] {
+  display: none;
+}
+
+.guide-keys {
+  display: flex;
+  gap: 4px;
+}
+
+/* En tangent. */
+.guide kbd {
+  min-width: 28px;
+  padding: 4px 8px;
+  background: #ffffff;
+  border-radius: 7px;
+  box-shadow: 0 2px 0 #e0c9a0; /* Hård skugga rakt ner = tangenten ser upphöjd ut. */
+  font-family: inherit;        /* Samma typsnitt som resten av guiden. */
+  font-size: 13px;
+  text-align: center;
+}

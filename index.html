@@ -36,6 +36,23 @@
        id="scene" är namnet som både style.css (#scene) och main.js letar efter. -->
   <canvas id="scene"></canvas>
 
+  <!-- Guiden: en liten ruta i nedre vänstra hörnet som visar vilka tangenter som gäller.
+       Den ligger ovanpå canvasen (se .guide i css/style.css).
+       <kbd> är HTML-elementet för en tangent. -->
+  <div class="guide">
+    <!-- Rad 1 visas alltid. -->
+    <div class="guide-row">
+      <span class="guide-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+      <span>Drive</span>
+    </div>
+    <!-- Rad 2 visas bara när bilen står framför en skylt. "hidden" gömmer den från början;
+         js/main.js tar bort och sätter tillbaka "hidden" och fyller i texten. -->
+    <div class="guide-row" id="guideEnter" hidden>
+      <span class="guide-keys"><kbd>Enter</kbd></span>
+      <span id="guideText"></span>
+    </div>
+  </div>
+
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
   <script type="module" src="js/main.js"></script>

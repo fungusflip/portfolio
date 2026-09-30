@@ -160,6 +160,42 @@ const ground = new THREE.Mesh(
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
+// --- Mjuk kant ---
+// I stället för att marken tar tvärt slut tonas den ut i bakgrundsfärgen, i en
+// cirkel. Det görs med ett andra plan precis ovanpå marken: genomskinligt i
+// mitten och gradvis mer täckande (i bakgrundens färg) utåt kanten.
+const FADE_START = 0.7; // Var toningen börjar: 0.7 = 70 % av vägen från mitten till kanten.
+const fadeImage = document.createElement('canvas');
+fadeImage.width = 512;
+fadeImage.height = 512;
+const fadePen = fadeImage.getContext('2d');
+// En rund toning (gradient) mellan två cirklar med samma mitt (256, 256):
+// den inre med radie 256 * 0.7 och den yttre med radie 256 (bildens kant).
+const gradient = fadePen.createRadialGradient(256, 256, 256 * FADE_START, 256, 256, 256);
+// rgba(rött, grönt, blått, täckning). 255, 243, 214 är bakgrundsfärgen #fff3d6.
+// Täckning 0 = helt genomskinlig, 1 = helt täckande.
+gradient.addColorStop(0, 'rgba(255, 243, 214, 0)');
+gradient.addColorStop(1, 'rgba(255, 243, 214, 1)');
+fadePen.fillStyle = gradient;
+// Utanför den yttre cirkeln (bildens hörn) fortsätter sista färgen, alltså helt täckande.
+fadePen.fillRect(0, 0, 512, 512);
+const fadeTexture = new THREE.CanvasTexture(fadeImage);
+fadeTexture.colorSpace = THREE.SRGBColorSpace;
+
+const fade = new THREE.Mesh(
+  new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE),
+  // transparent: true behövs för att genomskinliga delar ska synas igenom.
+  // depthWrite: false gör att planet inte "skymmer" saker som ritas efter det.
+  new THREE.MeshBasicMaterial({ map: fadeTexture, transparent: true, depthWrite: false })
+);
+fade.rotation.x = -Math.PI / 2;
+fade.position.y = 0.04; // Strax ovanför marken och parkeringsrutorna.
+scene.add(fade);
+
+// Så långt från mitten bilen får köra: fram till där toningen börjar.
+// GROUND_SIZE / 2 = avståndet från mitten till kanten.
+const DRIVE_RADIUS = (GROUND_SIZE / 2) * FADE_START;
+
 // ---------------------------------------------------------------------------
 // PROJEKT – listan som bestämmer vilka skyltar som finns. ÄNDRA HÄR.
 // ---------------------------------------------------------------------------
@@ -580,6 +616,20 @@ for (const project of PROJECTS) {
   });
 }
 
+// Guidens andra rad (se index.html). getElementById letar upp ett element på dess id.
+const guideEnter = document.getElementById('guideEnter');
+const guideText = document.getElementById('guideText');
+
+// Visar raden "Enter – Read more: ..." för ett projekt, eller gömmer den om project är null.
+function showGuide(project) {
+  if (project && project.url) {
+    guideText.textContent = `Read more: ${project.title}`; // textContent = elementets text.
+    guideEnter.hidden = false;
+  } else {
+    guideEnter.hidden = true;
+  }
+}
+
 // Körs en gång per bild: kollar vilken ruta bilen står i och sköter skärmarna.
 function updateBillboards(delta) {
   for (const billboard of billboards) {
@@ -593,6 +643,7 @@ function updateBillboards(delta) {
       // "villkor ? a : b" = a om sant, annars b.
       billboard.screenMaterial.color.set(near ? '#ffffff' : '#777777');
       billboard.padMaterial.opacity = near ? 1 : 0.3;
+      showGuide(near ? billboard.project : null);
 
       if (near) {
         // Bilen körde in: skapa en spelare. Filen laddas alltså först nu, när den behövs.
@@ -642,17 +693,19 @@ const leafColors = PALETTE.leaves.map((hex) => new THREE.Color(hex));
 const CROWN_BLOBS = [[0, 2.8, 0, 1], [0.9, 2.3, 0.3, 0.7], [-0.8, 2.4, -0.4, 0.75]];
 
 // Steg 1: bestäm var träden ska stå.
-const TREE_TRIES = 70;
+const TREE_TRIES = 110; // Fler försök än förut, eftersom de som hamnar utanför cirkeln hoppas över.
 const trees = [];
 for (let i = 0; i < TREE_TRIES; i++) {
   // Math.random() ger ett slumptal mellan 0 och 1.
   // (tal - 0.5) ger -0.5..0.5, gånger markens storlek ger en plats någonstans på marken.
-  const x = (Math.random() - 0.5) * (GROUND_SIZE - 10);
-  const z = (Math.random() - 0.5) * (GROUND_SIZE - 10);
+  const x = (Math.random() - 0.5) * GROUND_SIZE;
+  const z = (Math.random() - 0.5) * GROUND_SIZE;
 
   // Math.hypot(x, z) = avståndet från mitten (Pythagoras). Inga träd på bilens startplats.
   // "continue" avbryter det här varvet och går vidare till nästa.
   if (Math.hypot(x, z) < 8) continue;
+  // Inga träd långt ute i toningen heller, där marken håller på att försvinna.
+  if (Math.hypot(x, z) > DRIVE_RADIUS + 5) continue;
   // Inga träd nära en skylt heller, så att de inte skymmer skärmen.
   // .some(...) svarar "stämmer det här för minst ett projekt i listan?".
   if (PROJECTS.some((project) => Math.hypot(x - project.x, z - project.z) < 12)) continue;
@@ -832,7 +885,6 @@ const ACCELERATION = 14;   // Hur snabbt farten ökar, enheter per sekund per se
 const FRICTION = 6;        // Hur snabbt bilen saktar in när man släpper gasen.
 const TURN_RATE = 2.4;     // Hur snabbt bilen svänger vid toppfart, radianer per sekund.
 const MAX_STEER = 0.5;     // Hur mycket framhjulen vrids, radianer (ca 29°).
-const LIMIT = GROUND_SIZE / 2 - 5; // Så långt från mitten bilen får åka (5 från kanten).
 
 // "let" i stället för "const" eftersom de här värdena ändras hela tiden.
 let speed = 0;   // Nuvarande fart. Negativ = backar.
@@ -872,9 +924,15 @@ function updateCar(delta) {
   // Vid heading 0 är sin = 0 och cos = 1, alltså rakt längs +Z.
   car.position.x += Math.sin(heading) * speed * delta;
   car.position.z += Math.cos(heading) * speed * delta;
-  // Håll kvar bilen på marken.
-  car.position.x = THREE.MathUtils.clamp(car.position.x, -LIMIT, LIMIT);
-  car.position.z = THREE.MathUtils.clamp(car.position.z, -LIMIT, LIMIT);
+  // Håll kvar bilen innanför cirkeln. Om avståndet från mitten är större än
+  // radien krymps positionen tillbaka till cirkelns kant. Att gångra både x och z
+  // med samma tal flyttar punkten rakt mot mitten, så bilen glider längs kanten
+  // i stället för att tvärstanna.
+  const distance = Math.hypot(car.position.x, car.position.z);
+  if (distance > DRIVE_RADIUS) {
+    car.position.x *= DRIVE_RADIUS / distance;
+    car.position.z *= DRIVE_RADIUS / distance;
+  }
   // Vrid själva modellen runt Y-axeln (den som pekar uppåt) så att den pekar dit den åker.
   car.rotation.y = heading;
 
