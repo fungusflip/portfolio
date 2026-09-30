@@ -64,6 +64,14 @@ const PALETTE = {
   sign: '#fff3d6',       // Textskyltens bakgrund: grädde.
   signText: '#25323d',   // Textens färg.
   signGlow: '#f0561a',   // Textens färg när bilen står i rutan: "tänd" orange.
+  gravel: '#b7a08a',      // Uppfartens grus: varmt grått.
+  gravelLight: '#d6c4b0', // Ljusa småstenar.
+  gravelDark: '#8f7a66',  // Mörka småstenar och kantlinje.
+  garageWall: '#a9a39b',   // Garagets väggar: betonggrå.
+  garageRoof: '#4b4642',   // Garagets platta tak: mörk takpapp.
+  garageDoor: '#e8e4dc',   // Garageporten: ljust plåtgrå.
+  asphalt: '#4b4642',      // Parkeringsfickornas asfalt: mörkt varmgrå.
+  asphaltLight: '#5f5954', // Ljusare korn i asfalten.
 };
 // PALETTE.background betyder "värdet som heter background i PALETTE".
 scene.background = new THREE.Color(PALETTE.background);
@@ -75,9 +83,14 @@ scene.background = new THREE.Color(PALETTE.background);
 //   30     – synfält i grader på höjden. Större = vidvinkel, mindre = zoom.
 //            Ett litet synfält långt bort ger den platta "isometriska" Diablo-looken.
 //   aspect – fönstrets bredd / höjd, annars blir bilden utdragen.
-//   0.1    – saker närmare än så ritas inte.
-//   200    – saker längre bort än så ritas inte.
-const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 200);
+//   5      – saker närmare än så ritas inte.
+//   400    – saker längre bort än så ritas inte.
+// Varför inte 0.1 som "nära"? Grafikkortet har begränsad noggrannhet när det avgör
+// vad som ligger framför vad, och den noggrannheten fördelas mellan nära och långt.
+// Ju mindre "nära" är, desto sämre blir den långt bort – och då börjar ytor som
+// ligger tätt ihop (mark, väg, asfalt) flimra. Kameran är alltid minst ca 40 enheter
+// från allt, så 5 är gott om marginal.
+const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 5, 400);
 
 // Var kameran sitter i förhållande till bilen: (x, y, z) = (21 åt sidan, 39 upp, 21 bakom).
 // Diablo-kamera = snett uppifrån OCH snett från sidan (diagonalt), alltid samma vinkel.
@@ -159,6 +172,15 @@ const ground = new THREE.Mesh(
 );
 // Ett plan skapas stående, som en vägg. Vrid det -90° runt X-axeln så det lägger sig ner.
 ground.rotation.x = -Math.PI / 2;
+// --- Lager på marken (mot flimmer) ---
+// Mark, vägar och parkeringsfickor ligger nästan på samma höjd. Då kan grafikkortet
+// inte avgöra vilken som är överst, och de flimrar ("z-fighting"). Lösningen:
+//   renderOrder = i vilken ordning saker ritas. Lägre tal ritas först.
+//   depthTest: false på lagren ovanpå = "rita alltid över det som redan finns".
+// Marken ritas allra först (-10), sedan vägkanter (-9), grus (-8) och asfalt (-5),
+// var och en rakt över den förra. Allt annat (bil, träd, hus) har renderOrder 0,
+// ritas efteråt och hamnar därför ovanpå som vanligt.
+ground.renderOrder = -10;
 scene.add(ground);
 
 // --- Mjuk kant ---
@@ -190,7 +212,7 @@ const fade = new THREE.Mesh(
   new THREE.MeshBasicMaterial({ map: fadeTexture, transparent: true, depthWrite: false })
 );
 fade.rotation.x = -Math.PI / 2;
-fade.position.y = 0.04; // Strax ovanför marken och parkeringsrutorna.
+fade.position.y = 0.07; // Strax ovanför marken, vägarna och parkeringsfickorna.
 scene.add(fade);
 
 // Så långt från mitten bilen får köra: fram till där toningen börjar.
@@ -212,6 +234,7 @@ const DRIVE_RADIUS = (GROUND_SIZE / 2) * FADE_START;
 //   x, z  – var skylten står på marken.
 //   phone – true = klippet är filmat på höjden (mobilformat). Skylten byggs då
 //           som en jättelik mobiltelefon i stället för en liggande bioduk.
+//   linkText – texten på länken längst ner i infopanelen. Utelämnad = "Open the full page →".
 // Lägg till en rad för en ny skylt, ta bort en rad för att ta bort en.
 const PROJECTS = [
   { title: 'Foliage Generator', media: 'assets/videos/foliage-generator.mp4', url: 'https://filip.renemark.se/misc/folliage-generator', category: 'Misc', content: 'assets/content/foliage-generator.html', x: 20, z: -10 },
@@ -497,20 +520,17 @@ function makeTitleTexture(title, lit = false) {
   return texture;
 }
 
-// Parkeringsrutans bild: en ram med texten ENTER, på genomskinlig bakgrund.
-// lit = true ger samma ruta med tänd (orange) ram och text, när bilen står i den.
-// Samma två texturer delas av alla rutor.
+// Parkeringsrutans text: ordet ENTER på genomskinlig bakgrund. Den ligger ovanpå
+// asfalten i en parkeringsficka (se makeParkingBay nedan).
+// lit = true ger samma text i tänd orange, när bilen står i fickan.
+// Samma två texturer delas av alla fickor.
 function makePadTexture(lit) {
   const image = document.createElement('canvas');
   image.width = 512;
   image.height = 256;
   const brush = image.getContext('2d');
-  const color = lit ? PALETTE.signGlow : PALETTE.signText;
   // Inget fillRect över hela bilden = bakgrunden förblir genomskinlig.
-  brush.strokeStyle = color; // stroke = linjer, fill = fyllda ytor.
-  brush.lineWidth = 14;
-  brush.strokeRect(12, 12, 488, 232);   // En ram en bit innanför kanten.
-  brush.fillStyle = color;
+  brush.fillStyle = lit ? PALETTE.signGlow : PALETTE.sign; // Grädde på mörk asfalt, orange när den är tänd.
   brush.font = 'bold 96px system-ui, sans-serif';
   brush.textAlign = 'center';
   brush.textBaseline = 'middle';
@@ -522,6 +542,83 @@ function makePadTexture(lit) {
 }
 const padTexture = makePadTexture(false);
 const padTextureActive = makePadTexture(true);
+
+// --- Parkeringsfickan ---
+// En mörk asfaltsruta med målade linjer, stor nog för en bil. Den skiljer sig
+// tydligt från grusvägarna: grus = här kör man, asfalt = här parkerar man och
+// trycker Enter. Linjerna är öppna i änden mot vägen, som en riktig parkeringsplats.
+//
+// För att fickan ska smälta ihop med infarten tonas asfalten över i grus i änden
+// mot vägen, och fickan har samma bredd och samma mörka kantlinje som vägarna.
+const BAY_WIDTH = 5.4; // Samma som en väg inklusive kantlinjer (ROAD_WIDTH + 2 * ROAD_EDGE).
+const BAY_LENGTH = 6.5;
+const bayImage = document.createElement('canvas');
+bayImage.width = 270;  // 50 pixlar per enhet: 5.4 x 6.5 enheter.
+bayImage.height = 325;
+const bayPen = bayImage.getContext('2d');
+const bayW = bayImage.width;  // Korta namn, de används många gånger nedan.
+const bayH = bayImage.height;
+// I bilden är y = 0 änden mot skylten och y = bayH änden mot vägen (infarten).
+const BLEND_START = bayH * 0.6; // Härifrån och ner till infarten tonas asfalten över i grus.
+
+// 1. Asfalt över hela ytan, med små ljusa korn.
+bayPen.fillStyle = PALETTE.asphalt;
+bayPen.fillRect(0, 0, bayW, bayH);
+bayPen.fillStyle = PALETTE.asphaltLight;
+for (let i = 0; i < 350; i++) {
+  bayPen.fillRect(Math.random() * bayW, Math.random() * bayH, 3, 3);
+}
+
+// 2. Toning mot grus: en gradient (mjuk övergång) från genomskinlig till grusfärg.
+// createLinearGradient(x1, y1, x2, y2) tonar längs linjen mellan de två punkterna.
+const bayBlend = bayPen.createLinearGradient(0, BLEND_START, 0, bayH);
+bayBlend.addColorStop(0, 'rgba(183, 160, 138, 0)'); // 183, 160, 138 = grusfärgen #b7a08a, helt genomskinlig.
+bayBlend.addColorStop(1, 'rgba(183, 160, 138, 1)'); // Samma färg, helt täckande.
+bayPen.fillStyle = bayBlend;
+bayPen.fillRect(0, BLEND_START, bayW, bayH - BLEND_START);
+
+// 3. Småsten som "spiller in" från vägen: tätt vid infarten, glesare längre in.
+// Math.random() gånger sig själv ger oftare små tal än stora, så de flesta
+// stenarna hamnar nära nederkanten.
+for (let i = 0; i < 320; i++) {
+  bayPen.fillStyle = i % 2 === 0 ? PALETTE.gravelLight : PALETTE.gravelDark;
+  const size = 2.5 + Math.random() * 4.5;
+  const y = bayH - Math.random() * Math.random() * (bayH - BLEND_START) * 1.3;
+  bayPen.fillRect(Math.random() * bayW, y, size, size);
+}
+
+// 4. Tre målade linjer: vänster, överkant (mot skylten) och höger. De slutar där
+// toningen börjar, så att infarten är öppen – som en riktig parkeringsplats.
+bayPen.strokeStyle = PALETTE.sign;
+bayPen.lineWidth = 8;
+bayPen.lineCap = 'round'; // Runda ändar på linjerna.
+bayPen.beginPath();
+bayPen.moveTo(24, BLEND_START);        // Nere till vänster...
+bayPen.lineTo(24, 24);                 // ...upp...
+bayPen.lineTo(bayW - 24, 24);          // ...tvärs över...
+bayPen.lineTo(bayW - 24, BLEND_START); // ...och ner till höger.
+bayPen.stroke();
+
+// 5. Mörk kantlinje till vänster, höger och upptill – samma som vägarnas kant
+// (10 pixlar = 0.2 enheter), så att fickan ser ut som en fortsättning på vägen.
+bayPen.fillStyle = PALETTE.gravelDark;
+bayPen.fillRect(0, 0, 10, bayH);
+bayPen.fillRect(bayW - 10, 0, 10, bayH);
+bayPen.fillRect(0, 0, bayW, 10);
+const bayTexture = new THREE.CanvasTexture(bayImage);
+bayTexture.colorSpace = THREE.SRGBColorSpace;
+bayTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+// depthTest/depthWrite: false = ett "lager på marken", se förklaringen vid MARK.
+const bayMaterial = new THREE.MeshBasicMaterial({ map: bayTexture, depthTest: false, depthWrite: false });
+
+// Ger en ny parkeringsficka, liggande på marken. Den som anropar bestämmer var den hamnar.
+function makeParkingBay() {
+  const bay = new THREE.Mesh(new THREE.PlaneGeometry(BAY_WIDTH, BAY_LENGTH), bayMaterial);
+  bay.rotation.x = -Math.PI / 2; // Lägg planet ner på marken.
+  bay.position.y = 0.035;        // Över grusvägarna, under ENTER-texten.
+  bay.renderOrder = -5;          // Ritas efter mark och grus, före allt som står på marken.
+  return bay;
+}
 
 // Här sparas allt som behövs om varje skylt medan programmet kör.
 const billboards = [];
@@ -596,13 +693,16 @@ for (const project of PROJECTS) {
   sign.position.set(0, height + border * 2 + 0.2 + signHeight / 2, 0);
   panel.add(sign);
 
-  // Parkeringsruta på marken framför skylten.
+  // Parkeringsficka på marken framför skylten, med ENTER-texten ovanpå.
+  const bay = makeParkingBay();
+  bay.position.z = PAD_DISTANCE;
+  group.add(bay);
   // transparent: true behövs för att genomskinliga delar av texturen ska synas igenom.
-  // opacity: 0.3 = svagt synlig tills bilen står i den.
-  const padMaterial = new THREE.MeshBasicMaterial({ map: padTexture, transparent: true, opacity: 0.3 });
+  // opacity: 0.6 = lite nedtonad tills bilen står i fickan.
+  const padMaterial = new THREE.MeshBasicMaterial({ map: padTexture, transparent: true, opacity: 0.6 });
   const pad = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.5), padMaterial);
   pad.rotation.x = -Math.PI / 2;          // Lägg planet ner på marken.
-  pad.position.set(0, 0.02, PAD_DISTANCE); // 0.02 upp, annars flimrar den mot marken.
+  pad.position.set(0, 0.05, PAD_DISTANCE); // 0.05 upp, annars flimrar den mot asfalten.
   group.add(pad);
 
   group.position.set(project.x, 0, project.z);
@@ -659,7 +759,7 @@ function updateBillboards(delta) {
       billboard.active = near;
       // "villkor ? a : b" = a om sant, annars b.
       billboard.screenMaterial.color.set(near ? '#ffffff' : '#777777');
-      billboard.padMaterial.opacity = near ? 1 : 0.3;
+      billboard.padMaterial.opacity = near ? 1 : 0.6;
       // Tänd texten: rutan och titeln byter färg till orange medan bilen står där.
       billboard.padMaterial.map = near ? padTextureActive : padTexture;
       billboard.signMaterial.map = near ? billboard.titleTextureActive : billboard.titleTexture;
@@ -712,6 +812,8 @@ async function openPanel(project) {
   panelBody.scrollTop = 0;
   panelLink.hidden = !project.url;
   if (project.url) panelLink.href = project.url;
+  // "a || b" = a om det finns, annars b. → är pilen →.
+  panelLink.textContent = project.linkText || 'Open the full page →';
   panel.hidden = false;
   document.body.classList.add('panel-open'); // CSS gömmer touchknapparna medan panelen är öppen.
 
@@ -766,8 +868,472 @@ function togglePanel() {
   // .find ger det första i listan som uppfyller villkoret (eller ingenting).
   const billboard = billboards.find((b) => b.active);
   if (billboard && billboard.project.content) openPanel(billboard.project);
+  // Ingen skylt? Står bilen på uppfarten hemma öppnas "About me" i stället.
+  else if (home.active) openPanel(ABOUT);
 }
 touchAction.addEventListener('click', togglePanel);
+
+// ---------------------------------------------------------------------------
+// HEMMA – "About me": en stuga med garage, namnskylt på garaget och en brevlåda vid korsningen.
+// ---------------------------------------------------------------------------
+// Bilen startar på uppfarten utanför garaget. Så länge den står där öppnar
+// Enter/Tab infopanelen med texten om mig.
+
+// Det som infopanelen visar. Samma fält som ett projekt i PROJECTS-listan.
+const ABOUT = {
+  title: 'About me',
+  category: 'Hello!',
+  content: 'assets/content/about.html',
+  url: 'mailto:filip@renemark.me',
+  linkText: 'Email me →',
+};
+
+// Texten på namnskylten.
+const HOME_NAME = 'Filip Renemark';
+const HOME_ROLE = 'Technical Artist';
+
+// Var tomten ligger på marken (uppfartens mitt). ÄNDRA HÄR för att flytta allt på en gång.
+// Tomten ligger i samma rad som projektskyltarna, längst ut till vänster på skärmen.
+// Besökaren startar alltså hemma och kör sedan åt höger längs huvudvägen, förbi projekten.
+const HOME_X = 31.5;
+const HOME_Z = -21.5;
+
+// Allt läggs i en grupp som vrids mot kameran, precis som skyltarna. Inne i gruppen gäller:
+//   +x = åt höger på skärmen, -x = åt vänster
+//   +z = nedåt på skärmen (mot kameran), -z = uppåt (bort mot projektskyltarna)
+const homeGroup = new THREE.Group();
+homeGroup.position.set(HOME_X, 0, HOME_Z);
+homeGroup.rotation.y = BILLBOARD_FACING;
+scene.add(homeGroup);
+
+// emissive = färg som ytan "lyser" med själv. Väggen mot kameran vetter bort från
+// solen och blir annars grå; lite eget ljus håller den ljus.
+const wallMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.sign, roughness: 0.9, emissive: PALETTE.sign, emissiveIntensity: 0.4 });
+// Lack och glas delas med bilen längre ner: brevlådan har bilens lack, fönstret bilens glas.
+// roughness: 0 = blank som en spegel, 1 = helt matt. metalness: 0 = plast, 1 = metall.
+const paintMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.carPaint, roughness: 0.35, metalness: 0.3 });
+const glassMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.glass, roughness: 0.2 });
+const roofMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.leaves[0], roughness: 0.8, flatShading: true });
+
+// --- Garaget: står mitt på tomten med porten mot kameran ---
+// Bilen står parkerad framför porten, och uppfarten går därifrån nedåt på skärmen
+// till huvudvägen – precis som infarten till en projektskylt.
+const GARAGE_WIDTH = 5.6;
+const GARAGE_DEPTH = 3.6;
+const GARAGE_HEIGHT = 2.6;
+const GARAGE_Z = 0; // Garagets mitt. Större z = längre ner på skärmen.
+
+// Garaget har egna färger (grå betong, mörkt platt tak) så att det inte ser ut som en del av stugan.
+const garageWallMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.garageWall, roughness: 1, emissive: PALETTE.garageWall, emissiveIntensity: 0.4 });
+const garageRoofMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.garageRoof, roughness: 1 });
+
+const garageWalls = new THREE.Mesh(new THREE.BoxGeometry(GARAGE_WIDTH, GARAGE_HEIGHT, GARAGE_DEPTH), garageWallMaterial);
+garageWalls.position.set(0, GARAGE_HEIGHT / 2, GARAGE_Z);
+homeGroup.add(garageWalls);
+// Platt tak: en tunn mörk skiva som sticker ut lite runt om.
+const garageRoof = new THREE.Mesh(new THREE.BoxGeometry(GARAGE_WIDTH + 0.5, 0.3, GARAGE_DEPTH + 0.5), garageRoofMaterial);
+garageRoof.position.set(0, GARAGE_HEIGHT + 0.15, GARAGE_Z);
+homeGroup.add(garageRoof);
+
+// Garageport på väggen mot kameran: en ljus vikport med vågräta paneler och en rad små fönster.
+const GARAGE_DOOR_WIDTH = 4.4;
+const GARAGE_DOOR_HEIGHT = 2.1;
+const doorImage = document.createElement('canvas');
+doorImage.width = 440;  // 100 pixlar per enhet.
+doorImage.height = 210;
+const doorPen = doorImage.getContext('2d');
+doorPen.fillStyle = PALETTE.garageDoor;
+doorPen.fillRect(0, 0, doorImage.width, doorImage.height);
+// Skarvarna mellan panelerna: fyra vågräta linjer.
+doorPen.fillStyle = PALETTE.garageWall;
+for (const y of [42, 84, 126, 168]) {
+  doorPen.fillRect(0, y - 3, doorImage.width, 6);
+}
+// Fyra små fönster i den översta panelen.
+doorPen.fillStyle = PALETTE.glass;
+for (const x of [40, 140, 240, 340]) {
+  doorPen.fillRect(x, 10, 60, 22);
+}
+// Handtag längst ner i mitten.
+doorPen.fillStyle = PALETTE.frame;
+doorPen.fillRect(doorImage.width / 2 - 30, 184, 60, 10);
+const doorTexture = new THREE.CanvasTexture(doorImage);
+doorTexture.colorSpace = THREE.SRGBColorSpace;
+const garageDoor = new THREE.Mesh(
+  new THREE.PlaneGeometry(GARAGE_DOOR_WIDTH, GARAGE_DOOR_HEIGHT),
+  new THREE.MeshBasicMaterial({ map: doorTexture })
+);
+// Precis utanpå väggen (0.01), annars flimrar den mot väggen.
+garageDoor.position.set(0, GARAGE_DOOR_HEIGHT / 2, GARAGE_Z + GARAGE_DEPTH / 2 + 0.01);
+homeGroup.add(garageDoor);
+
+// Det mörka hålet bakom porten. Det syns bara medan porten är "öppen" (gömd), när
+// bilen backar ut i början. Ligger en aning närmare väggen (0.005) än porten (0.01).
+const garageOpening = new THREE.Mesh(
+  new THREE.PlaneGeometry(GARAGE_DOOR_WIDTH, GARAGE_DOOR_HEIGHT),
+  new THREE.MeshBasicMaterial({ color: PALETTE.frame })
+);
+garageOpening.position.set(0, GARAGE_DOOR_HEIGHT / 2, GARAGE_Z + GARAGE_DEPTH / 2 + 0.005);
+homeGroup.add(garageOpening);
+
+// --- Stugan, till höger om garaget ---
+const CABIN_X = 5.6;   // Stugans mitt i sidled.
+const CABIN_Z = 0;     // Samma djup som garaget, så att de står i rad.
+const CABIN_SIZE = 5;  // Bredd och djup (kvadratisk).
+const CABIN_HEIGHT = 3.8; // Högre än garaget (2.6), så att det röda taket reser sig över garagets.
+
+const cabinWalls = new THREE.Mesh(new THREE.BoxGeometry(CABIN_SIZE, CABIN_HEIGHT, CABIN_SIZE), wallMaterial);
+cabinWalls.position.set(CABIN_X, CABIN_HEIGHT / 2, CABIN_Z);
+homeGroup.add(cabinWalls);
+
+// Tak: en "kon" med bara 4 sidor är en pyramid. Den skapas med ett hörn framåt,
+// så den vrids 45° (PI / 4) för att sidorna ska ligga längs väggarna.
+// Radie 3.9 ger en sida på ca 5.5, alltså lite takfot utanför väggarna.
+const cabinRoof = new THREE.Mesh(new THREE.ConeGeometry(3.9, 2, 4), roofMaterial);
+cabinRoof.rotation.y = Math.PI / 4;
+cabinRoof.position.set(CABIN_X, CABIN_HEIGHT + 1, CABIN_Z); // Konens mitt = halva dess höjd (2 / 2) över väggarna.
+homeGroup.add(cabinRoof);
+
+// Skorsten: en liten låda som sticker upp genom taket.
+const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.6, 0.6), postMaterial);
+chimney.position.set(CABIN_X - 1.2, CABIN_HEIGHT + 1, CABIN_Z - 0.8);
+homeGroup.add(chimney);
+
+// Dörr och fönster: tunna lådor på väggen som vetter mot kameran (mitten + halva djupet).
+const door = new THREE.Mesh(new THREE.BoxGeometry(1, 1.9, 0.1), postMaterial);
+door.position.set(CABIN_X + 1.1, 0.95, CABIN_Z + CABIN_SIZE / 2);
+homeGroup.add(door);
+const cabinWindow = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 0.1), glassMaterial);
+cabinWindow.position.set(CABIN_X - 1, 1.6, CABIN_Z + CABIN_SIZE / 2);
+homeGroup.add(cabinWindow);
+
+// (Själva uppfarten är en av grusvägarna, se VÄGAR längre ner.)
+
+// Parkeringsfickan utanför garaget, samma som framför skyltarna. Här startar bilen.
+const HOME_PAD_Z = PAD_DISTANCE; // Lika långt framför garaget som fickorna ligger framför skyltarna.
+const homeBay = makeParkingBay();
+homeBay.position.z = HOME_PAD_Z;
+homeGroup.add(homeBay);
+const homePadMaterial = new THREE.MeshBasicMaterial({ map: padTexture, transparent: true, opacity: 0.6 });
+const homePad = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.5), homePadMaterial);
+homePad.rotation.x = -Math.PI / 2; // Lägg planet ner på marken.
+homePad.position.set(0, 0.05, HOME_PAD_Z);
+homeGroup.add(homePad);
+
+// --- Namnskylten: står på garagets tak, som skylten på en verkstad ---
+const NAME_WIDTH = 5.4;
+const NAME_HEIGHT = 1.98;
+const nameImage = document.createElement('canvas');
+nameImage.width = 960;
+nameImage.height = 352; // Samma proportioner som skylten (5.4 x 1.98).
+const namePen = nameImage.getContext('2d');
+namePen.fillStyle = PALETTE.sign;
+namePen.fillRect(0, 0, nameImage.width, nameImage.height);
+namePen.textAlign = 'center';
+namePen.textBaseline = 'middle';
+namePen.fillStyle = PALETTE.signText;
+namePen.font = 'bold 124px system-ui, sans-serif';
+namePen.fillText(HOME_NAME, nameImage.width / 2, 130); // Namnet: stort och mörkt.
+namePen.fillStyle = PALETTE.signGlow;
+namePen.font = 'bold 76px system-ui, sans-serif';
+namePen.fillText(HOME_ROLE, nameImage.width / 2, 258); // Rollen: orange, under namnet.
+const nameTexture = new THREE.CanvasTexture(nameImage);
+nameTexture.colorSpace = THREE.SRGBColorSpace;
+nameTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+// Brädan sitter vid takets kant närmast kameran och lutar bakåt runt sin underkant,
+// som skyltarnas skärmar, så att kameran ser texten rakt.
+const nameBoard = new THREE.Group();
+nameBoard.position.set(0, GARAGE_HEIGHT + 0.3, GARAGE_Z + GARAGE_DEPTH / 2 - 0.3);
+nameBoard.rotation.x = -SCREEN_TILT;
+homeGroup.add(nameBoard);
+// Träram bakom, lite större än texten.
+const nameFrame = new THREE.Mesh(new THREE.BoxGeometry(NAME_WIDTH + 0.3, NAME_HEIGHT + 0.3, 0.2), postMaterial);
+nameFrame.position.set(0, NAME_HEIGHT / 2 + 0.15, -0.11);
+nameBoard.add(nameFrame);
+const nameFace = new THREE.Mesh(
+  new THREE.PlaneGeometry(NAME_WIDTH, NAME_HEIGHT),
+  new THREE.MeshBasicMaterial({ map: nameTexture })
+);
+nameFace.position.set(0, NAME_HEIGHT / 2 + 0.15, 0);
+nameBoard.add(nameFace);
+
+// --- Huvudvägen och korsningen ---
+// Huvudvägen går tvärs över skärmen en bit framför raden av skyltar, nedanför
+// parkeringsfickorna. Uppfarten slutar i en korsning mitt på den.
+const ROAD_DISTANCE = PAD_DISTANCE + 6.5; // Hur långt framför skyltarna huvudvägens mitt ligger.
+
+// Flyttar en punkt { x, z } mot kameran (nedåt på skärmen) så många enheter.
+// sin/cos gör om skyltarnas vinkel till en riktning, som för bilen.
+function towardCamera(point, distance) {
+  return {
+    x: point.x + Math.sin(BILLBOARD_FACING) * distance,
+    z: point.z + Math.cos(BILLBOARD_FACING) * distance,
+  };
+}
+// Flyttar en punkt åt höger på skärmen (minus = åt vänster).
+function toTheRight(point, distance) {
+  return {
+    x: point.x + Math.cos(BILLBOARD_FACING) * distance,
+    z: point.z - Math.sin(BILLBOARD_FACING) * distance,
+  };
+}
+
+const firstProject = PROJECTS[0];
+const lastProject = PROJECTS[PROJECTS.length - 1];
+// Mitt emellan första och sista skylten, flyttat ner till huvudvägen = korsningen.
+const junction = towardCamera(
+  { x: (firstProject.x + lastProject.x) / 2, z: (firstProject.z + lastProject.z) / 2 },
+  ROAD_DISTANCE
+);
+// Där uppfarten möter huvudvägen: rakt nedanför garaget.
+const homeRoadPoint = towardCamera({ x: HOME_X, z: HOME_Z }, ROAD_DISTANCE);
+
+// --- Brevlådan: vid korsningen i slutet av uppfarten ---
+const mailbox = new THREE.Group();
+// Inne i hem-gruppen ligger korsningen på (0, ROAD_DISTANCE). Brevlådan står i hörnet
+// mellan uppfarten och huvudvägen: 3.9 åt höger och 3.9 uppåt därifrån.
+mailbox.position.set(3.9, 0, ROAD_DISTANCE - 3.9);
+mailbox.scale.setScalar(1.4); // Lite överdrivet stor, så att den syns från kameran långt upp.
+homeGroup.add(mailbox);
+const mailPost = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.2, 0.18), postMaterial);
+mailPost.position.y = 0.6;
+mailbox.add(mailPost);
+const mailBox = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 1.1), paintMaterial); // Samma röda lack som bilen.
+mailBox.position.y = 1.5;
+mailbox.add(mailBox);
+// Flaggan sitter i en egen grupp vid sitt fäste, så att den fälls runt den punkten.
+const mailFlag = new THREE.Group();
+mailFlag.position.set(-0.4, 1.5, 0.2); // På lådans vänstra sida, mot uppfarten.
+mailbox.add(mailFlag);
+const flagMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.signText });
+const flagArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 0.12), flagMaterial);
+flagArm.position.y = 0.45; // Armen börjar vid fästet och går uppåt.
+mailFlag.add(flagArm);
+const flagTip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.45), flagMaterial);
+flagTip.position.set(0, 0.72, -0.2);
+mailFlag.add(flagTip);
+const FLAG_DOWN = Math.PI / 2; // Vriden 90° = ligger ner längs lådan.
+mailFlag.rotation.x = FLAG_DOWN;
+const MAILBOX_RADIUS = 6; // Hur nära bilen måste vara för att flaggan ska fällas upp.
+
+// Rutans mitt i VÄRLDEN. localToWorld gör om en punkt inne i gruppen till världens koordinater.
+homeGroup.updateMatrixWorld();
+const homePadWorld = homeGroup.localToWorld(new THREE.Vector3(0, 0, HOME_PAD_Z));
+// Brevlådans plats i världen. getWorldPosition fyller i den nya vektorn med svaret.
+const mailboxWorld = mailbox.getWorldPosition(new THREE.Vector3());
+const home = {
+  padX: homePadWorld.x,
+  padZ: homePadWorld.z,
+  active: false, // Står bilen på uppfarten just nu?
+  mailNear: false, // Är bilen nära brevlådan just nu?
+};
+
+// Körs en gång per bild: kollar om bilen är nära brevlådan och om den står på uppfarten.
+function updateHome() {
+  // Brevlådan: flaggan fälls upp och blir orange när bilen kör förbi. Bara för syns skull.
+  const mailNear = Math.hypot(car.position.x - mailboxWorld.x, car.position.z - mailboxWorld.z) < MAILBOX_RADIUS;
+  if (mailNear !== home.mailNear) {
+    home.mailNear = mailNear;
+    mailFlag.rotation.x = mailNear ? 0 : FLAG_DOWN;
+    flagMaterial.color.set(mailNear ? PALETTE.signGlow : PALETTE.signText);
+  }
+
+  const distance = Math.hypot(car.position.x - home.padX, car.position.z - home.padZ);
+  const near = distance < PAD_RADIUS;
+  if (near === home.active) return; // Inget har ändrats.
+  home.active = near;
+  homePadMaterial.opacity = near ? 1 : 0.6;
+  homePadMaterial.map = near ? padTextureActive : padTexture;
+  showGuide(near ? ABOUT : null);
+  if (!near && panelProject === ABOUT) closePanel();
+}
+
+// ---------------------------------------------------------------------------
+// VÄGAR – grusvägar från stugan ut till projektskyltarna.
+// ---------------------------------------------------------------------------
+// Gruset är en liten bild som upprepas som kakelplattor, precis som markens prickar:
+// en gråbrun botten med ljusa och mörka småstenar.
+const GRAVEL_PIXELS = 256; // Bildens storlek i pixlar.
+const GRAVEL_UNITS = 4;    // Hur stor en kopia av bilden blir på vägen, i enheter.
+const gravelImage = document.createElement('canvas');
+gravelImage.width = GRAVEL_PIXELS;
+gravelImage.height = GRAVEL_PIXELS;
+const gravelPen = gravelImage.getContext('2d');
+gravelPen.fillStyle = PALETTE.gravel;
+gravelPen.fillRect(0, 0, GRAVEL_PIXELS, GRAVEL_PIXELS);
+// 260 småstenar, varannan ljus och varannan mörk. i % 2 är 0 för jämna tal och 1 för udda.
+for (let i = 0; i < 260; i++) {
+  gravelPen.fillStyle = i % 2 === 0 ? PALETTE.gravelLight : PALETTE.gravelDark;
+  const size = 3 + Math.random() * 6;
+  // Håll stenen helt innanför bilden, annars klipps den av i skarven mellan kopiorna.
+  gravelPen.fillRect(Math.random() * (GRAVEL_PIXELS - size), Math.random() * (GRAVEL_PIXELS - size), size, size);
+}
+const gravelTexture = new THREE.CanvasTexture(gravelImage);
+gravelTexture.colorSpace = THREE.SRGBColorSpace;
+gravelTexture.wrapS = THREE.RepeatWrapping;
+gravelTexture.wrapT = THREE.RepeatWrapping;
+gravelTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+// depthTest/depthWrite: false = ett "lager på marken", se förklaringen vid MARK.
+const gravelMaterial = new THREE.MeshBasicMaterial({ map: gravelTexture, depthTest: false, depthWrite: false });
+// Kantlinjen: en enfärgad, lite bredare väg som ligger under gruset och sticker ut på sidorna.
+const roadEdgeMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.gravelDark, depthTest: false, depthWrite: false });
+
+const ROAD_WIDTH = 5;     // Vägarnas bredd i enheter.
+const ROAD_EDGE = 0.2;    // Hur mycket kantlinjen sticker ut på varje sida.
+
+const MAIN_ROAD_RIGHT = 32; // Hur långt huvudvägen fortsätter åt höger från skyltradens mitt.
+
+// Varje rad är en rak väg från en punkt { x, z } till en annan. ÄNDRA HÄR för fler eller färre vägar.
+const ROADS = [
+  // Huvudvägen: börjar vid uppfarten hemma, går förbi alla skyltar och vidare ut mot högerkanten
+  // (plats för fler saker senare).
+  { from: homeRoadPoint, to: toTheRight(junction, MAIN_ROAD_RIGHT) },
+  // Uppfarten: från garageporten ner till huvudvägen (den runda änden göms under garaget).
+  { from: towardCamera({ x: HOME_X, z: HOME_Z }, GARAGE_Z + GARAGE_DEPTH / 2), to: homeRoadPoint },
+];
+// En kort infart från huvudvägen in till varje skylts parkeringsficka.
+// "..." packar upp en lista; .map gör en ny lista med en väg per skylt.
+ROADS.push(...billboards.map((billboard) => ({
+  from: towardCamera({ x: billboard.project.x, z: billboard.project.z }, ROAD_DISTANCE),
+  to: { x: billboard.padX, z: billboard.padZ },
+})));
+
+// Gångvägen från parkeringen hemma till stugans dörr: två smala bitar i vinkel.
+// En väg kan ha en egen bredd (width); utan den gäller ROAD_WIDTH.
+// homePoint gör om en plats inne i hem-gruppen (x = sidled, z = nedåt på skärmen) till världen.
+function homePoint(x, z) {
+  const world = homeGroup.localToWorld(new THREE.Vector3(x, 0, z));
+  return { x: world.x, z: world.z };
+}
+const PATH_WIDTH = 1.3;
+const DOOR_X = CABIN_X + 1.1;            // Dörrens plats i sidled (samma som där dörren byggs).
+const DOOR_Z = CABIN_Z + CABIN_SIZE / 2; // Väggen med dörren.
+const PATH_TURN_Z = DOOR_Z + 2.6;        // Hur långt rakt ut från dörren gången går innan den svänger.
+ROADS.push(
+  { from: homePoint(DOOR_X, DOOR_Z + 0.3), to: homePoint(DOOR_X, PATH_TURN_Z), width: PATH_WIDTH }, // Rakt ut från dörren...
+  { from: homePoint(DOOR_X, PATH_TURN_Z), to: homePoint(2, PATH_TURN_Z), width: PATH_WIDTH }         // ...och åt vänster in till parkeringen.
+);
+
+// Bygger en väg. Den består av en rak bit och en rund platta i varje ände, så att
+// ändarna blir runda och vägar som möts i en punkt får en mjuk skarv.
+// height = höjd över marken. Varje väg får sin egen höjd, annars flimrar de där de korsar varandra.
+// order = renderOrder: i vilken ordning lagret ritas (lägre först), se förklaringen vid MARK.
+function addRoadLayer(road, width, material, height, order) {
+  const dx = road.to.x - road.from.x;
+  const dz = road.to.z - road.from.z;
+  const length = Math.hypot(dx, dz);
+
+  const strip = new THREE.PlaneGeometry(width, length);
+  strip.rotateX(-Math.PI / 2); // Lägg ner formen på marken. Längden går nu längs Z.
+  const cap = new THREE.CircleGeometry(width / 2, 24); // CircleGeometry(radie, antal kanter).
+  cap.rotateX(-Math.PI / 2);
+
+  // uv = vilken del av texturen varje hörn visar, från 0 till 1. Gångrar man talen
+  // upprepas texturen så många gånger, så att stenarna är lika stora på alla vägar.
+  for (const [geometry, across, along] of [[strip, width, length], [cap, width, width]]) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+      uv.setXY(i, uv.getX(i) * (across / GRAVEL_UNITS), uv.getY(i) * (along / GRAVEL_UNITS));
+    }
+  }
+
+  const stripMesh = new THREE.Mesh(strip, material);
+  stripMesh.position.set((road.from.x + road.to.x) / 2, height, (road.from.z + road.to.z) / 2); // Mitt emellan ändarna.
+  stripMesh.rotation.y = Math.atan2(dx, dz); // Vrid så att längden pekar från start till mål.
+  stripMesh.renderOrder = order;
+  scene.add(stripMesh);
+
+  for (const end of [road.from, road.to]) {
+    const capMesh = new THREE.Mesh(cap, material);
+    capMesh.position.set(end.x, height, end.z);
+    // De runda ändarna ritas alltid strax EFTER den raka biten. Med samma nummer
+    // får grafikkortet välja ordning själv, och valet ändras när kameran rör sig –
+    // då byter änden och vägen plats om vartannat och det flimrar.
+    capMesh.renderOrder = order + 0.001;
+    scene.add(capMesh);
+  }
+}
+
+// .forEach ger både vägen och dess nummer i (0, 1, 2, ...).
+ROADS.forEach((road, i) => {
+  // "a || b" = a om det finns, annars b: vägens egen bredd, eller den vanliga.
+  const width = road.width || ROAD_WIDTH;
+  // Alla kantlinjer ligger lägst (samma färg, så de får gärna överlappa).
+  addRoadLayer(road, width + ROAD_EDGE * 2, roadEdgeMaterial, 0.006, -9);
+  // Gruset ovanpå. Varje väg ritas strax efter den förra (-8, -7.99, -7.98, ...),
+  // så att det alltid är samma väg som ligger överst där två korsar varandra.
+  addRoadLayer(road, width, gravelMaterial, 0.012 + i * 0.003, -8 + i * 0.01);
+});
+
+// ---------------------------------------------------------------------------
+// VÄGSKYLTAR – små träskyltar med en pil och en text. ÄNDRA HÄR.
+// ---------------------------------------------------------------------------
+//   text  – det som står på skylten.
+//   arrow – åt vilket håll pilen pekar på skärmen: 'up', 'left' eller 'right'.
+//   at    – var skylten står, { x, z }.
+const SIGNPOSTS = [
+  // Mitt emot uppfarten, på andra sidan huvudvägen: åt höger ligger tech art-projekten.
+  { text: 'Tech Art', arrow: 'right', at: towardCamera(homeRoadPoint, 4.2) },
+];
+
+const SIGNPOST_WIDTH = 4.2;
+const SIGNPOST_HEIGHT = 1.2;
+for (const signpost of SIGNPOSTS) {
+  const image = document.createElement('canvas');
+  image.width = 700;
+  image.height = 200; // Samma proportioner som brädan (4.2 x 1.2).
+  const brush = image.getContext('2d');
+  brush.fillStyle = PALETTE.sign;
+  brush.fillRect(0, 0, image.width, image.height);
+  brush.fillStyle = PALETTE.signText;
+  brush.font = 'bold 110px system-ui, sans-serif';
+  brush.textAlign = 'center';
+  brush.textBaseline = 'middle';
+  // Pilen är ett vanligt tecken. Vänsterpil står före texten, de andra efter.
+  // ← = ←, → = →, ↑ = ↑.
+  let label = `${signpost.text} ↑`;
+  if (signpost.arrow === 'left') label = `← ${signpost.text}`;
+  if (signpost.arrow === 'right') label = `${signpost.text} →`;
+  brush.fillText(label, image.width / 2, image.height / 2 + 6);
+  const texture = new THREE.CanvasTexture(image);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  const group = new THREE.Group();
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.6, 0.25), postMaterial);
+  post.position.set(0, 0.8, -0.14);
+  group.add(post);
+  // Brädan lutar bakåt runt sin underkant, som alla andra skyltar.
+  const board = new THREE.Group();
+  board.position.y = 1.4;
+  board.rotation.x = -SCREEN_TILT;
+  group.add(board);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(SIGNPOST_WIDTH + 0.25, SIGNPOST_HEIGHT + 0.25, 0.2), postMaterial);
+  frame.position.set(0, SIGNPOST_HEIGHT / 2 + 0.12, -0.11);
+  board.add(frame);
+  const face = new THREE.Mesh(
+    new THREE.PlaneGeometry(SIGNPOST_WIDTH, SIGNPOST_HEIGHT),
+    new THREE.MeshBasicMaterial({ map: texture })
+  );
+  face.position.set(0, SIGNPOST_HEIGHT / 2 + 0.12, 0);
+  board.add(face);
+
+  group.position.set(signpost.at.x, 0, signpost.at.z);
+  group.rotation.y = BILLBOARD_FACING; // Vänd mot kameran.
+  scene.add(group);
+}
+
+// Avståndet från en punkt (x, z) till närmaste ställe på en väg. Används för att
+// hålla träden borta från vägarna.
+function distanceToRoad(x, z, road) {
+  const dx = road.to.x - road.from.x;
+  const dz = road.to.z - road.from.z;
+  // t = hur långt längs vägen den närmaste punkten ligger: 0 = starten, 1 = målet.
+  // clamp håller t mellan 0 och 1, så att punkten aldrig hamnar utanför vägens ändar.
+  const t = THREE.MathUtils.clamp(((x - road.from.x) * dx + (z - road.from.z) * dz) / (dx * dx + dz * dz), 0, 1);
+  return Math.hypot(x - (road.from.x + dx * t), z - (road.from.z + dz * t));
+}
 
 // ---------------------------------------------------------------------------
 // LÖNNAR – höstträd utspridda över marken.
@@ -789,7 +1355,7 @@ const leafColors = PALETTE.leaves.map((hex) => new THREE.Color(hex));
 const CROWN_BLOBS = [[0, 2.8, 0, 1], [0.9, 2.3, 0.3, 0.7], [-0.8, 2.4, -0.4, 0.75]];
 
 // Steg 1: bestäm var träden ska stå.
-const TREE_TRIES = 110; // Fler försök än förut, eftersom de som hamnar utanför cirkeln hoppas över.
+const TREE_TRIES = 150; // Fler försök än förut, eftersom de som hamnar utanför cirkeln hoppas över.
 const trees = [];
 for (let i = 0; i < TREE_TRIES; i++) {
   // Math.random() ger ett slumptal mellan 0 och 1.
@@ -797,11 +1363,14 @@ for (let i = 0; i < TREE_TRIES; i++) {
   const x = (Math.random() - 0.5) * GROUND_SIZE;
   const z = (Math.random() - 0.5) * GROUND_SIZE;
 
-  // Math.hypot(x, z) = avståndet från mitten (Pythagoras). Inga träd på bilens startplats.
+  // Math.hypot(x, z) = avståndet från mitten (Pythagoras).
   // "continue" avbryter det här varvet och går vidare till nästa.
-  if (Math.hypot(x, z) < 8) continue;
+  // Inga träd på tomten runt stugan (där bilen startar).
+  if (Math.hypot(x - HOME_X, z - HOME_Z) < 12) continue;
   // Inga träd långt ute i toningen heller, där marken håller på att försvinna.
   if (Math.hypot(x, z) > DRIVE_RADIUS + 5) continue;
+  // Inga träd på eller precis intill en väg.
+  if (ROADS.some((road) => distanceToRoad(x, z, road) < ROAD_WIDTH / 2 + 2)) continue;
   // Inga träd nära en skylt heller, så att de inte skymmer skärmen.
   // .some(...) svarar "stämmer det här för minst ett projekt i listan?".
   if (PROJECTS.some((project) => Math.hypot(x - project.x, z - project.z) < 12)) continue;
@@ -814,6 +1383,19 @@ for (let i = 0; i < TREE_TRIES; i++) {
     // Math.floor avrundar nedåt = en slumpad plats i listan med lövfärger.
     color: leafColors[Math.floor(Math.random() * leafColors.length)],
   });
+}
+
+// Träd runt stugan. De här står på bestämda platser i stället för slumpade,
+// så att tomten ser likadan ut varje gång. [x, z, storlek, färgnummer], räknat
+// inne i hem-gruppen (-x = vänster, -z = uppåt på skärmen).
+const HOME_TREES = [
+  [-3, -5, 1.2, 1], [2.5, -6, 1.0, 0], [7, -5.5, 1.2, 2],   // Bakom garaget och stugan.
+  [-6.5, -1, 1.1, 0], [-7, 4, 1.0, 1], [-6, 8, 0.9, 2],     // Till vänster om garaget och uppfarten.
+];
+for (const [x, z, scale, colorIndex] of HOME_TREES) {
+  // localToWorld gör om platsen i hem-gruppen till en plats i världen.
+  const spot = homeGroup.localToWorld(new THREE.Vector3(x, 0, z));
+  trees.push({ x: spot.x, z: spot.z, angle: Math.random() * Math.PI * 2, scale, color: leafColors[colorIndex] });
 }
 
 // Steg 2: skapa två InstancedMesh. Sista talet = hur många kopior som ska ritas.
@@ -861,8 +1443,7 @@ const car = new THREE.Group();
 // Fyra material = fyra sorters ytor.
 // roughness: 0 = blank som en spegel, 1 = helt matt.
 // metalness: 0 = plast/gummi, 1 = metall.
-const paintMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.carPaint, roughness: 0.35, metalness: 0.3 });
-const glassMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.glass, roughness: 0.2 });
+// (paintMaterial och glassMaterial skapas längre upp, vid HEMMA, eftersom stugan också använder dem.)
 const tireMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.tire, roughness: 0.9 });
 const rimMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.rim, roughness: 0.4, metalness: 0.6 });
 
@@ -946,6 +1527,9 @@ for (const x of [-0.65, 0.65]) {
     if (z > 0) frontWheels.push(wheel); // Positivt z = fram.
   }
 }
+// Bilen startar inne i garaget och backar ut av sig själv (se INTRO i updateCar).
+const carStart = towardCamera({ x: HOME_X, z: HOME_Z }, GARAGE_Z); // Garagets mitt, i världen.
+car.position.set(carStart.x, 0, carStart.z);
 scene.add(car);
 
 // ---------------------------------------------------------------------------
@@ -1012,13 +1596,39 @@ const MAX_STEER = 0.5;     // Hur mycket framhjulen vrids, radianer (ca 29°).
 // "let" i stället för "const" eftersom de här värdena ändras hela tiden.
 let speed = 0;   // Nuvarande fart. Negativ = backar.
 // Åt vilket håll bilen pekar, i radianer. 0 = längs +Z.
-// Startvärdet PI / 4 (45°) pekar rakt uppåt på skärmen, mot skyltarna.
+// Startvärdet PI / 4 (45°) pekar rakt uppåt på skärmen: bilen står med nosen in i garaget.
 let heading = Math.PI / 4;
+
+// --- INTRO: bilen backar ut ur garaget av sig själv när sidan laddas ---
+const INTRO_SPEED = 4; // Hur fort den backar, enheter per sekund.
+// Hur långt den ska backa: från garagets mitt till parkeringsfickans mitt.
+let introLeft = HOME_PAD_Z - GARAGE_Z;
+// Porten är "öppen" (gömd) tills bilen är ute. Bakom den syns det mörka hålet.
+garageDoor.visible = false;
 
 // Körs en gång per bild. delta = sekunder sedan förra bilden (ca 0.016 vid 60 bilder/s).
 // Allt som ändras över tid gångras med delta. Då går bilen lika fort på en
 // snabb och en långsam dator: fart * tid = sträcka.
 function updateCar(delta) {
+  // INTRO: så länge det finns sträcka kvar backar bilen själv och tangenterna ignoreras.
+  if (introLeft > 0) {
+    // Hur långt bilen flyttas den här bilden. Math.min gör att den aldrig backar
+    // längre än det som är kvar, så den stannar exakt mitt i fickan.
+    const step = Math.min(INTRO_SPEED * delta, introLeft);
+    introLeft -= step;
+    // Backa = flytta MOT riktningen bilen pekar, därav minustecknen.
+    car.position.x -= Math.sin(heading) * step;
+    car.position.z -= Math.cos(heading) * step;
+    car.rotation.y = heading;
+    // Hjulen snurrar baklänges, lika fort som marken passerar (se längst ner i funktionen).
+    for (const spinner of spinners) {
+      spinner.rotation.x -= step / WHEEL_RADIUS;
+    }
+    // Framme: stäng porten. Från nästa bild styr tangenterna som vanligt.
+    if (introLeft <= 0) garageDoor.visible = true;
+    return; // Hoppa över resten av funktionen.
+  }
+
   // "villkor ? 1 : 0" betyder: 1 om villkoret är sant, annars 0.  || betyder "eller".
   // (framåt) - (bakåt) ger 1, -1 eller 0. Båda samtidigt tar ut varandra.
   const throttle = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
@@ -1109,6 +1719,7 @@ renderer.setAnimationLoop((time) => {
 
   updateCar(delta);
   updateBillboards(delta);
+  updateHome();
 
   // Kameran följer bilen. Först räknas siktpunkten ut: bilens position + försprånget.
   // .clone() gör en kopia först, annars skulle .add ändra bilens riktiga position.

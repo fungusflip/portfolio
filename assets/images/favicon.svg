@@ -1,0 +1,19 @@
+<!-- Ikonen på webbläsarfliken: den röda bilen sedd uppifrån, på gul mark.
+     SVG är en bild som beskrivs med former i text, så den är skarp i alla storlekar.
+     viewBox="0 0 32 32" = ritytan är 32 x 32 enheter. rx = hörnens rundning. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Mark -->
+  <rect width="32" height="32" rx="7" fill="#ffd166"/>
+  <!-- Fyra däck -->
+  <rect x="7" y="7" width="4" height="6" rx="1.5" fill="#1e1e20"/>
+  <rect x="21" y="7" width="4" height="6" rx="1.5" fill="#1e1e20"/>
+  <rect x="7" y="19" width="4" height="6" rx="1.5" fill="#1e1e20"/>
+  <rect x="21" y="19" width="4" height="6" rx="1.5" fill="#1e1e20"/>
+  <!-- Kaross -->
+  <rect x="9" y="4" width="14" height="24" rx="4" fill="#c8321e"/>
+  <!-- Hytt (glas) -->
+  <rect x="11.5" y="13" width="9" height="9" rx="2" fill="#25323d"/>
+  <!-- Strålkastare -->
+  <rect x="11" y="5" width="3" height="2" rx="1" fill="#fff4c2"/>
+  <rect x="18" y="5" width="3" height="2" rx="1" fill="#fff4c2"/>
+</svg>
