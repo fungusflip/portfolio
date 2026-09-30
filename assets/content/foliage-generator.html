@@ -1,0 +1,124 @@
+<p>I built a procedural foliage generation system in Houdini that creates optimized vegetation meshes, bakes them to cards, and brings them into Unreal Engine for real-time rendering. This tool bridges the gap between high-quality artistic foliage and performance-friendly game assets — all while staying fully procedural and customizable.</p>
+<p><strong>Houdini System Overview — Vertex Color Baking for Wind</strong></p>
+  <video controls muted loop playsinline preload="metadata">
+    <source src="https://filip.renemark.se/wp-content/uploads/2026/02/88f96917e1cbec7a8df68a057ac22c55.mp4" type="video/mp4">
+  </video>
+<p>Vertex color visualization showing sway intensity (stored in vertex colors) and direction data baked per-blade for realistic wind animation.</p>
+  <figure>
+    <img src="https://filip.renemark.se/wp-content/uploads/2026/02/de0b6b6b9d8cc88be9503801298383cc.png" alt="Houdini parameter interface showing Width, ClusterAmount, MaxBlades, Spread, Growth, Bend, and Subdivide controls" loading="lazy">
+  </figure>
+  
+    
+    <p><strong>Vertex Color Baking for Wind Animation</strong><br>One of the most important parts of this system is the <strong>vertex color baking</strong> for controlling wind behavior. Instead of uniform wind across all grass, I bake <strong>sway intensity</strong> and <strong>direction</strong> directly into the vertex colors of each blade during generation.</p>
+    
+    
+    <p>In the VEX code, each vertex gets:<br>
+    • <strong>Red/Green channels (U/V)</strong> — Encodes position along the blade (0 = root, 1 = tip)<br>
+    • <strong>Blue channel (phase)</strong> — Randomized per-blade to offset wind timing<br>
+    • <strong>Amplitude attribute</strong> — Controls individual blade sway strength</p>
+    
+    
+    <p>This data is then read by the Unreal shader, allowing each blade to respond to wind forces with <strong>unique timing, intensity, and directionality</strong>. The result is organic, non-uniform motion that sells the illusion of natural wind flow — no two blades move identically.</p>
+    
+  
+<p><strong>Foliage Mesh Generation in Houdini</strong></p>
+  <video controls muted loop playsinline preload="metadata">
+    <source src="https://filip.renemark.se/wp-content/uploads/2026/01/446559c5acd9184eb7abb200f13f74b3.mp4" type="video/mp4">
+  </video>
+<p>Procedural generation of detailed foliage meshes with controllable density, shape, and variation.</p>
+  
+    
+    <p><strong>Parameter-Driven Generation with TOPs</strong><br>The entire system is driven by a set of exposed parameters that control every aspect of the foliage generation. Using <strong>Houdini TOPs (Task Operators)</strong>, I can generate clusters and individual leaves in parallel, with each leaf randomized based on the tool’s parameters.</p>
+    
+    
+    <p>The key parameters include:<br>
+    • <strong>Width</strong> — Controls blade width<br>
+    • <strong>ClusterAmount</strong> — Number of grass clusters (30 in this setup)<br>
+    • <strong>MaxBlades</strong> — Maximum blades per cluster (3)<br>
+    • <strong>Spread</strong> — How far blades spread from center (1.434)<br>
+    • <strong>Growth</strong> — Height variation (0.5)<br>
+    • <strong>Bend</strong> — Natural blade curvature<br>
+    • <strong>Subdivide</strong> — Mesh resolution control</p>
+    
+    
+    <p>By using TOPs, the system can generate hundreds of unique variations in parallel, dramatically speeding up iteration times. Each cluster and leaf inherits randomized values within the parameter ranges, ensuring natural variation without manual tweaking.</p>
+    
+  
+  <figure>
+    <img src="https://filip.renemark.se/wp-content/uploads/2026/02/de0b6b6b9d8cc88be9503801298383cc.png" alt="Houdini parameter interface" loading="lazy">
+  </figure>
+<p><strong>Thick Grass Generation System</strong></p>
+  <video controls muted loop playsinline preload="metadata">
+    <source src="https://filip.renemark.se/wp-content/uploads/2026/02/608ac32aa7a9c10f14d576e37314cff8.mp4" type="video/mp4">
+  </video>
+<p>Dense grass clusters generated procedurally with natural variation and clumping behavior.</p>
+  <figure>
+    <video controls muted loop playsinline preload="metadata">
+      <source src="https://filip.renemark.se/wp-content/uploads/2026/01/40b852a75775d6a348a1cc161bfe0f02.mp4" type="video/mp4">
+    </video>
+  </figure>
+  
+    
+    <p><strong>Tall Grass in Unreal Engine</strong><br>The generated foliage brought into Unreal Engine with real-time lighting and wind simulation. The system generates billboards and cards optimized for performance while maintaining visual quality. Each grass blade is procedurally varied to avoid repetition, and the entire setup is fully data-driven — meaning I can tweak parameters in Houdini and regenerate entire biomes on demand.</p>
+    
+    
+    <p>Getting the materials to feel natural was a big part of this. I used gradient-based color variation tied to world position and height, so grass transitions naturally from root to tip. Combined with subsurface scattering and translucency, the grass reacts beautifully to directional light. The vertex color data drives the wind shader, reading the baked phase and amplitude to create convincing motion.</p>
+    
+  
+  
+    
+    <p><strong>Foliage Card Baking &amp; Optimization</strong><br>The real challenge wasn’t just generating the foliage — it was making it performant. High-poly grass looks great in isolation, but scatter thousands of instances across a landscape and your framerate tanks. That’s where foliage cards come in.</p>
+    
+    
+    <p>I built a baking pipeline in Houdini that takes the high-detail mesh and flattens it into optimized billboard cards. These cards capture the silhouette and lighting information of the original mesh but render at a fraction of the cost. The system automatically generates UVs, bakes normal maps, and outputs alpha-masked textures ready for engine import.</p>
+    
+    
+    <p>The trick was balancing visual fidelity with triangle count. Too few faces and the grass looks flat and fake. Too many and you lose the performance benefit. I landed on a sweet spot using crossed quads with carefully authored normals to sell the volume from multiple angles. The vertex colors are preserved through the baking process, ensuring wind animation works identically on cards as it does on full geometry.</p>
+    
+  
+  <figure>
+    <video controls muted loop playsinline preload="metadata">
+      <source src="https://filip.renemark.se/wp-content/uploads/2026/02/e2c48a8eaf352ae1180427ca69eb47b7.mp4" type="video/mp4">
+    </video>
+  </figure>
+<h3>Technical Breakdown</h3>
+  
+  
+    
+    <h4>Houdini Generation</h4>
+    
+    
+    <ul>
+      <li>Parameter-driven procedural system</li>
+      <li>TOPs for parallel cluster generation</li>
+      <li>Per-leaf randomization from parameters</li>
+      <li>Vertex color baking for sway data</li>
+      <li>Phase and amplitude per-blade</li>
+      <li>Curve-based blade geometry with bending</li>
+      <li>Clumping and natural variation</li>
+      <li>Automatic LOD generation</li>
+      <li>UV layout and atlas packing</li>
+    </ul>
+    
+  
+  
+  
+  
+    
+    <h4>Unreal Integration</h4>
+    
+    
+    <ul>
+      <li>Vertex color-driven wind shader</li>
+      <li>Per-blade phase and amplitude control</li>
+      <li>Subsurface scattering for translucency</li>
+      <li>Gradient-based color variation</li>
+      <li>Instance-based rendering for performance</li>
+      <li>Distance-based LOD transitions</li>
+      <li>Collision-responsive grass (player interaction)</li>
+    </ul>
+    
+  
+  
+<p><em>This system is fully modular and reusable — I can generate forests, meadows, or alien vegetation by tweaking parameters and swapping textures. The vertex color baking technique allows for incredibly nuanced wind behavior without expensive per-blade calculations in the shader. The TOPs-based approach means I can batch-generate thousands of variations for massive open worlds. It’s become a core part of my environment toolkit.</em></p>
+<p><img src="https://filip.renemark.se/shaders-rendering/project-water-shader/attachment/tgalogowhite" alt="Logo" loading="lazy"></p>

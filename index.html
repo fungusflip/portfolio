@@ -48,10 +48,26 @@
     <!-- Rad 2 visas bara när bilen står framför en skylt. "hidden" gömmer den från början;
          js/main.js tar bort och sätter tillbaka "hidden" och fyller i texten. -->
     <div class="guide-row" id="guideEnter" hidden>
-      <span class="guide-keys"><kbd>Enter</kbd></span>
+      <span class="guide-keys"><kbd>Enter</kbd><kbd>Tab</kbd></span>
       <span id="guideText"></span>
     </div>
   </div>
+
+  <!-- Infopanelen: öppnas med Enter/Tab på en parkeringsruta. "hidden" gömmer den från början.
+       js/main.js fyller i kategori, rubrik och text (texten hämtas från assets/content/). -->
+  <aside class="panel" id="panel" hidden>
+    <header class="panel-head">
+      <div>
+        <div class="panel-category" id="panelCategory"></div>
+        <h1 class="panel-title" id="panelTitle"></h1>
+      </div>
+      <button class="panel-close" id="panelClose" aria-label="Close">&times;</button>
+    </header>
+    <!-- Själva texten, bilderna och videorna. -->
+    <div class="panel-body" id="panelBody"></div>
+    <a class="panel-link" id="panelLink" target="_blank" rel="noopener">Open the full page &rarr;</a>
+    <div class="panel-hint"><kbd>Esc</kbd> close</div>
+  </aside>
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->

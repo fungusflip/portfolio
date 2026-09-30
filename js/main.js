@@ -63,6 +63,7 @@ const PALETTE = {
   frame: '#2b2d33',      // Ramen runt skyltarnas skärm: mörkgrå.
   sign: '#fff3d6',       // Textskyltens bakgrund: grädde.
   signText: '#25323d',   // Textens färg.
+  signGlow: '#f0561a',   // Textens färg när bilen står i rutan: "tänd" orange.
 };
 // PALETTE.background betyder "värdet som heter background i PALETTE".
 scene.background = new THREE.Color(PALETTE.background);
@@ -205,16 +206,18 @@ const DRIVE_RADIUS = (GROUND_SIZE / 2) * FADE_START;
 //           .mp4 / .webm = video, .gif = animerad gif, .png / .jpg = stillbild,
 //           null = ingen fil än (en "play"-symbol visas).
 //           Video är att föredra: mycket mindre filer än gif och lättare för datorn.
-//   url   – sidan som öppnas när man trycker Enter framför skylten. null = ingen.
+//   url   – projektets egen sida på filip.renemark.se. Länkas längst ner i infopanelen. null = ingen länk.
+//   category – liten etikett överst i infopanelen.
+//   content  – textfilen (HTML) som visas i infopanelen när man trycker Enter/Tab på parkeringsrutan.
 //   x, z  – var skylten står på marken.
 //   phone – true = klippet är filmat på höjden (mobilformat). Skylten byggs då
 //           som en jättelik mobiltelefon i stället för en liggande bioduk.
 // Lägg till en rad för en ny skylt, ta bort en rad för att ta bort en.
 const PROJECTS = [
-  { title: 'Foliage Generator', media: 'assets/videos/foliage-generator.mp4', url: 'https://filip.renemark.se/misc/folliage-generator', x: 20, z: -10 },
-  { title: 'Water Shader', media: 'assets/videos/water-shader.mp4', url: 'https://filip.renemark.se/shaders-rendering/project-water-shader', x: 10, z: 0 },
-  { title: 'SpookChester — Pixelart Render', media: 'assets/videos/spookchester.mp4', url: 'https://filip.renemark.se/misc/spookchester-pixelart-render', x: 0, z: 10 },
-  { title: 'Mutation Protocol', media: 'assets/videos/mutation-protocol.mp4', url: 'https://filip.renemark.se/misc/mutation-protocol', x: -10, z: 20, phone: true },
+  { title: 'Foliage Generator', media: 'assets/videos/foliage-generator.mp4', url: 'https://filip.renemark.se/misc/folliage-generator', category: 'Misc', content: 'assets/content/foliage-generator.html', x: 20, z: -10 },
+  { title: 'Water Shader', media: 'assets/videos/water-shader.mp4', url: 'https://filip.renemark.se/shaders-rendering/project-water-shader', category: 'Shaders & Rendering', content: 'assets/content/water-shader.html', x: 10, z: 0 },
+  { title: 'SpookChester — Pixelart Render', media: 'assets/videos/spookchester.mp4', url: 'https://filip.renemark.se/misc/spookchester-pixelart-render', category: 'Misc', content: 'assets/content/spookchester.html', x: 0, z: 10 },
+  { title: 'Mutation Protocol', media: 'assets/videos/mutation-protocol.mp4', url: 'https://filip.renemark.se/misc/mutation-protocol', category: 'Misc', content: 'assets/content/mutation-protocol.html', x: -10, z: 20, phone: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -467,7 +470,8 @@ function makePlayer(billboard) {
 }
 
 // Gör en textur med projektets namn, till skylten ovanför skärmen.
-function makeTitleTexture(title) {
+// lit = true ger samma skylt men med tänd (orange) text, när bilen står i rutan.
+function makeTitleTexture(title, lit = false) {
   const image = document.createElement('canvas');
   image.width = 1024;
   image.height = 140; // Samma proportioner som skylten (8 x 1.1), annars blir texten utdragen.
@@ -482,7 +486,7 @@ function makeTitleTexture(title) {
     fontSize -= 4;
     brush.font = `bold ${fontSize}px system-ui, sans-serif`;
   }
-  brush.fillStyle = PALETTE.signText;
+  brush.fillStyle = lit ? PALETTE.signGlow : PALETTE.signText;
   brush.textAlign = 'center';     // x nedan betyder textens mitt...
   brush.textBaseline = 'middle';  // ...och y betyder textens mitt på höjden.
   brush.fillText(title, image.width / 2, image.height / 2);
@@ -494,17 +498,19 @@ function makeTitleTexture(title) {
 }
 
 // Parkeringsrutans bild: en ram med texten ENTER, på genomskinlig bakgrund.
-// Samma textur delas av alla rutor.
-function makePadTexture() {
+// lit = true ger samma ruta med tänd (orange) ram och text, när bilen står i den.
+// Samma två texturer delas av alla rutor.
+function makePadTexture(lit) {
   const image = document.createElement('canvas');
   image.width = 512;
   image.height = 256;
   const brush = image.getContext('2d');
+  const color = lit ? PALETTE.signGlow : PALETTE.signText;
   // Inget fillRect över hela bilden = bakgrunden förblir genomskinlig.
-  brush.strokeStyle = PALETTE.signText; // stroke = linjer, fill = fyllda ytor.
+  brush.strokeStyle = color; // stroke = linjer, fill = fyllda ytor.
   brush.lineWidth = 14;
   brush.strokeRect(12, 12, 488, 232);   // En ram en bit innanför kanten.
-  brush.fillStyle = PALETTE.signText;
+  brush.fillStyle = color;
   brush.font = 'bold 96px system-ui, sans-serif';
   brush.textAlign = 'center';
   brush.textBaseline = 'middle';
@@ -514,7 +520,8 @@ function makePadTexture() {
   texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
   return texture;
 }
-const padTexture = makePadTexture();
+const padTexture = makePadTexture(false);
+const padTextureActive = makePadTexture(true);
 
 // Här sparas allt som behövs om varje skylt medan programmet kör.
 const billboards = [];
@@ -581,10 +588,11 @@ for (const project of PROJECTS) {
   // och höjden krymper lika mycket så att texten inte blir utdragen.
   const signWidth = isPhone ? 6 : SCREEN_WIDTH;
   const signHeight = SIGN_HEIGHT * (signWidth / SCREEN_WIDTH);
-  const sign = new THREE.Mesh(
-    new THREE.PlaneGeometry(signWidth, signHeight),
-    new THREE.MeshBasicMaterial({ map: makeTitleTexture(project.title) })
-  );
+  // Två texturer per skylt: vanlig och markerad (när bilen står i rutan). Byts i updateBillboards.
+  const titleTexture = makeTitleTexture(project.title);
+  const titleTextureActive = makeTitleTexture(project.title, true);
+  const signMaterial = new THREE.MeshBasicMaterial({ map: titleTexture });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(signWidth, signHeight), signMaterial);
   sign.position.set(0, height + border * 2 + 0.2 + signHeight / 2, 0);
   panel.add(sign);
 
@@ -607,6 +615,9 @@ for (const project of PROJECTS) {
     texture,        // Skärmens textur.
     screenMaterial,
     padMaterial,
+    signMaterial,
+    titleTexture,
+    titleTextureActive,
     // Parkeringsrutans mitt i VÄRLDEN. Rutan ligger PAD_DISTANCE framför skylten,
     // åt det håll skylten vetter. sin/cos gör om vinkeln till en riktning (som för bilen).
     padX: project.x + Math.sin(BILLBOARD_FACING) * PAD_DISTANCE,
@@ -620,9 +631,9 @@ for (const project of PROJECTS) {
 const guideEnter = document.getElementById('guideEnter');
 const guideText = document.getElementById('guideText');
 
-// Visar raden "Enter – Read more: ..." för ett projekt, eller gömmer den om project är null.
+// Visar raden "Enter / Tab – Read more: ..." för ett projekt, eller gömmer den om project är null.
 function showGuide(project) {
-  if (project && project.url) {
+  if (project && project.content) {
     guideText.textContent = `Read more: ${project.title}`; // textContent = elementets text.
     guideEnter.hidden = false;
   } else {
@@ -643,7 +654,11 @@ function updateBillboards(delta) {
       // "villkor ? a : b" = a om sant, annars b.
       billboard.screenMaterial.color.set(near ? '#ffffff' : '#777777');
       billboard.padMaterial.opacity = near ? 1 : 0.3;
+      // Tänd texten: rutan och titeln byter färg till orange medan bilen står där.
+      billboard.padMaterial.map = near ? padTextureActive : padTexture;
+      billboard.signMaterial.map = near ? billboard.titleTextureActive : billboard.titleTexture;
       showGuide(near ? billboard.project : null);
+      if (!near && panelProject === billboard.project) closePanel();
 
       if (near) {
         // Bilen körde in: skapa en spelare. Filen laddas alltså först nu, när den behövs.
@@ -665,12 +680,78 @@ function updateBillboards(delta) {
   }
 }
 
-// Enter framför en skylt öppnar projektets sida i en ny flik.
+// ---------------------------------------------------------------------------
+// INFOPANELEN – en ruta till vänster med projektets text, bilder och videor.
+// ---------------------------------------------------------------------------
+// Enter eller Tab på en parkeringsruta öppnar den. Esc, Enter, Tab eller krysset stänger.
+// Medan den är öppen står bilen still, så piltangenterna kan rulla texten i stället.
+const panel = document.getElementById('panel');
+const panelCategory = document.getElementById('panelCategory');
+const panelTitle = document.getElementById('panelTitle');
+const panelBody = document.getElementById('panelBody');
+const panelLink = document.getElementById('panelLink');
+let panelOpen = false;
+let panelProject = null; // Vilket projekt panelen visar just nu.
+
+// Hämtade textfiler sparas här, så att varje fil bara hämtas en gång.
+const contentCache = new Map();
+
+async function openPanel(project) {
+  panelOpen = true;
+  panelProject = project;
+  keys.clear(); // Släpp alla körtangenter så att bilen inte fortsätter själv.
+  panelCategory.textContent = project.category || '';
+  panelTitle.textContent = project.title;
+  panelBody.textContent = 'Loading…';
+  panelBody.scrollTop = 0;
+  panelLink.hidden = !project.url;
+  if (project.url) panelLink.href = project.url;
+  panel.hidden = false;
+
+  // fetch hämtar en fil från nätet/servern. await väntar tills den är klar.
+  if (!contentCache.has(project.content)) {
+    try {
+      const response = await fetch(project.content);
+      contentCache.set(project.content, response.ok ? await response.text() : null);
+    } catch (error) {
+      contentCache.set(project.content, null);
+    }
+  }
+  // Användaren kan ha stängt panelen eller bytt projekt medan filen hämtades.
+  if (panelProject !== project) return;
+  const html = contentCache.get(project.content);
+  // innerHTML tolkar texten som HTML. Filerna är våra egna, så det är säkert.
+  if (html) panelBody.innerHTML = html;
+  else panelBody.textContent = 'Could not load the text. Use the link below instead.';
+}
+
+function closePanel() {
+  panelOpen = false;
+  panelProject = null;
+  panel.hidden = true;
+  panelBody.textContent = ''; // Släpper bilder och videor ur minnet.
+  // Tangenter som hölls nedtryckta medan panelen var öppen ska inte styra bilen.
+  keys.clear();
+}
+
+document.getElementById('panelClose').addEventListener('click', closePanel);
+
 window.addEventListener('keydown', (e) => {
-  if (e.code !== 'Enter') return;
+  if (e.code === 'Escape' && panelOpen) {
+    closePanel();
+    return;
+  }
+  if (e.code !== 'Enter' && e.code !== 'Tab') return;
+  // Tab flyttar annars fokus mellan knappar och länkar. Vi vill använda den själva.
+  e.preventDefault();
+  if (e.repeat) return; // Håller man tangenten nere ska panelen inte blinka av och på.
+  if (panelOpen) {
+    closePanel();
+    return;
+  }
   // .find ger det första i listan som uppfyller villkoret (eller ingenting).
   const billboard = billboards.find((b) => b.active);
-  if (billboard && billboard.project.url) window.open(billboard.project.url, '_blank');
+  if (billboard && billboard.project.content) openPanel(billboard.project);
 });
 
 // ---------------------------------------------------------------------------
@@ -868,6 +949,7 @@ const DRIVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'Arr
 // (e) => { ... } är en funktion; e är information om händelsen.
 window.addEventListener('keydown', (e) => {
   if (!DRIVE_KEYS.includes(e.code)) return; // Inte en körtangent? Gör ingenting.
+  if (panelOpen) return; // Infopanelen är öppen: bilen står still.
   e.preventDefault(); // Stoppar webbläsarens egna beteende, t.ex. att pilarna scrollar sidan.
   keys.add(e.code);
 });
