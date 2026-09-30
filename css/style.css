@@ -243,8 +243,9 @@ html, body {
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
   }
-  /* Uppåt/nedåt ligger på höjden, som en gas- och bromspedal. */
-  .touch-right { flex-direction: column-reverse; }
+  /* Uppåt/nedåt staplas på höjden, med framåt överst och back under –
+     samma ordning som knapparna står i index.html. */
+  .touch-right { flex-direction: column; }
   .touch-btn.pressed {
     background: #f0561a;             /* Samma "tända" orange som skyltarna. */
     color: #fff3d6;
@@ -252,14 +253,13 @@ html, body {
     transform: translateY(3px);
   }
 
-  /* "Read more"-knappen, mitt i nederkanten. */
+  /* "Read more"-knappen, mitt i överkanten – långt från körknapparna, så att de inte krockar. */
   .touch-action {
     position: fixed;
     left: 50%;
-    bottom: calc(40px + env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    max-width: calc(100vw - 340px);  /* Får inte krocka med knapparna på sidorna. */
-    min-width: 120px;
+    top: calc(20px + env(safe-area-inset-top)); /* env(...) = plats för kameraön/klockan på iPhone. */
+    transform: translateX(-50%);                 /* Flyttar knappen halva sin bredd åt vänster = exakt mitten. */
+    min-width: 140px;
     padding: 14px 20px;
     border: 0;
     border-radius: 999px;
