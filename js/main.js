@@ -171,12 +171,14 @@ scene.add(ground);
 //           Video är att föredra: mycket mindre filer än gif och lättare för datorn.
 //   url   – sidan som öppnas när man trycker Enter framför skylten. null = ingen.
 //   x, z  – var skylten står på marken.
+//   phone – true = klippet är filmat på höjden (mobilformat). Skylten byggs då
+//           som en jättelik mobiltelefon i stället för en liggande bioduk.
 // Lägg till en rad för en ny skylt, ta bort en rad för att ta bort en.
 const PROJECTS = [
-  { title: 'Camilla — Procedural Robot', media: 'assets/videos/camilla-robots.mp4', url: 'https://filip.renemark.se/misc/1544', x: 20, z: -10 },
-  { title: 'Vertex Animation Texture Pipeline', media: 'assets/images/vat-fluid.gif', url: 'https://filip.renemark.se/misc/bar-fluid', x: 10, z: 0 },
-  { title: 'Spite: Catharsis', media: 'assets/images/spite-rubble.gif', url: 'https://filip.renemark.se/misc/spite-catharsis', x: 0, z: 10 },
-  { title: 'Idle Village', media: 'assets/images/idle-village.gif', url: 'https://filip.renemark.se/misc/idle-village', x: -10, z: 20 },
+  { title: 'Foliage Generator', media: 'assets/videos/foliage-generator.mp4', url: 'https://filip.renemark.se/misc/folliage-generator', x: 20, z: -10 },
+  { title: 'Water Shader', media: 'assets/videos/water-shader.mp4', url: 'https://filip.renemark.se/shaders-rendering/project-water-shader', x: 10, z: 0 },
+  { title: 'SpookChester — Pixelart Render', media: 'assets/videos/spookchester.mp4', url: 'https://filip.renemark.se/misc/spookchester-pixelart-render', x: 0, z: 10 },
+  { title: 'Mutation Protocol', media: 'assets/videos/mutation-protocol.mp4', url: 'https://filip.renemark.se/misc/mutation-protocol', x: -10, z: 20, phone: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -191,9 +193,13 @@ const SCREEN_TILT = 0.3;   // Hur mycket skärmen lutar bakåt, i radianer (ca 1
 const PAD_DISTANCE = 6;    // Hur långt framför skylten parkeringsrutan ligger.
 const PAD_RADIUS = 4;      // Hur nära rutans mitt bilen måste vara för att skärmen ska starta.
 
-// Skärmens bild i pixlar. Också 16:9. Större = skarpare men tyngre för datorn.
-const SCREEN_PIXELS_X = 960;
-const SCREEN_PIXELS_Y = 540;
+const PHONE_WIDTH = 4;     // Mobilskyltens skärm: 4 x 7.1 = formatet 9:16 (stående).
+const PHONE_HEIGHT = 7.1;
+
+// Skärmens bild i pixlar: 960 på långsidan, 540 på kortsidan.
+// Större = skarpare men tyngre för datorn.
+const SCREEN_PIXELS_LONG = 960;
+const SCREEN_PIXELS_SHORT = 540;
 
 // Alla skyltar vrids så att de vetter mot kameran. Kameran står alltid åt
 // samma håll från bilen (cameraOffset), så samma vinkel fungerar överallt.
@@ -204,37 +210,68 @@ const postMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.trunk, roug
 const frameMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.frame, roughness: 0.8 });
 
 // --- Att rita på en skärm ---
-// Varje skylt har en egen osynlig canvas (960 x 540) som är skärmens bild.
-// Allt som ska visas – play-symbol, video, gif, stillbild – ritas i den, och
-// canvasen används som textur. Då fungerar alla filtyper på samma sätt.
+// Varje skylt har en egen osynlig canvas som är skärmens bild (960 x 540 pixlar,
+// eller 540 x 960 för en mobilskylt). Allt som ska visas – play-symbol,
+// laddningssnurra, video, gif, stillbild – ritas i den, och canvasen används
+// som textur. Då fungerar alla filtyper på samma sätt.
+// brush.canvas är canvasen som pennan hör till; därifrån läses bredd och höjd.
 
-// Play-symbolen som visas innan skärmen har startat.
+// Play-symbolen som visas när skärmen är avstängd.
 function drawPlaceholder(brush) {
+  const width = brush.canvas.width;
+  const height = brush.canvas.height;
   brush.fillStyle = PALETTE.glass;
-  brush.fillRect(0, 0, SCREEN_PIXELS_X, SCREEN_PIXELS_Y); // fillRect(x, y, bredd, höjd).
+  brush.fillRect(0, 0, width, height); // fillRect(x, y, bredd, höjd).
   // En triangel ritas som en "stig" (path) mellan tre punkter som sedan fylls.
+  // Punkterna räknas från mitten (cx, cy), så symbolen hamnar rätt oavsett skärmens form.
+  const cx = width / 2;
+  const cy = height / 2;
   brush.fillStyle = PALETTE.speckle;
   brush.beginPath();
-  brush.moveTo(430, 190); // Övre vänstra hörnet.
-  brush.lineTo(430, 350); // Nedre vänstra hörnet.
-  brush.lineTo(560, 270); // Spetsen till höger.
+  brush.moveTo(cx - 50, cy - 80); // Övre vänstra hörnet.
+  brush.lineTo(cx - 50, cy + 80); // Nedre vänstra hörnet.
+  brush.lineTo(cx + 80, cy);      // Spetsen till höger.
   brush.fill();
 }
 
+// Laddningssnurran som visas medan klippet hämtas: en båge som snurrar runt mitten.
+// Den ritas om varje bild, lite mer vriden varje gång.
+function drawLoading(billboard) {
+  const brush = billboard.brush;
+  const width = brush.canvas.width;
+  const height = brush.canvas.height;
+  brush.fillStyle = PALETTE.glass; // Samma bakgrund som play-symbolen, så bytet inte blinkar.
+  brush.fillRect(0, 0, width, height);
+  // performance.now() = millisekunder sedan sidan laddades. Gånger 0.006 ger
+  // en vinkel som ökar med ungefär ett varv per sekund.
+  const angle = performance.now() * 0.006;
+  brush.strokeStyle = PALETTE.speckle;
+  brush.lineWidth = 16;
+  brush.lineCap = 'round'; // Runda ändar på linjen.
+  brush.beginPath();
+  // arc(mitt x, mitt y, radie, startvinkel, slutvinkel): en bit av en cirkel,
+  // här tre fjärdedels varv (1.5 * PI).
+  brush.arc(width / 2, height / 2, 60, angle, angle + Math.PI * 1.5);
+  brush.stroke();
+  billboard.texture.needsUpdate = true;
+}
+
 // Ritar en bild (video, gif-bild eller stillbild) på en skylts skärm.
-// Bilden förminskas så att HELA får plats, med mörka kanter om formatet inte är 16:9.
+// Bilden förminskas så att HELA får plats, med mörka kanter om formatet inte stämmer.
 //   source = det som ska ritas, width/height = dess storlek i pixlar.
 function drawOnScreen(billboard, source, width, height) {
   const brush = billboard.brush;
+  const screenWidth = brush.canvas.width;
+  const screenHeight = brush.canvas.height;
   brush.fillStyle = PALETTE.frame;
-  brush.fillRect(0, 0, SCREEN_PIXELS_X, SCREEN_PIXELS_Y);
+  brush.fillRect(0, 0, screenWidth, screenHeight);
   // Hur mycket bilden måste krympas för att få plats på bredden och på höjden.
   // Math.min väljer den minsta av de två, så att den får plats åt båda hållen.
-  const scale = Math.min(SCREEN_PIXELS_X / width, SCREEN_PIXELS_Y / height);
+  const scale = Math.min(screenWidth / width, screenHeight / height);
   const drawWidth = width * scale;
   const drawHeight = height * scale;
   // drawImage(bild, x, y, bredd, höjd). x och y räknas ut så att bilden hamnar i mitten.
-  brush.drawImage(source, (SCREEN_PIXELS_X - drawWidth) / 2, (SCREEN_PIXELS_Y - drawHeight) / 2, drawWidth, drawHeight);
+  brush.drawImage(source, (screenWidth - drawWidth) / 2, (screenHeight - drawHeight) / 2, drawWidth, drawHeight);
   // Säger till three.js att canvasen har ändrats och måste skickas till grafikkortet igen.
   billboard.texture.needsUpdate = true;
 }
@@ -257,6 +294,7 @@ function makeVideoPlayer(billboard) {
   video.loop = true;        // Börja om när den tar slut.
   video.muted = true;       // Webbläsare tillåter bara automatisk start om ljudet är av.
   video.playsInline = true; // Hindrar mobiler från att öppna videon i helskärm.
+  let started = false;      // Blir true när videon faktiskt har börjat visa bilder.
   return {
     // play() kan nekas av webbläsaren; .catch gör att det inte blir ett fel i så fall.
     play() { video.play().catch(() => {}); },
@@ -268,8 +306,14 @@ function makeVideoPlayer(billboard) {
       video.load();
     },
     update() {
-      // readyState 2 eller mer = det finns en färdig bild att visa.
-      if (video.readyState >= 2) drawOnScreen(billboard, video, video.videoWidth, video.videoHeight);
+      // Videon räknas som igång när tiden har börjat gå (currentTime över 0).
+      // Innan dess finns ingen riktig bild att visa, bara svart.
+      if (video.currentTime > 0) started = true;
+      if (started) {
+        drawOnScreen(billboard, video, video.videoWidth, video.videoHeight);
+      } else {
+        drawLoading(billboard); // Visa snurran tills första bilden finns.
+      }
     },
   };
 }
@@ -343,7 +387,10 @@ function makeGifPlayer(billboard) {
       patch.height = 0;
     },
     update(delta) {
-      if (frames.length === 0) return; // Filen har inte laddats klart än.
+      if (frames.length === 0) {
+        drawLoading(billboard); // Filen har inte laddats klart än: visa snurran.
+        return;
+      }
       wait -= delta;
       if (wait <= 0) {
         wait = Math.max(wait, -0.1); // Försök inte "ta igen" tid efter ett långt hack.
@@ -356,12 +403,18 @@ function makeGifPlayer(billboard) {
 // Stillbild: laddas och ritas en enda gång.
 function makeImagePlayer(billboard) {
   const image = new Image();
+  let loaded = false;
   // onload körs när bilden har laddats klart.
-  image.onload = () => drawOnScreen(billboard, image, image.width, image.height);
+  image.onload = () => {
+    loaded = true;
+    drawOnScreen(billboard, image, image.width, image.height);
+  };
   image.src = billboard.project.media;
   return {
     play() {},
-    update() {},
+    update() {
+      if (!loaded) drawLoading(billboard); // Visa snurran tills bilden är laddad.
+    },
     stop() {
       image.onload = null; // Rita inte om bilden hinner laddas efter att vi lämnat.
       image.src = '';
@@ -434,32 +487,43 @@ const billboards = [];
 for (const project of PROJECTS) {
   const group = new THREE.Group();
 
-  // Två stolpar, en på var sida.
-  for (const x of [-3, 3]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, POST_HEIGHT, 0.3), postMaterial);
-    post.position.set(x, POST_HEIGHT / 2, -0.16); // Mitten = halva höjden, så botten står på marken.
-    group.add(post);
+  // Skyltens mått beror på om den är en liggande bioduk eller en stående mobil.
+  // "villkor ? a : b" = a om sant, annars b.
+  const isPhone = project.phone === true;
+  const width = isPhone ? PHONE_WIDTH : SCREEN_WIDTH;
+  const height = isPhone ? PHONE_HEIGHT : SCREEN_HEIGHT;
+  const border = isPhone ? 0.25 : 0.2;        // Ramens bredd runt skärmen. Mobilen har lite tjockare kant.
+  const baseY = isPhone ? 0.1 : POST_HEIGHT;  // Panelens underkant: mobilen står direkt på marken.
+
+  // Bioduken står på två stolpar, en på var sida. Mobilen har inga.
+  if (!isPhone) {
+    for (const x of [-3, 3]) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, POST_HEIGHT, 0.3), postMaterial);
+      post.position.set(x, POST_HEIGHT / 2, -0.16); // Mitten = halva höjden, så botten står på marken.
+      group.add(post);
+    }
   }
 
   // Panelen = allt som lutar: ram, skärm och textskylt. Gruppen sitter vid
-  // skärmens underkant, så lutningen sker runt den kanten som ett gångjärn.
+  // panelens underkant, så lutningen sker runt den kanten som ett gångjärn.
   const panel = new THREE.Group();
-  panel.position.y = POST_HEIGHT;
+  panel.position.y = baseY;
   panel.rotation.x = -SCREEN_TILT; // Minus = överkanten lutar bakåt, skärmen vänds uppåt mot kameran.
   group.add(panel);
 
   // Ram: en platt låda lite större än skärmen, precis bakom den.
   const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(SCREEN_WIDTH + 0.4, SCREEN_HEIGHT + 0.4, 0.3),
+    new THREE.BoxGeometry(width + border * 2, height + border * 2, 0.3),
     frameMaterial
   );
-  frame.position.set(0, SCREEN_HEIGHT / 2 + 0.2, -0.16);
+  frame.position.set(0, height / 2 + border, -0.16);
   panel.add(frame);
 
   // Skärmens bild: en egen canvas per skylt, med play-symbolen från början.
+  // Mobilen får en stående canvas (540 x 960), bioduken en liggande (960 x 540).
   const screenImage = document.createElement('canvas');
-  screenImage.width = SCREEN_PIXELS_X;
-  screenImage.height = SCREEN_PIXELS_Y;
+  screenImage.width = isPhone ? SCREEN_PIXELS_SHORT : SCREEN_PIXELS_LONG;
+  screenImage.height = isPhone ? SCREEN_PIXELS_LONG : SCREEN_PIXELS_SHORT;
   const brush = screenImage.getContext('2d');
   drawPlaceholder(brush);
   const texture = new THREE.CanvasTexture(screenImage);
@@ -473,16 +537,19 @@ for (const project of PROJECTS) {
   // ljusstyrka, som en riktig skärm. Färgen gångras med texturen: grå = nedtonad
   // (avstängd), vit = full styrka (påslagen).
   const screenMaterial = new THREE.MeshBasicMaterial({ map: texture, color: '#777777' });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_WIDTH, SCREEN_HEIGHT), screenMaterial);
-  screen.position.set(0, SCREEN_HEIGHT / 2 + 0.2, 0);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(width, height), screenMaterial);
+  screen.position.set(0, height / 2 + border, 0);
   panel.add(screen);
 
-  // Textskylt ovanför skärmen.
+  // Textskylt ovanför skärmen. Över mobilen är den lite smalare (6 i stället för 8),
+  // och höjden krymper lika mycket så att texten inte blir utdragen.
+  const signWidth = isPhone ? 6 : SCREEN_WIDTH;
+  const signHeight = SIGN_HEIGHT * (signWidth / SCREEN_WIDTH);
   const sign = new THREE.Mesh(
-    new THREE.PlaneGeometry(SCREEN_WIDTH, SIGN_HEIGHT),
+    new THREE.PlaneGeometry(signWidth, signHeight),
     new THREE.MeshBasicMaterial({ map: makeTitleTexture(project.title) })
   );
-  sign.position.set(0, SCREEN_HEIGHT + 0.4 + 0.2 + SIGN_HEIGHT / 2, 0);
+  sign.position.set(0, height + border * 2 + 0.2 + signHeight / 2, 0);
   panel.add(sign);
 
   // Parkeringsruta på marken framför skylten.
