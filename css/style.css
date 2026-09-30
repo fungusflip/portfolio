@@ -162,6 +162,11 @@ body {
   border-radius: 8px;
   background: #ffffff;
 }
+/* Stående videor (mobilformat) får inte bli högre än skärmen. */
+.panel-body video {
+  max-height: 60vh;
+  margin: 0 auto;
+}
 
 .panel-link {
   display: block;
@@ -181,4 +186,107 @@ body {
   border-radius: 5px;
   box-shadow: 0 2px 0 #e0c9a0;
   font-family: inherit;
+}
+
+/* ------------------------------------------------------------------ */
+/* MOBIL OCH TOUCH                                                     */
+/* ------------------------------------------------------------------ */
+
+/* Ingen scroll, inget nypzoomande och ingen "dra för att uppdatera" ovanpå spelet. */
+html, body {
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* Touchkontrollerna är gömda på dator. */
+.touch {
+  display: none;
+}
+
+/* (pointer: coarse) = huvudsakligt pekdon är ett finger. Gäller mobil och surfplatta,
+   inte en dator med mus. */
+@media (pointer: coarse) {
+  /* Tangentguiden är meningslös utan tangentbord. */
+  .guide {
+    display: none;
+  }
+
+  .touch {
+    display: block;
+  }
+  /* Panelen är uppe: knapparna behövs inte och ska inte ligga ovanpå texten. */
+  body.panel-open .touch {
+    display: none;
+  }
+
+  .touch-group {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom)); /* env(...) = plats för hemindikatorn på iPhone. */
+    display: flex;
+    gap: 14px;
+  }
+  .touch-left { left: calc(20px + env(safe-area-inset-left)); }
+  .touch-right { right: calc(20px + env(safe-area-inset-right)); }
+
+  .touch-btn {
+    width: 76px;
+    height: 76px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 243, 214, 0.85);
+    box-shadow: 0 4px 0 #e0c9a0, 0 6px 16px rgba(90, 40, 0, 0.2);
+    color: #25323d;
+    font-size: 28px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;     /* Ingen "håll nere"-meny på iOS. */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+  /* Uppåt/nedåt ligger på höjden, som en gas- och bromspedal. */
+  .touch-right { flex-direction: column-reverse; }
+  .touch-btn.pressed {
+    background: #f0561a;             /* Samma "tända" orange som skyltarna. */
+    color: #fff3d6;
+    box-shadow: 0 1px 0 #b03a0c;
+    transform: translateY(3px);
+  }
+
+  /* "Read more"-knappen, mitt i nederkanten. */
+  .touch-action {
+    position: fixed;
+    left: 50%;
+    bottom: calc(40px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    max-width: calc(100vw - 340px);  /* Får inte krocka med knapparna på sidorna. */
+    min-width: 120px;
+    padding: 14px 20px;
+    border: 0;
+    border-radius: 999px;
+    background: #f0561a;
+    color: #fff3d6;
+    box-shadow: 0 4px 0 #b03a0c, 0 6px 16px rgba(90, 40, 0, 0.25);
+    font: 700 15px system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .touch-action[hidden] { display: none; }
+}
+
+/* Smal skärm: panelen fyller nästan hela skärmen, som ett ark. */
+@media (max-width: 600px) {
+  .panel {
+    left: 10px;
+    right: 10px;
+    top: 10px;
+    bottom: 10px;
+    width: auto;
+  }
+  .panel-title { font-size: 19px; }
+  .panel-hint { display: none; } /* "Esc close" – finns inte på mobil, krysset räcker. */
+}
+
+/* Panelen ska kunna rullas med fingret, trots att sidan i övrigt blockerar touch. */
+.panel-body {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }

@@ -8,7 +8,7 @@
   <!-- Teckenkodning: utf-8 klarar alla tecken, t.ex. å, ä, ö. -->
   <meta charset="utf-8">
   <!-- Gör att sidan får rätt bredd och skala på mobiler. -->
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Texten på webbläsarfliken. -->
   <title>Portfolio</title>
   <!-- Laddar utseendet från css/style.css. -->
@@ -50,6 +50,22 @@
     <div class="guide-row" id="guideEnter" hidden>
       <span class="guide-keys"><kbd>Enter</kbd><kbd>Tab</kbd></span>
       <span id="guideText"></span>
+    </div>
+  </div>
+
+  <!-- Touchkontroller för mobil och surfplatta. De syns bara på skärmar med touch
+       (se @media (pointer: coarse) i css/style.css). Varje knapp låtsas vara en tangent:
+       data-key är tangentens namn, samma som e.code i js/main.js. -->
+  <div class="touch" id="touch">
+    <div class="touch-group touch-left">
+      <button class="touch-btn" data-key="KeyA" aria-label="Steer left">&#9664;</button>
+      <button class="touch-btn" data-key="KeyD" aria-label="Steer right">&#9654;</button>
+    </div>
+    <!-- Den här knappen ersätter Enter/Tab. js/main.js visar den bara framför en skylt. -->
+    <button class="touch-action" id="touchAction" hidden>Read more</button>
+    <div class="touch-group touch-right">
+      <button class="touch-btn" data-key="KeyW" aria-label="Drive forward">&#9650;</button>
+      <button class="touch-btn" data-key="KeyS" aria-label="Reverse">&#9660;</button>
     </div>
   </div>
 

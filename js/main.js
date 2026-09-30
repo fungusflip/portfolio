@@ -632,12 +632,18 @@ const guideEnter = document.getElementById('guideEnter');
 const guideText = document.getElementById('guideText');
 
 // Visar raden "Enter / Tab – Read more: ..." för ett projekt, eller gömmer den om project är null.
+// Mobilens "Read more"-knapp (se index.html) följer samma regel som guideraden.
+const touchAction = document.getElementById('touchAction');
+
 function showGuide(project) {
   if (project && project.content) {
     guideText.textContent = `Read more: ${project.title}`; // textContent = elementets text.
     guideEnter.hidden = false;
+    touchAction.textContent = 'Read more'; // Kort text: titeln syns redan på skylten.
+    touchAction.hidden = false;
   } else {
     guideEnter.hidden = true;
+    touchAction.hidden = true;
   }
 }
 
@@ -707,6 +713,7 @@ async function openPanel(project) {
   panelLink.hidden = !project.url;
   if (project.url) panelLink.href = project.url;
   panel.hidden = false;
+  document.body.classList.add('panel-open'); // CSS gömmer touchknapparna medan panelen är öppen.
 
   // fetch hämtar en fil från nätet/servern. await väntar tills den är klar.
   if (!contentCache.has(project.content)) {
@@ -729,6 +736,7 @@ function closePanel() {
   panelOpen = false;
   panelProject = null;
   panel.hidden = true;
+  document.body.classList.remove('panel-open');
   panelBody.textContent = ''; // Släpper bilder och videor ur minnet.
   // Tangenter som hölls nedtryckta medan panelen var öppen ska inte styra bilen.
   keys.clear();
@@ -745,6 +753,12 @@ window.addEventListener('keydown', (e) => {
   // Tab flyttar annars fokus mellan knappar och länkar. Vi vill använda den själva.
   e.preventDefault();
   if (e.repeat) return; // Håller man tangenten nere ska panelen inte blinka av och på.
+  togglePanel();
+});
+
+// Öppnar panelen för skylten bilen står vid, eller stänger den om den redan är öppen.
+// Används av både tangentbordet (Enter/Tab) och mobilens knapp.
+function togglePanel() {
   if (panelOpen) {
     closePanel();
     return;
@@ -752,7 +766,8 @@ window.addEventListener('keydown', (e) => {
   // .find ger det första i listan som uppfyller villkoret (eller ingenting).
   const billboard = billboards.find((b) => b.active);
   if (billboard && billboard.project.content) openPanel(billboard.project);
-});
+}
+touchAction.addEventListener('click', togglePanel);
 
 // ---------------------------------------------------------------------------
 // LÖNNAR – höstträd utspridda över marken.
@@ -960,6 +975,32 @@ window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
 
 // ---------------------------------------------------------------------------
+// TOUCHKNAPPAR – mobilens version av tangentbordet.
+// ---------------------------------------------------------------------------
+// Varje knapp (se index.html) lägger in sin tangent i samma lista `keys` som
+// tangentbordet använder. Då behöver updateCar ingenting veta om touch.
+// Pointer events fungerar för både finger och mus, och varje finger har sitt eget
+// id, så man kan hålla gas med en tumme och styra med den andra.
+for (const button of document.querySelectorAll('.touch-btn')) {
+  const code = button.dataset.key; // data-key="KeyW" i HTML blir button.dataset.key här.
+  const press = (e) => {
+    e.preventDefault();
+    if (panelOpen) return;
+    // Fingret "fastnar" på knappen även om det glider utanför den, så man släpper aldrig av misstag.
+    button.setPointerCapture(e.pointerId);
+    keys.add(code);
+    button.classList.add('pressed'); // CSS ger den nedtryckta knappen en annan färg.
+  };
+  const release = () => {
+    keys.delete(code);
+    button.classList.remove('pressed');
+  };
+  button.addEventListener('pointerdown', press);
+  button.addEventListener('pointerup', release);
+  button.addEventListener('pointercancel', release); // Systemet avbröt touchen (t.ex. en notis).
+}
+
+// ---------------------------------------------------------------------------
 // KÖRNING – ändra de här talen för att ändra känslan.
 // ---------------------------------------------------------------------------
 const MAX_SPEED = 12;      // Toppfart, enheter per sekund.
@@ -1035,7 +1076,18 @@ function updateCar(delta) {
 // ---------------------------------------------------------------------------
 // FÖNSTRET ÄNDRAR STORLEK
 // ---------------------------------------------------------------------------
+// På en smal skärm (mobil i stående läge) ryms inte världen i bredd. Då flyttas
+// kameran längre bort: zoom 1 = vanliga avståndet, 2 = dubbelt så långt.
+// 1.6 är ungefär bildförhållandet på en vanlig dator. Ändra 2.2 för att begränsa hur långt bort den får gå.
+let cameraZoom = 1;
+function updateCameraZoom() {
+  const aspect = window.innerWidth / window.innerHeight;
+  cameraZoom = THREE.MathUtils.clamp(1.6 / aspect, 1, 2.2);
+}
+updateCameraZoom();
+
 window.addEventListener('resize', () => {
+  updateCameraZoom();
   camera.aspect = window.innerWidth / window.innerHeight; // Nytt bildförhållande.
   camera.updateProjectionMatrix(); // Måste anropas efter att kamerans inställningar ändrats.
   renderer.setSize(window.innerWidth, window.innerHeight); // Ny storlek på ritytan.
@@ -1063,7 +1115,7 @@ renderer.setAnimationLoop((time) => {
   const target = car.position.clone().add(cameraLead);
   // Kameran sätts på siktpunkten + förskjutningen. Förskjutningen vrids inte
   // med bilen, så kameran tittar alltid från samma håll.
-  camera.position.copy(target).add(cameraOffset);
+  camera.position.copy(target).addScaledVector(cameraOffset, cameraZoom); // addScaledVector = lägg till offset gånger zoom.
   camera.lookAt(target);
 
   // Rita scenen sedd från kameran. Utan den här raden syns ingenting.
