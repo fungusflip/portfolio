@@ -30,11 +30,11 @@
   <!-- Säger till X/Twitter (och Discord) att visa bilden stort i stället för som en liten ruta. -->
   <meta name="twitter:card" content="summary_large_image">
   <!-- Laddar utseendet från css/style.css. -->
-  <!-- ?v=29 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
+  <!-- ?v=33 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=29">
+  <link rel="stylesheet" href="css/style.css?v=33">
 
   <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
        import ... from 'three' slår webbläsaren upp 'three' här och hämtar
@@ -91,12 +91,27 @@
       <div class="intro-progress"><div class="intro-progress-fill" id="introProgress"></div></div>
       <p class="intro-hint"><span class="intro-keys">or press any key · drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></p>
       <!-- För den som har bråttom (t.ex. en rekryterare): CV och mejl direkt. -->
+      <!-- För den som inte vill köra: alla projekt i en vanlig lista (se js/project-list.js).
+           Fungerar direkt, även medan världen laddas. -->
+      <button class="intro-skip" id="introProjects" type="button">Skip the drive — browse all projects (P)</button>
       <p class="intro-links">
         <a href="https://filip.renemark.se/wp-content/uploads/2026/05/Filip_Renemark_CV.pdf" target="_blank" rel="noopener">CV (PDF)</a>
         <a href="mailto:filip@renemark.me">filip@renemark.me</a>
         <a href="https://filip.renemark.se" target="_blank" rel="noopener">Classic site</a>
       </p>
     </div>
+  </section>
+
+  <!-- Knappen uppe till höger i spelet som öppnar projektlistan. Göms medan startskärmen syns. -->
+  <button class="projects-button" id="projectsButton" type="button">All projects</button>
+
+  <!-- PROJEKTLISTAN: alla projekt som kort, grupperade per värld. js/project-list.js fyller i den. -->
+  <section class="projects" id="projects" hidden aria-labelledby="projectsTitle">
+    <header class="projects-head">
+      <h1 id="projectsTitle">All projects</h1>
+      <button class="panel-close" id="projectsClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="projects-body" id="projectsBody"></div>
   </section>
 
   <!-- Guiden: en liten ruta i nedre vänstra hörnet som visar vilka tangenter som gäller.
@@ -150,6 +165,6 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="js/main.js?v=29"></script>
+  <script type="module" src="js/main.js?v=33"></script>
 </body>
 </html>

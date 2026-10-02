@@ -119,6 +119,10 @@ export let autoDrive = null; // Pågående körning, eller null.
 export function startAutoDrive(to, reverse, driveSpeed, onDone) {
   autoDrive = { to, reverse, speed: driveSpeed, onDone };
 }
+// Avbryter autopiloten (utan att köra dess onDone), t.ex. när man hoppar direkt till en värld.
+export function cancelAutoDrive() {
+  autoDrive = null;
+}
 
 // Vrider en vinkel mjukt mot en annan, åt det kortaste hållet.
 function turnTowards(angle, goal, rate, delta) {

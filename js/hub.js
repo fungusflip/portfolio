@@ -7,7 +7,8 @@ import {
   PALETTE, WORLDS, GROUND_SIZE, TILE_PIXELS, TILE_UNITS, DRIVE_RADIUS, HUB_X, HUB_Z,
   towardCamera, worldGroup, makeEdgeFade, makeTileTexture,
 } from './core.js';
-import { PROJECTS, buildBillboards } from './billboards.js';
+import { buildBillboards } from './billboards.js';
+import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad } from './roads.js';
 import {
   HOME_X, HOME_Z, GARAGE_Z, GARAGE_DEPTH, CABIN_X, CABIN_Z, CABIN_SIZE,

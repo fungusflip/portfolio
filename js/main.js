@@ -27,6 +27,9 @@ import {
 } from './core.js';
 import { introOpen, setLoadingProgress, setReady, setFade } from './ui.js';
 import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
+// Projektlistan fungerar direkt, även under laddningen (den behöver bara projektdatan).
+import { setWorldJumper } from './project-list.js';
+import { startFromCode } from './ui.js';
 
 // ---------------------------------------------------------------------------
 // 1. LADDNINGSSCENEN – börjar rulla direkt
@@ -118,21 +121,36 @@ const fadeBack = performance.now();
 
 // Startknappen blir klickbar. När besökaren trycker backar bilen ut ur garaget av sig
 // själv; framme stängs porten och strålkastarna tänds.
+// Leder adressen till en viss värld (t.ex. .../#art) åker bilen i stället direkt dit.
 const INTRO_SPEED = 4;
-setReady(() => {
-  startAutoDrive({ x: home.padX, z: home.padZ }, true, INTRO_SPEED, () => {
-    garageDoor.visible = true;
-    beam.intensity = HEADLIGHT_STRENGTH;
-  });
-});
-
-// TEST: ?goto=art (eller techart, prog) i adressen startar spelet direkt och kör in i
-// grottan dit. Bra för att snabbt prova en värld utan att köra hela vägen.
-const goto = WORLDS[new URLSearchParams(location.search).get('goto')];
-if (goto) {
-  document.getElementById('introStart').click();
-  portals.travelTo(goto);
+let jumpTarget = WORLDS[location.hash.slice(1)] || WORLDS[new URLSearchParams(location.search).get('goto')] || null;
+if (jumpTarget === WORLDS.hub) jumpTarget = null; // #hub = vanlig start.
+function carReady() {
+  garageDoor.visible = true;
+  beam.intensity = HEADLIGHT_STRENGTH;
 }
+setReady(() => {
+  if (jumpTarget) {
+    carReady();
+    portals.jumpTo(jumpTarget);
+    jumpTarget = null;
+  } else {
+    startAutoDrive({ x: home.padX, z: home.padZ }, true, INTRO_SPEED, carReady);
+  }
+}, jumpTarget ? `Start in ${jumpTarget.title}` : 'Start driving');
+
+// TEST: ?autostart i adressen trycker på startknappen av sig själv (t.ex. ?autostart#art).
+if (new URLSearchParams(location.search).has('autostart')) startFromCode();
+
+// "Visit in 3D" i projektlistan: starta spelet om det inte redan är igång, och hoppa till världen.
+setWorldJumper((world) => {
+  if (world === WORLDS.hub) jumpTarget = null;
+  else jumpTarget = world;
+  if (!startFromCode()) {   // Spelet var redan igång: hoppa direkt.
+    jumpTarget = null;
+    portals.jumpTo(world);
+  }
+});
 
 // ---------------------------------------------------------------------------
 // KAMERAN

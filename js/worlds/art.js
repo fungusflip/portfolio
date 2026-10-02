@@ -1,35 +1,12 @@
 // ============================================================================
-// worlds/art.js — Art-världen: en målares skyddsduk med färgstänk, och två staffli
-// med målningar vid teleportplattan. Byggs först när man reser hit.
+// worlds/art.js — Art-världen: en målares skyddsduk med färgstänk, och färgburkar
+// och en jättepensel vid teleportplattan. Byggs först när man reser hit.
 // ============================================================================
 import * as THREE from 'three';
 import { PALETTE, WORLDS, TILE_PIXELS, BILLBOARD_FACING, worldGroup, postMaterial } from '../core.js';
 import { buildWorldBasics, decorSpots } from './common.js';
 
 const world = WORLDS.art;
-
-// En målning med slumpade penseldrag i Art-världens färger – lite olika varje gång.
-function makePaintingTexture() {
-  const image = document.createElement('canvas');
-  image.width = 256;
-  image.height = 320; // Samma proportioner som duken (2 x 2.5).
-  const pen = image.getContext('2d');
-  pen.fillStyle = PALETTE.sign;
-  pen.fillRect(0, 0, image.width, image.height);
-  pen.lineCap = 'round';
-  for (let i = 0; i < 14; i++) {
-    // Ett penseldrag: en tjock, böjd linje (quadraticCurveTo) mellan två slumpade punkter.
-    pen.strokeStyle = PALETTE.artPaints[Math.floor(Math.random() * PALETTE.artPaints.length)];
-    pen.lineWidth = 10 + Math.random() * 26;
-    pen.beginPath();
-    pen.moveTo(Math.random() * 256, Math.random() * 320);
-    pen.quadraticCurveTo(Math.random() * 256, Math.random() * 320, Math.random() * 256, Math.random() * 320);
-    pen.stroke();
-  }
-  const texture = new THREE.CanvasTexture(image);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
 
 export function build() {
   buildWorldBasics(world, (pen) => {
@@ -62,25 +39,54 @@ export function build() {
     }
   });
 
-  // --- Två staffli, ett på var sida om plattan ---
-  for (const at of decorSpots(world).slice(0, 2)) { // .slice(0, 2) = bara de två första platserna.
-    const easel = new THREE.Group();
-    // Tre ben: två fram som lutar ut åt sidorna, ett bak som lutar bakåt.
-    for (const [x, z, tiltZ, tiltX] of [[-0.6, 0.2, -0.15, 0], [0.6, 0.2, 0.15, 0], [0, -0.7, 0, -0.35]]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.4, 0.12), postMaterial);
-      leg.position.set(x, 1.6, z);
-      leg.rotation.set(tiltX, 0, tiltZ);
-      easel.add(leg);
-    }
-    const ledge = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.3), postMaterial); // Hyllan.
-    ledge.position.set(0, 1.2, 0.35);
-    easel.add(ledge);
-    const painting = new THREE.Mesh(new THREE.PlaneGeometry(2, 2.5), new THREE.MeshLambertMaterial({ map: makePaintingTexture() }));
-    painting.position.set(0, 2.55, 0.42);
-    painting.rotation.x = -0.15; // Lutar bakåt som skyltarna.
-    easel.add(painting);
-    easel.position.set(at.x, 0, at.z);
-    easel.rotation.y = BILLBOARD_FACING;
-    worldGroup(world).add(easel);
+  // --- Dekoration vid plattan: färgburkar och en jättepensel ---
+  // (Projekten står redan på staffli, så här blir det målarens verktyg i stället.)
+  const [left, right, rightLow] = decorSpots(world);
+  const group = worldGroup(world);
+  const tinMaterial = new THREE.MeshStandardMaterial({ color: '#b8bcc2', roughness: 0.4, metalness: 0.6 }); // Plåt.
+  // En färgburk: plåtburk, färgyta upptill och en droppe färg som runnit ner längs sidan.
+  function paintPot(at, color, scale) {
+    const pot = new THREE.Group();
+    const tin = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 20), tinMaterial);
+    tin.position.y = 0.6;
+    pot.add(tin);
+    const paintMaterial = new THREE.MeshLambertMaterial({ color });
+    const paint = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 0.05, 20), paintMaterial);
+    paint.position.y = 1.2;
+    pot.add(paint);
+    const drip = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.6, 0.06), paintMaterial); // Rinner ner mot kameran.
+    drip.position.set(0.1, 0.95, 0.69);
+    pot.add(drip);
+    const puddle = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.03, 16), paintMaterial); // Pölen vid foten.
+    puddle.position.set(0.4, 0.02, 0.9);
+    pot.add(puddle);
+    pot.scale.setScalar(scale);
+    pot.position.set(at.x, 0, at.z);
+    pot.rotation.y = BILLBOARD_FACING;
+    group.add(pot);
   }
+  // Tre burkar i en klunga till vänster, en ensam till höger.
+  paintPot(left, PALETTE.artPaints[0], 1.4);
+  paintPot({ x: left.x + 1.6, z: left.z - 1.2 }, PALETTE.artPaints[1], 1.1);
+  paintPot({ x: left.x - 1.2, z: left.z + 1.5 }, PALETTE.artPaints[2], 0.9);
+  paintPot(rightLow, PALETTE.artPaints[3], 1.2);
+
+  // Jättepenseln, liggande på marken till höger: skaft i trä, plåthylsa och borst med rosa färg i spetsen.
+  const brush = new THREE.Group();
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 4.5, 12), postMaterial);
+  handle.position.y = 2.25;
+  brush.add(handle);
+  const ferrule = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.3, 1, 12), tinMaterial);
+  ferrule.position.y = 5;
+  brush.add(ferrule);
+  const bristles = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.6, 12), new THREE.MeshLambertMaterial({ color: '#efe2cc' }));
+  bristles.position.y = 6.3;
+  brush.add(bristles);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.75, 12), new THREE.MeshLambertMaterial({ color: PALETTE.artAccent }));
+  tip.position.y = 6.75;
+  brush.add(tip);
+  for (const part of brush.children) part.position.y -= 3.5; // Penseln är ca 7 lång: centrera den på sin plats.
+  brush.rotation.set(0, BILLBOARD_FACING + 0.6, Math.PI / 2); // Lägg den ner på sidan, snett.
+  brush.position.set(right.x, 0.4, right.z);
+  group.add(brush);
 }

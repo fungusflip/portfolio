@@ -14,7 +14,8 @@ import {
   PALETTE, BILLBOARD_FACING, CAMERA_PITCH, currentWorld, worldGroup,
   towardCamera, toTheRight, makeGlowMaterial,
 } from './core.js';
-import { PROJECTS, BILLBOARD_SPACING } from './billboards.js';
+import { BILLBOARD_SPACING } from './billboards.js';
+import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE } from './roads.js';
 
 export const LAMP_SIDE = ROAD_WIDTH / 2 + 1.2; // Hur långt från vägens mitt stolpen står.

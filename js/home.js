@@ -7,19 +7,13 @@ import {
   PALETTE, WORLDS, BILLBOARD_FACING, CAMERA_PITCH, MAX_ANISOTROPY, SCREEN_TILT,
   towardCamera, toTheRight, worldGroup, postMaterial, paintMaterial, makeGlowMaterial,
 } from './core.js';
-import { PROJECTS, PAD_DISTANCE, PAD_RADIUS, addParkingBay, lightPad } from './billboards.js';
+import { PAD_DISTANCE, PAD_RADIUS, addParkingBay, lightPad } from './billboards.js';
+import { PROJECTS } from './projects.js';
 import { ROAD_DISTANCE } from './roads.js';
 import { setParkedAt } from './ui.js';
+import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
 
-// Det som infopanelen visar när bilen står utanför garaget. Samma fält som ett projekt.
-const ABOUT = {
-  title: 'About me',
-  category: 'Hello!',
-  content: 'assets/content/about.html',
-  url: 'mailto:filip@renemark.me',
-  linkText: 'Email me →',
-};
 // Texten på namnskylten.
 const HOME_NAME = 'Filip Renemark';
 const HOME_ROLE = 'Technical Artist';

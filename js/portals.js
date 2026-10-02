@@ -10,7 +10,7 @@ import {
   towardCamera, note, postMaterial, makeTitleTexture,
 } from './core.js';
 import { keys, panelOpen, closePanel, setFade } from './ui.js';
-import { car, speed, stopCar, setHeading, autoDrive, startAutoDrive } from './car.js';
+import { car, speed, stopCar, setHeading, autoDrive, startAutoDrive, cancelAutoDrive } from './car.js';
 import { hubPoint } from './home.js';
 import { setWeather } from './leaves.js';
 import { optimizeWorld, prepareWorld, markMoving } from './optimize.js';
@@ -314,6 +314,26 @@ function startTravel(portal) {
   startAutoDrive(target, backingIn, PORTAL_SPEED, () => {
     travel.stage = portal.style === 'cave' ? 'fadeOut' : 'sink';
   });
+}
+
+// Hoppar direkt till en värld, utan att köra dit: skärmen tonas, världen laddas och bilen
+// kommer fram som vanligt (backar ut ur grottan hemma, stiger upp ur plattan i de andra).
+// Används av länkar som .../#art och av "Visit in 3D" i projektlistan.
+export function jumpTo(world) {
+  if (travel || world === currentWorld) return;
+  // Var bilen ska komma ut: hemma ur grottan som leder till världen den kommer ifrån
+  // (eller Tech Art-grottan), annars ur teleportplattan i den nya världen.
+  const exit = world === WORLDS.hub
+    ? PORTALS.find((p) => p.world === WORLDS.hub && p.leadsTo === currentWorld) || techartCave
+    : padIn(world);
+  if (panelOpen) closePanel();
+  keys.clear();
+  stopCar();
+  cancelAutoDrive();
+  // En påhittad "ingång" som bara säger vart resan går. Resan börjar direkt med toningen.
+  travel = { portal: { leadsTo: world, exit }, stage: 'fadeOut' };
+  setFade(fadeAmount, world.background);
+  loadWorld(world);
 }
 
 // Reser till en värld direkt, genom ingången dit i världen bilen är i (används av

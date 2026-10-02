@@ -17,7 +17,7 @@ const DRIVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'Arr
 
 window.addEventListener('keydown', (e) => {
   if (!DRIVE_KEYS.includes(e.code)) return; // Inte en körtangent? Gör ingenting.
-  if (panelOpen || introOpen) return; // Infopanelen eller startskärmen är öppen: bilen står still.
+  if (panelOpen || introOpen || listOpen) return; // Panelen, startskärmen eller projektlistan är öppen: bilen står still.
   e.preventDefault(); // Stoppar webbläsarens egna beteende, t.ex. att pilarna scrollar sidan.
   keys.add(e.code);
 });
@@ -36,7 +36,7 @@ for (const button of document.querySelectorAll('.touch-btn')) {
   const code = button.dataset.key; // data-key="KeyW" i HTML blir button.dataset.key här.
   const press = (e) => {
     e.preventDefault();
-    if (panelOpen || introOpen) return;
+    if (panelOpen || introOpen || listOpen) return;
     // Fingret "fastnar" på knappen även om det glider utanför den, så man släpper aldrig av misstag.
     button.setPointerCapture(e.pointerId);
     keys.add(code);
@@ -135,6 +135,18 @@ export function closePanel() {
   keys.clear();
 }
 
+// Öppnar panelen för ett visst projekt (används av projektlistan, se project-list.js).
+export function openProject(project) {
+  openPanel(project);
+}
+
+// Projektlistan: medan den är öppen står bilen still och Enter öppnar inget.
+export let listOpen = false;
+export function setListOpen(open) {
+  listOpen = open;
+  keys.clear();
+}
+
 // Öppnar panelen för stället bilen står vid, eller stänger den om den redan är öppen.
 // Används av både tangentbordet (Enter/Tab) och mobilens knapp.
 function togglePanel() {
@@ -150,7 +162,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (e.code !== 'Enter' && e.code !== 'Tab') return;
-  if (introOpen) return; // Startskärmen sköter sina egna tangenter (se nedan).
+  if (introOpen || listOpen) return; // Startskärmen och projektlistan sköter sina egna tangenter.
   // Tab flyttar annars fokus mellan knappar och länkar. Vi vill använda den själva.
   e.preventDefault();
   if (e.repeat) return; // Håller man tangenten nere ska panelen inte blinka av och på.
@@ -177,12 +189,21 @@ export function setLoadingProgress(fraction, text) {
 }
 
 // Allt är laddat: knappen blir en riktig startknapp. callback körs när man trycker.
-export function setReady(callback) {
+// label = knappens text (t.ex. "Start in Art" när adressen leder till en viss värld).
+export function setReady(callback, label = 'Start driving') {
   ready = true;
   onStart = callback;
   introStart.disabled = false;
-  introStart.textContent = 'Start driving';
+  introStart.textContent = label;
   document.body.classList.remove('loading'); // CSS: knappen pulserar, tangenttipset syns.
+}
+
+// Startar spelet från koden (t.ex. när man väljer "Visit in 3D" i projektlistan).
+// Returnerar false om världen inte är färdigladdad än.
+export function startFromCode() {
+  if (!ready) return false;
+  startGame();
+  return true;
 }
 
 function startGame() {
@@ -196,10 +217,11 @@ function startGame() {
 }
 introStart.addEventListener('click', startGame);
 window.addEventListener('keydown', (e) => {
-  if (!introOpen || !ready) return;
+  if (!introOpen || !ready || listOpen) return;
   // Kortkommandon (t.ex. Cmd+R för att ladda om) och ensamma Shift/Alt/... ska inte starta.
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(e.key)) return;
+  if (e.code === 'KeyP') return; // P öppnar projektlistan i stället (se project-list.js).
   e.preventDefault();
   startGame();
 });
