@@ -104,14 +104,15 @@ export function buildHubRoads() {
   ];
   buildRoads(hub, roads);
 
-  buildSignposts(hub, [
+  const signposts = [
     // Mitt emot uppfarten: åt höger ligger projekten och Tech Art-grottan.
     { text: 'Tech Art', arrow: 'right', at: towardCamera(homeRoadPoint, 4.2) },
     // Där den nedre vägen svänger av: båda grottorna ligger åt det hållet.
     { text: 'Programming · Art', arrow: 'down', at: hubPoint(PROG_TURN_RIGHT + 5.5, ROAD_DISTANCE + 6) },
     // Under den nedre vägen: Art fortsätter åt vänster.
     { text: 'Art', arrow: 'left', at: hubPoint(-6, PROG_LOOP_DOWN + 5.5) },
-  ]);
+  ];
+  buildSignposts(hub, signposts);
 
   const lamps = [
     ...rowLamps(hub),
@@ -121,11 +122,11 @@ export function buildHubRoads() {
     { at: hubPoint(PROG_TURN_RIGHT + LAMP_SIDE, 25), arm: ARM_LEFT },
   ];
   buildLamps(hub, lamps);
-  return { roads, lamps };
+  return { roads, lamps, signposts };
 }
 
 // Lönnar utspridda över marken, men inte där de är i vägen.
-export function buildHubTrees({ roads, lamps }) {
+export function buildHubTrees({ roads, lamps, signposts }) {
   const TREE_TRIES = 270; // Många försök, eftersom de som hamnar på fel ställe hoppas över.
   const trees = [];
   const hubPortals = PORTALS.filter((portal) => portal.world === hub);
@@ -139,6 +140,8 @@ export function buildHubTrees({ roads, lamps }) {
     if (PROJECTS.some((project) => Math.hypot(x - project.x, z - project.z) < 12)) continue; // Skyltarna.
     if (hubPortals.some((portal) => Math.hypot(x - portal.at.x, z - portal.at.z) < 12)) continue; // Grottorna.
     if (lamps.some((lamp) => Math.hypot(x - lamp.at.x, z - lamp.at.z) < 3)) continue; // Lyktorna.
+    // Vägskyltarna: brädan är 4.2 bred, och en trädkrona är upp till ca 2 i radie.
+    if (signposts.some((sign) => Math.hypot(x - sign.at.x, z - sign.at.z) < 5)) continue;
     trees.push(randomTree(x, z));
   }
   // Träd runt stugan på bestämda platser, så att tomten ser likadan ut varje gång.

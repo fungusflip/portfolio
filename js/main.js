@@ -162,6 +162,29 @@ function introCameraShift() {
     : toTheRight(origin, -INTRO_SHIFT_SIDE * introShift);
 }
 
+// Kameran tittar FRAMÅT dit bilen kör: siktpunkten flyttas en bit i bilens färdriktning,
+// längre ju fortare den kör. Då ser man vart man är på väg även när man kör nedåt på
+// skärmen (förut tittade kameran alltid lika mycket uppåt, så bilen hamnade i nederkanten).
+// Farten räknas ut från hur långt bilen flyttat sig, så det fungerar även med autopiloten.
+const LOOK_AHEAD = 0.3;     // Sekunder framåt kameran "tittar": 0.3 s × toppfart 12 = ca 3.6 enheter. ÄNDRA för mer/mindre. (Var 0.6 – kändes för mycket.)
+const LOOK_AHEAD_MAX = 4;   // Aldrig längre än så här, i enheter.
+const LOOK_SMOOTHING = 1.2; // Hur mjukt kameran glider dit (mindre = mjukare och långsammare).
+const lookAhead = new THREE.Vector3();       // Hur långt framför bilen kameran tittar just nu.
+const lookAheadGoal = new THREE.Vector3();   // Dit den är på väg.
+const lastCarPosition = new THREE.Vector3().copy(car.position);
+function updateLookAhead(delta) {
+  lookAheadGoal.subVectors(car.position, lastCarPosition); // Hur långt bilen flyttat sig den här bilden.
+  lookAheadGoal.y = 0;
+  // Ett hopp på mer än 2 enheter är en resa till en annan värld, inte körning.
+  if (delta > 0 && lookAheadGoal.length() < 2) lookAheadGoal.multiplyScalar(LOOK_AHEAD / delta); // Fart × tid.
+  else lookAheadGoal.set(0, 0, 0);
+  lookAheadGoal.clampLength(0, LOOK_AHEAD_MAX);
+  lastCarPosition.copy(car.position);
+  // damp för x och z var för sig: glid mjukt mot målet i stället för att hoppa.
+  lookAhead.x = THREE.MathUtils.damp(lookAhead.x, lookAheadGoal.x, LOOK_SMOOTHING, delta);
+  lookAhead.z = THREE.MathUtils.damp(lookAhead.z, lookAheadGoal.z, LOOK_SMOOTHING, delta);
+}
+
 // ---------------------------------------------------------------------------
 // RENDERLOOPEN – hjärtat i programmet. Körs en gång per skärmuppdatering.
 // ---------------------------------------------------------------------------
@@ -187,7 +210,8 @@ function gameFrame(time) {
   const afterGame = performance.now();
 
   // Kameran följer bilen: siktpunkten = bilen + försprånget, kameran = siktpunkten + avståndet.
-  const target = cameraTarget.copy(car.position).add(cameraLead);
+  updateLookAhead(delta);
+  const target = cameraTarget.copy(car.position).add(cameraLead).add(lookAhead);
   if (!introOpen) introShift = THREE.MathUtils.damp(introShift, 0, 2.5, delta);
   if (introShift > 0.001) {
     const shift = introCameraShift();

@@ -283,13 +283,15 @@ export function makeEdgeFade(world) {
 //   background – färgen runt marken (och toningen när man reser dit).
 //   accent     – världens "lysande" färg: grottljuset dit, teleportplattan och lyktornas sken.
 //   rowStart   – (bara hemma) var första projektskylten står.
+//   display    – hur projekten visas där: 'cinema' (drive-in-duk), 'viewport' (3D-programfönster),
+//                'arcade' (arkadmaskin) eller 'easel' (tavla på staffli). Se billboards.js.
 //   module     – (andra världar) filen som bygger världen. Den hämtas och byggs först när
 //                man reser dit första gången (se portals.js och worlds/).
 export const WORLDS = {
-  hub: { title: 'Home', x: HUB_X, z: HUB_Z, background: PALETTE.background, accent: PALETTE.warmLamp, rowStart: { x: 20, z: -10 } },
-  techart: { title: 'Tech Art', x: 1000, z: 0, background: PALETTE.techBackground, accent: PALETTE.techGridMain, module: './worlds/techart.js' },
-  prog: { title: 'Programming', x: 0, z: 1000, background: PALETTE.progBackground, accent: PALETTE.progTrace, module: './worlds/prog.js' },
-  art: { title: 'Art', x: -1000, z: 0, background: PALETTE.artBackground, accent: PALETTE.artAccent, module: './worlds/art.js' },
+  hub: { title: 'Home', x: HUB_X, z: HUB_Z, background: PALETTE.background, accent: PALETTE.warmLamp, display: 'cinema', rowStart: { x: 20, z: -10 } },
+  techart: { title: 'Tech Art', x: 1000, z: 0, background: PALETTE.techBackground, accent: PALETTE.techGridMain, display: 'viewport', module: './worlds/techart.js' },
+  prog: { title: 'Programming', x: 0, z: 1000, background: PALETTE.progBackground, accent: PALETTE.progTrace, display: 'arcade', module: './worlds/prog.js' },
+  art: { title: 'Art', x: -1000, z: 0, background: PALETTE.artBackground, accent: PALETTE.artAccent, display: 'easel', module: './worlds/art.js' },
 };
 
 // Världen bilen är i just nu. Andra filer läser den direkt, men ändrar den med setCurrentWorld.

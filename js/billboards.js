@@ -392,32 +392,170 @@ export function lightPad(padMaterial, lit) {
 // ---------------------------------------------------------------------------
 export const billboards = []; // Allt som behövs om varje byggd skylt medan programmet kör.
 
+// ---------------------------------------------------------------------------
+// VISNINGSSÄTT – varje värld visar sina projekt på sitt eget sätt (WORLDS.display).
+// ---------------------------------------------------------------------------
+// Skärmen, titelskylten och parkeringsfickan är likadana överallt. Det som skiljer är
+// "huset" runt skärmen. Varje visningssätt har:
+//   baseY(isPhone) – hur högt över marken skärmens underkant sitter.
+//   border         – ramens bredd runt skärmen.
+//   signGap        – extra luft mellan ramen och titelskylten.
+//   build(parts)   – bygger huset. parts = { group, panel, width, height, border, baseY, isPhone }.
+//     group = hela skylten (står på marken, +z mot kameran).
+//     panel = det som lutar bakåt med skärmen (y = uppåt längs skärmen, z = ut ur skärmen).
+// Material som bara skyltarna använder:
+const goldMaterial = new THREE.MeshStandardMaterial({ color: '#c9a227', roughness: 0.45, metalness: 0.5, emissive: '#3a2a05' });
+const viewportMaterial = new THREE.MeshStandardMaterial({ color: '#33414f', roughness: 0.6 });   // 3D-programmets gråblå.
+const arcadeMaterial = new THREE.MeshStandardMaterial({ color: '#16241c', roughness: 0.8 });     // Arkadmaskinens mörkgröna lack.
+const glowMaterials = {}; // Lysande färger (MeshBasicMaterial), skapas när de behövs och delas.
+function glow(color) {
+  if (!glowMaterials[color]) glowMaterials[color] = new THREE.MeshBasicMaterial({ color });
+  return glowMaterials[color];
+}
+// En låda med mått (b, h, d) på plats (x, y, z) i förälder. Sparar många rader nedan.
+function box(parent, material, b, h, d, x, y, z) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(b, h, d), material);
+  mesh.position.set(x, y, z);
+  parent.add(mesh);
+  return mesh;
+}
+
+const DISPLAYS = {
+  // --- Hemma: drive-in-bio. En duk på två stolpar (mobilen står direkt på marken). ---
+  cinema: {
+    baseY: (isPhone) => (isPhone ? 0.1 : POST_HEIGHT),
+    border: 0.2,
+    signGap: 0,
+    build({ group, panel, width, height, border, isPhone }) {
+      if (!isPhone) {
+        for (const x of [-3, 3]) box(group, postMaterial, 0.3, POST_HEIGHT, 0.3, x, POST_HEIGHT / 2, -0.16);
+      }
+      box(panel, frameMaterial, width + border * 2, height + border * 2, 0.3, 0, height / 2 + border, -0.16);
+    },
+  },
+
+  // --- Tech Art: ett fönster ur ett 3D-program på ett skärmstativ. ---
+  // Titelrad med fönsterknappar upptill, och en axel-"gizmo" (röd X, grön Y, blå Z) i
+  // hörnet – som i Blender, Maya och Houdini.
+  viewport: {
+    baseY: (isPhone) => (isPhone ? 1 : 2.2),
+    border: 0.18,
+    signGap: 0.5, // Plats för titelraden.
+    build({ group, panel, width, height, border, baseY }) {
+      const outerWidth = width + border * 2;
+      const top = height + border * 2;
+      box(panel, viewportMaterial, outerWidth, top, 0.25, 0, height / 2 + border, -0.15);       // Ramen.
+      box(panel, viewportMaterial, outerWidth, 0.45, 0.27, 0, top + 0.22, -0.15);               // Titelraden.
+      box(panel, glow(PALETTE.techGridMain), outerWidth, 0.05, 0.29, 0, top, -0.15);            // Lysande linje under den.
+      ['#ff5f57', '#febc2e', '#28c840'].forEach((color, i) => {                                 // Fönsterknapparna.
+        box(panel, glow(color), 0.2, 0.2, 0.05, -outerWidth / 2 + 0.35 + i * 0.32, top + 0.22, 0);
+      });
+      // Gizmon i nedre vänstra hörnet: tre pinnar från samma punkt.
+      const corner = { x: -width / 2 + 0.5, y: 0.5 + border };
+      box(panel, glow('#ff4d4d'), 0.7, 0.07, 0.07, corner.x + 0.35, corner.y, 0.06);  // X åt höger.
+      box(panel, glow('#5dde6a'), 0.07, 0.7, 0.07, corner.x, corner.y + 0.35, 0.06);  // Y uppåt.
+      box(panel, glow('#4d8bff'), 0.07, 0.07, 0.7, corner.x, corner.y, 0.06 + 0.35);  // Z ut ur skärmen.
+      // Stativet: en fot och en stolpe upp till skärmen.
+      box(group, viewportMaterial, 2.6, 0.15, 1.4, 0, 0.075, -0.4);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, baseY, 10), viewportMaterial);
+      pole.position.set(0, baseY / 2, -0.4);
+      group.add(pole);
+    },
+  },
+
+  // --- Programming: en jättelik arkadmaskin. ---
+  // Skärmen sitter mellan två sidogavlar, titeln lyser upptill som en "marquee", och
+  // framför skärmen finns en kontrollpanel med joystick och knappar.
+  arcade: {
+    baseY: () => 1.5,
+    border: 0.25,
+    signGap: 0.15,
+    build({ group, panel, width, height, border, baseY }) {
+      const outerWidth = width + border * 2;
+      const lean = Math.sin(SCREEN_TILT) * (height + border * 2);       // Hur långt bakåt skärmens överkant lutar.
+      const topY = baseY + Math.cos(SCREEN_TILT) * (height + border * 2) + 1.7; // Maskinens höjd, inklusive titeln.
+      box(panel, arcadeMaterial, outerWidth, height + border * 2, 0.3, 0, height / 2 + border, -0.16); // Skärmens kant.
+      // Sidogavlarna, med en lysande neonlist längs framkanten.
+      const depth = lean + 1.8;
+      for (const side of [-1, 1]) {
+        const x = side * (outerWidth / 2 + 0.2);
+        box(group, arcadeMaterial, 0.4, topY, depth, x, topY / 2, 0.4 - depth / 2);
+        box(group, glow(PALETTE.progTrace), 0.08, topY, 0.08, x + side * 0.05, topY / 2, 0.42);
+      }
+      box(group, arcadeMaterial, outerWidth, topY, 0.8, 0, topY / 2, -lean - 0.6);    // Baksidan.
+      box(group, arcadeMaterial, outerWidth, 0.3, depth, 0, topY - 0.15, 0.4 - depth / 2); // Taket, lika djupt som gavlarna.
+      // Nedre fronten och kontrollpanelen.
+      box(group, arcadeMaterial, outerWidth, baseY - 0.45, 0.3, 0, (baseY - 0.45) / 2, 0.35);
+      box(group, arcadeMaterial, outerWidth, 0.3, 1.1, 0, baseY - 0.3, 0.55);
+      box(group, glow(PALETTE.progTrace), outerWidth, 0.05, 0.05, 0, baseY - 0.15, 1.1); // Neonkant.
+      // Joysticken: en pinne med en röd kula, och två knappar.
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.45, 8), frameMaterial);
+      stick.position.set(-outerWidth * 0.25, baseY + 0.07, 0.6);
+      group.add(stick);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), glow('#ff4d6d'));
+      knob.position.set(-outerWidth * 0.25, baseY + 0.32, 0.6);
+      group.add(knob);
+      ['#ffd23f', '#4dc3ff'].forEach((color, i) => {
+        const button = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16), glow(color));
+        button.position.set(outerWidth * (0.1 + i * 0.15), baseY - 0.1, 0.6);
+        group.add(button);
+      });
+    },
+  },
+
+  // --- Art: en tavla i guldram på ett stort staffli. ---
+  easel: {
+    baseY: (isPhone) => (isPhone ? 1 : 1.7),
+    border: 0.45, // Bred guldram.
+    signGap: 0.2,
+    build({ group, panel, width, height, border, baseY }) {
+      const frameWidth = width + border * 2;
+      const frameHeight = height + border * 2;
+      box(panel, goldMaterial, frameWidth, frameHeight, 0.3, 0, height / 2 + border, -0.18);       // Guldramen.
+      box(panel, frameMaterial, width + 0.16, height + 0.16, 0.34, 0, height / 2 + border, -0.18); // Mörk innerkant.
+      // Hörnornament: små guldklossar som sticker ut i ramens hörn.
+      for (const x of [-1, 1]) {
+        for (const y of [0, 1]) box(panel, goldMaterial, 0.7, 0.7, 0.4, x * (frameWidth / 2 - 0.2), 0.2 + y * (frameHeight - 0.4), -0.15);
+      }
+      box(panel, postMaterial, frameWidth + 0.6, 0.18, 0.6, 0, -0.1, 0.1); // Hyllan tavlan står på.
+      // Staffliet: två ben fram som lutar som tavlan och står BAKOM den (tavlan vilar mot
+      // dem), och ett ben bak som går från toppen snett bakåt ner till marken.
+      const legLength = baseY + frameHeight + 1.6;
+      const LEG_Z = -0.5; // Benens fot: en bit bakom tavlans framsida.
+      for (const side of [-1, 1]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.25, legLength, 0.25), postMaterial);
+        leg.rotation.x = -SCREEN_TILT; // Lutar bakåt, precis som tavlan.
+        leg.position.set(side * (frameWidth / 2 - 0.4), (legLength / 2) * Math.cos(SCREEN_TILT), LEG_Z - (legLength / 2) * Math.sin(SCREEN_TILT));
+        group.add(leg);
+      }
+      // Bakbenet: från frambenens topp och 3 enheter bakåt ner till marken.
+      const topY = legLength * Math.cos(SCREEN_TILT);
+      const topZ = LEG_Z - legLength * Math.sin(SCREEN_TILT);
+      const BACK_SPREAD = 3;
+      const backLeg = new THREE.Mesh(new THREE.BoxGeometry(0.25, Math.hypot(topY, BACK_SPREAD), 0.25), postMaterial);
+      backLeg.rotation.x = Math.atan2(BACK_SPREAD, topY); // Toppen framåt, foten bakåt.
+      backLeg.position.set(0, topY / 2, topZ - BACK_SPREAD / 2);
+      group.add(backLeg);
+    },
+  },
+};
+
 export function buildBillboards(world) {
+  const display = DISPLAYS[world.display || 'cinema'];
   for (const project of PROJECTS) {
     if (project.world !== world) continue;
     const group = new THREE.Group();
     const isPhone = project.phone === true;
     const width = isPhone ? PHONE_WIDTH : SCREEN_WIDTH;
     const height = isPhone ? PHONE_HEIGHT : SCREEN_HEIGHT;
-    const border = isPhone ? 0.25 : 0.2;        // Ramens bredd runt skärmen.
-    const baseY = isPhone ? 0.1 : POST_HEIGHT;  // Panelens underkant: mobilen står direkt på marken.
-
-    // Bioduken står på två stolpar. Mobilen har inga.
-    if (!isPhone) {
-      for (const x of [-3, 3]) {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, POST_HEIGHT, 0.3), postMaterial);
-        post.position.set(x, POST_HEIGHT / 2, -0.16);
-        group.add(post);
-      }
-    }
+    const border = display.border;
+    const baseY = display.baseY(isPhone); // Skärmens underkant över marken.
     // Panelen = allt som lutar (ram, skärm, textskylt). Den lutar runt sin underkant som ett gångjärn.
     const panel = new THREE.Group();
     panel.position.y = baseY;
     panel.rotation.x = -SCREEN_TILT;
     group.add(panel);
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(width + border * 2, height + border * 2, 0.3), frameMaterial);
-    frame.position.set(0, height / 2 + border, -0.16);
-    panel.add(frame);
+    display.build({ group, panel, width, height, border, baseY, isPhone });
 
     // Skärmens canvas, med play-symbolen från början. Mobilen får en stående canvas.
     const screenImage = document.createElement('canvas');
@@ -443,11 +581,10 @@ export function buildBillboards(world) {
     const titleTextureActive = makeTitleTexture(project.title, true);
     const signMaterial = new THREE.MeshBasicMaterial({ map: titleTexture });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(signWidth, signHeight), signMaterial);
-    sign.position.set(0, height + border * 2 + 0.2 + signHeight / 2, 0);
+    sign.position.set(0, height + border * 2 + 0.2 + display.signGap + signHeight / 2, 0);
     panel.add(sign);
 
     const padMaterial = addParkingBay(group, PAD_DISTANCE);
-
     group.position.set(project.x, 0, project.z);
     group.rotation.y = BILLBOARD_FACING;
     worldGroup(world).add(group);

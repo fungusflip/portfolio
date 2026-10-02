@@ -32,6 +32,10 @@ export function makeTrees(trees) {
   const trunks = new THREE.InstancedMesh(trunkGeometry, postMaterial, trees.length);
   const crowns = new THREE.InstancedMesh(leafGeometry, leafMaterial, trees.length * CROWN_BLOBS.length);
   placeTrees(trunks, crowns, trees);
+  // Färgerna sätts bara en gång här (placeTrees kan köras varje bild i laddningsscenen).
+  trees.forEach((tree, i) => {
+    for (let j = 0; j < CROWN_BLOBS.length; j++) crowns.setColorAt(i * CROWN_BLOBS.length + j, tree.color);
+  });
   return [trunks, crowns];
 }
 
@@ -57,7 +61,6 @@ export function placeTrees(trunks, crowns, trees) {
       helper.updateMatrix();
       const slot = i * CROWN_BLOBS.length + j; // Träd i använder platserna i*3, i*3+1, i*3+2.
       crowns.setMatrixAt(slot, helper.matrix);
-      crowns.setColorAt(slot, tree.color);
     });
   });
   trunks.instanceMatrix.needsUpdate = true;
