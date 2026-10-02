@@ -1,0 +1,191 @@
+// ============================================================================
+// car.js — bilen: modellen, körningen och autopiloten (när den kör av sig själv).
+// ============================================================================
+import * as THREE from 'three';
+import { scene, PALETTE, DRIVE_RADIUS, currentWorld, paintMaterial, glassMaterial } from './core.js';
+import { keys } from './ui.js';
+
+// ---------------------------------------------------------------------------
+// MODELLEN – byggd av lådor och cylindrar. Fronten pekar längs +Z.
+// ---------------------------------------------------------------------------
+// Det är en funktion, så att laddningsscenen (loading-scene.js) kan bygga en egen bil.
+const tireMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.tire, roughness: 0.9 });
+const rimMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.rim, roughness: 0.4, metalness: 0.6 });
+// MeshBasicMaterial påverkas inte av ljuset, så lamporna ser ut att lysa själva.
+const headlightMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.headlight });
+const taillightMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.taillight });
+const lampGeometry = new THREE.BoxGeometry(0.28, 0.14, 0.06); // Samma form till alla fyra lampor.
+
+export const WHEEL_RADIUS = 0.3;
+// Ett slätt hjul ser likadant ut hur det än snurrar, så varje hjul har däck + fälg +
+// två ekrar i kors. Ekrarna är det som ögat kan följa.
+const tireGeometry = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.25, 20);
+tireGeometry.rotateZ(Math.PI / 2); // Ligg ner med axeln längs X, som ett hjul.
+const rimGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.27, 20); // Lite bredare än däcket, så den syns.
+rimGeometry.rotateZ(Math.PI / 2);
+const spokeGeometry = new THREE.BoxGeometry(0.29, 0.08, 0.4);
+
+// Ger { model, spinners, frontWheels }: hela bilen, hjulens snurrande delar och framhjulen.
+export function makeCarModel() {
+  const model = new THREE.Group(); // Alla delar läggs i en grupp; delarnas platser är relativa gruppen.
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 2.4), paintMaterial); // Kaross.
+  body.position.y = 0.5;
+  model.add(body);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1, 0.4, 1.1), glassMaterial); // Hytt.
+  cabin.position.set(0, 0.9, -0.2);
+  model.add(cabin);
+  for (const x of [-0.4, 0.4]) {
+    const headlight = new THREE.Mesh(lampGeometry, headlightMaterial);
+    headlight.position.set(x, 0.55, 1.2); // Fronten ligger på z = 1.2.
+    model.add(headlight);
+    const taillight = new THREE.Mesh(lampGeometry, taillightMaterial);
+    taillight.position.set(x, 0.55, -1.2);
+    model.add(taillight);
+  }
+  const spinners = [];
+  const frontWheels = [];
+  for (const x of [-0.65, 0.65]) {
+    for (const z of [-0.75, 0.75]) {
+      // Hjulet SVÄNGER (runt Y) och SNURRAR (runt X): en grupp för varje.
+      const wheel = new THREE.Group();   // Yttre: plats på bilen + sväng.
+      const spinner = new THREE.Group(); // Inre: snurr.
+      wheel.add(spinner);
+      spinner.add(new THREE.Mesh(tireGeometry, tireMaterial));
+      spinner.add(new THREE.Mesh(rimGeometry, rimMaterial));
+      const spokeA = new THREE.Mesh(spokeGeometry, tireMaterial);
+      const spokeB = new THREE.Mesh(spokeGeometry, tireMaterial);
+      spokeB.rotation.x = Math.PI / 2;
+      spinner.add(spokeA, spokeB);
+      wheel.position.set(x, WHEEL_RADIUS, z); // y = hjulets radie, så det precis nuddar marken.
+      model.add(wheel);
+      spinners.push(spinner);
+      if (z > 0) frontWheels.push(wheel);
+    }
+  }
+  return { model, spinners, frontWheels };
+}
+
+// Spelets bil.
+const built = makeCarModel();
+export const car = built.model;
+const spinners = built.spinners;
+const frontWheels = built.frontWheels;
+scene.add(car);
+
+// --- Strålkastarnas ljus ---
+// EN SpotLight (ljuskägla) mitt i fronten, eftersom den kastar skuggor – och varje lampa
+// med skuggor kostar lika mycket som att rita scenen en extra gång.
+// SpotLight(färg, styrka, räckvidd, vinkel, mjuk kant). Släckt tills introt är klart.
+export const HEADLIGHT_STRENGTH = 600; // ÄNDRA för starkare/svagare ljus.
+export const beam = new THREE.SpotLight(PALETTE.headlightBeam, 0, 30, 0.55, 0.7);
+// Fusk: lampan sitter en bit OVANFÖR bilen, så att ljuset blir en tydlig pöl framför den.
+beam.position.set(0, 2.2, 1.3);
+beam.target.position.set(0, 0, 8); // Siktar på marken 8 enheter framför bilen.
+// Skuggor: utan dem lyser ljuset rakt igenom hus och träd.
+beam.castShadow = true;
+beam.shadow.mapSize.set(1024, 1024);
+beam.shadow.camera.near = 0.5;
+beam.shadow.camera.far = 30;
+beam.shadow.bias = -0.002;
+beam.shadow.normalBias = 0.03;
+car.add(beam, beam.target);
+
+// ---------------------------------------------------------------------------
+// KÖRNING – ändra de här talen för att ändra känslan.
+// ---------------------------------------------------------------------------
+const MAX_SPEED = 12;      // Toppfart, enheter per sekund.
+const ACCELERATION = 14;   // Hur snabbt farten ökar.
+const FRICTION = 6;        // Hur snabbt bilen saktar in när man släpper gasen.
+const TURN_RATE = 2.4;     // Hur snabbt bilen svänger vid toppfart, radianer per sekund.
+const MAX_STEER = 0.5;     // Hur mycket framhjulen vrids, radianer (ca 29°).
+
+export let speed = 0;  // Nuvarande fart. Negativ = backar.
+let heading = Math.PI / 4; // Åt vilket håll bilen pekar. PI / 4 = rakt uppåt på skärmen.
+
+// Andra filer ändrar fart och riktning med de här (ett importerat värde går bara att läsa).
+export function stopCar() {
+  speed = 0;
+}
+export function setHeading(angle) {
+  heading = angle;
+  car.rotation.y = angle;
+}
+
+// --- AUTOPILOT: bilen kör av sig själv till en punkt ---
+// Används när bilen backar ut ur garaget, och när den kör in i och ut ur en portal.
+//   to – målet { x, z }, reverse – true = backa dit, driveSpeed – enheter per sekund,
+//   onDone – körs när bilen är framme (får utelämnas).
+export let autoDrive = null; // Pågående körning, eller null.
+export function startAutoDrive(to, reverse, driveSpeed, onDone) {
+  autoDrive = { to, reverse, speed: driveSpeed, onDone };
+}
+
+// Vrider en vinkel mjukt mot en annan, åt det kortaste hållet.
+function turnTowards(angle, goal, rate, delta) {
+  const difference = Math.atan2(Math.sin(goal - angle), Math.cos(goal - angle));
+  return angle + difference * (1 - Math.exp(-rate * delta));
+}
+
+function updateAutoDrive(delta) {
+  const dx = autoDrive.to.x - car.position.x;
+  const dz = autoDrive.to.z - car.position.z;
+  const distanceLeft = Math.hypot(dx, dz);
+  // Math.min: kör aldrig längre än det som är kvar, så bilen stannar exakt på målet.
+  const step = Math.min(autoDrive.speed * delta, distanceLeft);
+  if (distanceLeft > 0) {
+    car.position.x += (dx / distanceLeft) * step;
+    car.position.z += (dz / distanceLeft) * step;
+    // Nosen ska peka mot målet – eller bort från det när bilen backar.
+    const goal = autoDrive.reverse ? Math.atan2(-dx, -dz) : Math.atan2(dx, dz);
+    heading = turnTowards(heading, goal, 10, delta);
+  }
+  car.rotation.y = heading;
+  speed = 0;
+  for (const spinner of spinners) spinner.rotation.x += (autoDrive.reverse ? -step : step) / WHEEL_RADIUS;
+  for (const wheel of frontWheels) wheel.rotation.y = THREE.MathUtils.damp(wheel.rotation.y, 0, 12, delta);
+  // Framme? Släpp autopiloten FÖRST, så att onDone kan starta en ny körning.
+  if (step >= distanceLeft) {
+    const onDone = autoDrive.onDone;
+    autoDrive = null;
+    if (onDone) onDone();
+  }
+}
+
+// Körs en gång per bild. delta = sekunder sedan förra bilden.
+// travelling = true medan en resa pågår (då står bilen still när autopiloten är klar).
+export function updateCar(delta, travelling) {
+  if (autoDrive) {
+    updateAutoDrive(delta);
+    return;
+  }
+  if (travelling) return;
+
+  // (framåt) - (bakåt) ger 1, -1 eller 0.
+  const throttle = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
+  // 1 = vänster, -1 = höger.
+  const steer = (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) - (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0);
+  if (throttle !== 0) {
+    speed += throttle * ACCELERATION * delta;
+  } else {
+    // Ingen gas: bromsa mot 0, men aldrig förbi 0 (då skulle bilen darra).
+    speed -= Math.sign(speed) * Math.min(Math.abs(speed), FRICTION * delta);
+  }
+  speed = THREE.MathUtils.clamp(speed, -MAX_SPEED / 2, MAX_SPEED); // Backen går hälften så fort.
+  // (speed / MAX_SPEED) = 0 när bilen står still, så den kan inte snurra på stället.
+  heading += steer * TURN_RATE * (speed / MAX_SPEED) * delta;
+  // sin/cos gör om vinkeln till en riktning.
+  car.position.x += Math.sin(heading) * speed * delta;
+  car.position.z += Math.cos(heading) * speed * delta;
+  // Håll kvar bilen innanför cirkeln runt världens mitt (den glider längs kanten).
+  const fromCenterX = car.position.x - currentWorld.x;
+  const fromCenterZ = car.position.z - currentWorld.z;
+  const distance = Math.hypot(fromCenterX, fromCenterZ);
+  if (distance > DRIVE_RADIUS) {
+    car.position.x = currentWorld.x + fromCenterX * (DRIVE_RADIUS / distance);
+    car.position.z = currentWorld.z + fromCenterZ * (DRIVE_RADIUS / distance);
+  }
+  car.rotation.y = heading;
+  for (const wheel of frontWheels) wheel.rotation.y = THREE.MathUtils.damp(wheel.rotation.y, steer * MAX_STEER, 12, delta);
+  // Ett hjul som rullar sträckan s vrids vinkeln s / radie.
+  for (const spinner of spinners) spinner.rotation.x += (speed * delta) / WHEEL_RADIUS;
+}

@@ -455,3 +455,52 @@ body.intro-open .touch {
 @media (pointer: coarse) {
   .intro-keys { display: none; }
 }
+
+/* FPS-mätaren uppe till höger (tryck F). Monospace = alla siffror lika breda, så texten inte hoppar. */
+.stats {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #9dffb0;
+  font: 12px ui-monospace, Menlo, monospace;
+  white-space: pre; /* Visa radbrytningarna (\n) i texten. */
+  pointer-events: none;
+  z-index: 20;
+}
+.stats[hidden] { display: none; }
+
+/* ------------------------------------------------------------------ */
+/* LADDNINGEN (på startskärmen)                                        */
+/* ------------------------------------------------------------------ */
+/* Medan världen laddas (body.loading) är startknappen avstängd och pulserar inte,
+   och en tunn mätare under den visar hur långt det har kommit. Själva laddnings-
+   scenen bakom är 3D (se js/loading-scene.js). */
+body.loading .intro-start {
+  animation: none;
+  cursor: progress;
+  background: rgba(240, 86, 26, 0.55);
+  box-shadow: none;
+  font-size: 15px;
+}
+.intro-progress {
+  width: 220px;
+  height: 6px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(255, 243, 214, 0.15);
+  overflow: hidden;
+}
+body:not(.loading) .intro-progress { visibility: hidden; } /* Klart: mätaren behövs inte. */
+.intro-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: #f0561a;
+  transform: scaleX(0.02);
+  transform-origin: left; /* Väx från vänster kant. */
+  transition: transform 0.3s ease;
+}
+/* Tangenttipset ("or press any key") är meningslöst innan det går att starta. */
+body.loading .intro-hint { visibility: hidden; }

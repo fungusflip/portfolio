@@ -30,11 +30,11 @@
   <!-- Säger till X/Twitter (och Discord) att visa bilden stort i stället för som en liten ruta. -->
   <meta name="twitter:card" content="summary_large_image">
   <!-- Laddar utseendet från css/style.css. -->
-  <!-- ?v=17 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
+  <!-- ?v=26 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=17">
+  <link rel="stylesheet" href="css/style.css?v=26">
 
   <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
        import ... from 'three' slår webbläsaren upp 'three' här och hämtar
@@ -53,7 +53,7 @@
 </head>
 
 <!-- <body> = det som syns på sidan. -->
-<body class="intro-open">
+<body class="intro-open loading">
   <!-- En canvas är en tom rityta. three.js ritar 3D-scenen i den.
        id="scene" är namnet som både style.css (#scene) och main.js letar efter. -->
   <canvas id="scene"></canvas>
@@ -61,6 +61,10 @@
   <!-- Toningen när bilen kör in i en portal: en ruta över hela fönstret som är
        osynlig (opacity 0) tills js/main.js tonar fram den i den nya världens färg. -->
   <div class="fade" id="fade"></div>
+
+
+  <!-- FPS-mätaren (tryck F). js/main.js fyller i texten. -->
+  <div class="stats" id="stats" hidden></div>
 
   <!-- Startskärmen: det första besökaren ser. Den berättar var man har hamnat och hur
        det fungerar. Den täcker INTE scenen – bilen och omgivningen syns bakom, som
@@ -81,7 +85,10 @@
         <li><span class="intro-icon">⛰️</span><span><strong>Caves</strong> — Tech Art, Programming &amp; Art worlds</span></li>
         <li><span class="intro-icon">🏠</span><span><strong>Garage</strong> — about me &amp; contact</span></li>
       </ul>
-      <button class="intro-start" id="introStart">Start driving</button>
+      <!-- Under laddningen är knappen avstängd (disabled) och visar hur långt det kommit.
+           js/ui.js gör den till "Start driving" när världen är klar. -->
+      <button class="intro-start" id="introStart" disabled>Loading…</button>
+      <div class="intro-progress"><div class="intro-progress-fill" id="introProgress"></div></div>
       <p class="intro-hint"><span class="intro-keys">or press any key · drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></p>
       <!-- För den som har bråttom (t.ex. en rekryterare): CV och mejl direkt. -->
       <p class="intro-links">
@@ -143,6 +150,6 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="js/main.js?v=17"></script>
+  <script type="module" src="js/main.js?v=26"></script>
 </body>
 </html>
