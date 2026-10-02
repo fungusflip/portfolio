@@ -1,0 +1,61 @@
+<p>This cat’s walk animation was built using <strong>blend spaces</strong> and <strong>state machines</strong> for smooth transitions between movement speeds. The jump was implemented from a single animation that I split into <strong>three clips</strong> — takeoff, airborne, and landing — allowing the motion to blend seamlessly in-game.</p>
+<p>I created the <strong>cat mesh, rig, and animations</strong> myself, while <a href="https://linktr.ee/klixx_" target="_blank" rel="noopener">Klixx</a> contributed the <strong>hand-painted texture</strong> and gave valuable feedback throughout production.</p>
+<h2>🎮 In-Game Implementation</h2>
+<p>🎥 <em>Here’s how it looks in the actual game:</em></p>
+<figure>
+ <video src="https://i.gyazo.com/c11e3331f8c62cc1f292e80854ba3e8e.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Cat animation in-game showing blend spaces, state machines, and split jump animation clips in action.</figcaption>
+</figure>
+<h2>🧀 Cheese Factory — Game Jam Implementation</h2>
+<p>This cat character was part of <strong>Cheese Factory</strong>, a game jam project built with a talented team, many of whom were new to game jams and internet releases.</p>
+<p><strong>🎮 <a href="https://sipproductions.itch.io/cheese-factory" target="_blank" rel="noopener">Play Cheese Factory on itch.io</a></strong></p>
+<p><em>Note: This is an unfinished release created under tight game jam constraints, so expect some bugs and rough edges. The focus was on rapid iteration and learning the jam process.</em></p>
+<h2>🔧 Technical Breakdown</h2>
+<p><strong>Animation Creation:</strong></p>
+<ul>
+ <li><strong>Rigging:</strong> Custom cat rig built in Maya with FK/IK controls</li>
+ <li><strong>Walk Cycle:</strong> Hand-keyed animation focusing on weight and timing</li>
+ <li><strong>Run Cycle:</strong> Faster variant with exaggerated poses for energy</li>
+ <li><strong>Jump Sequence:</strong> Single animation split into takeoff, airborne, and landing</li>
+</ul>
+<p><strong>Engine Implementation:</strong></p>
+<ul>
+ <li><strong>Blend Spaces:</strong> Smooth transitions between idle, walk, and run speeds</li>
+ <li><strong>State Machine:</strong> Handles movement state transitions and conditions</li>
+ <li><strong>Modular Jump:</strong> Three-clip system allows dynamic air time adjustment</li>
+ <li><strong>Seamless Blending:</strong> In-engine animation blending for responsive feel</li>
+</ul>
+<p><strong>Production Pipeline:</strong></p>
+<ul>
+ <li>Created cat mesh and base rig in Maya</li>
+ <li>Animated walk, run, and jump sequences</li>
+ <li>Exported to Unreal Engine with animation clips</li>
+ <li>Collaborated with texture artist for hand-painted look</li>
+ <li>Implemented animation system with blend spaces and state machines</li>
+ <li>Iterated based on gameplay feedback</li>
+</ul>
+<h2>🎨 Animation Fundamentals — Walk Cycle in Maya</h2>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/03/9d267bf1e30cc676c1aa25382260e8f6.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Untextured walk cycle in Maya. The clean animation showcases the motion without visual distraction — personally, I think it looks better without the texture!</figcaption>
+</figure>
+<p>Here’s the walk animation in its pure form — no textures, just clean motion. Honestly? <strong>I think it looks better this way.</strong> The silhouette and weight distribution are clearer without visual noise.</p>
+<p><strong>What makes this walk cycle work:</strong></p>
+<ul>
+ <li><strong>Weight Shift:</strong> Body rises and falls with each step for believable motion</li>
+ <li><strong>Hip Rotation:</strong> Natural sway as weight transfers between legs</li>
+ <li><strong>Paw Timing:</strong> Offset footfalls create a smooth, organic rhythm</li>
+ <li><strong>Tail Follow-Through:</strong> Secondary motion that adds life and personality</li>
+ <li><strong>Head Bob:</strong> Subtle vertical movement tied to the body’s center of gravity</li>
+</ul>
+<p>Sometimes the animation itself tells the story better than the final rendered asset. This clean playback lets you see the <strong>fundamentals</strong> — spacing, timing, arcs — without distraction.</p>
+<h2>💡 What I Learned</h2>
+<p><strong>Show the final result first.</strong> People want to see how it works in context before diving into the technical details. Leading with gameplay footage hooks attention, then you can explain the process.</p>
+<p><strong>Animation fundamentals show best without distraction.</strong> The untextured Maya playback proves that good animation doesn’t need fancy rendering — clear silhouettes and solid timing speak for themselves.</p>
+<p><strong>Animation splitting is powerful.</strong> Breaking the jump into three clips gave us way more control than using a single long animation. We could adjust air time based on jump height without re-animating.</p>
+<p><strong>Blend spaces make movement feel responsive.</strong> The smooth transitions between walk and run speeds made the cat feel alive and reactive to player input, even though we were just blending between two animation clips.</p>
+<p><strong>Collaboration amplifies results.</strong> Working with Klixx on the texture taught me how much a good hand-painted texture can enhance character appeal. Their feedback during production also helped refine the animations.</p>
+<p><strong>Game jams teach adaptability.</strong> Working with teammates new to the jam format meant being flexible, explaining technical constraints clearly, and focusing on what was achievable in the time we had.</p>
+<h2>🎮 Try It Yourself</h2>
+<p>Want to see these animation systems in action? <strong><a href="https://sipproductions.itch.io/cheese-factory" target="_blank" rel="noopener">Play Cheese Factory on itch.io</a></strong> and experience the cat character’s movement firsthand!</p>
+<p><strong>Interested in character animation, rigging systems, or Unreal Engine workflows?</strong> Let’s connect!</p>

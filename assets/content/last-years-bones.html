@@ -1,0 +1,71 @@
+<p><br> <br></p>
+<h3>Last Year’s Bones — Collage of a Year</h3>
+<p>WIP · Study Archive · Updated 11 Aug 2025</p>
+ <img src="https://filip.renemark.se/wp-content/uploads/2025/09/ezgif-10a9d878648bea.gif" alt="Hero Showcase" loading="lazy">
+<h2>Why This Exists</h2>
+<p> <em>Last Year’s Bones</em> is my way to make teaching at TGA actually <strong>stick</strong>.<br> Rigging, Houdini tools, materials, timing, animation, rendering — I needed one place<br> to weave those lessons together. It’s a collage of studies folded into a single mood piece. </p>
+<h2>About This Project</h2>
+<p><em>Last Year’s Bones</em> combines several studies into one collage project — a serpent rig, humanoid + wings, stone wall tool, and vine growth system. Each part taught me something unique about procedural workflows, rigging, and materials.</p>
+<ul>
+ <li><strong>Serpent:</strong> Modeled the head in Maya, then built a Houdini tool to procedurally rig, animate, and control body length. UV mapped + textured the body. Learned procedural UV mapping, normals/tangents, and how to drive animation procedurally.</li>
+ <li><strong>Humanoid + Wings:</strong> Used viewport textures with Sobel edge detection for a stylized line look. Modeled a humanoid + wings, rigged and skinned both (tested volumetric skinning per joint). Practiced different skinning workflows.</li>
+ <li><strong>Stone Wall Tool:</strong> First time tackling hard-edge materials in a procedural workflow. Learned the importance of splitting normals at UV seams, and planning graphic normals properly for baked maps and shading.</li>
+ <li><strong>Vines:</strong> Started as a VFX sketch → evolved into a procedural growth tool. Learned to manipulate data per frame using a solver, and why batching meshes matters (whole forest ≠ one mesh). Also learned about texture density adjustments when scaling geometry.</li>
+</ul>
+<p>Overall, this project was my step into <strong>baking and manipulating data more deliberately</strong>, exploring how procedural systems meet traditional rigging, and how planning UVs/normals up front changes everything downstream.</p></p>
+<h2>Vine Generation</h2>
+<p>Started by building a Houdini HDA to generate vines as procedural curves, then layering attributes for thickness and masks.</p>
+ <img src="https://filip.renemark.se/wp-content/uploads/2025/08/a1ea857add8ad958a100cbcacc2c22c0.gif" alt="Vine growth lines and width color" loading="lazy">
+<p>Width attribute visualized by color helped me debug scaling and get a feel for silhouette.</p>
+ <video src="https://filip.renemark.se/wp-content/uploads/2025/08/85ccabb64c808844c0c157502fb73c55.mp4" controls muted loop playsinline preload="metadata"></video>
+<p><strong>What I learned:</strong> attribute visualization early saves time when layering growth, masks, and materials later.</p>
+<p><strong>What I learned:</strong> attribute visualization early saves time when layering growth, masks, and materials later.</p>
+<h2>Serpent Rigging (Houdini → UE)</h2>
+<p>Built a procedural serpent rig in Houdini: spline-follow with head-lead, body lag, and curvature-based banking. Exported both baked animation and runtime versions.</p>
+ <img src="https://i.gyazo.com/71f2d85ecdadbc244b00814b5ce153d5.gif" alt="Houdini baked serpent rig" loading="lazy">
+<p>Imported into Unreal for lookdev testing:</p>
+ <img src="https://i.gyazo.com/41ca5e22c9fd46a4a99f2ca8b842f243.gif" alt="Serpent in Unreal Engine" loading="lazy">
+<p><strong>What I learned:</strong> smoothing the head path and lowering spline point density near tight curves removes jitter. Phase offset on body lag + curvature banking sells the “alive” feel.</p>
+<p><br> <br></p>
+<h2>Character Skeleton, Skinning &amp; Animation</h2>
+<p>Built a simple character rig from scratch — blockout mesh → skeleton → skinning → animation test.</p>
+ <img src="https://i.gyazo.com/a1b90ce9966cf71f12ec675caa803155.png" alt="Character rig with tris and skeleton view" loading="lazy">
+<ul>
+ <li><strong>Skeleton:</strong> pelvis, spine, arms, legs, head — minimal joints, clean orientation.</li>
+ <li><strong>Skinning:</strong> bound with geodesic + manual weight tweaks for shoulders/hips.</li>
+ <li><strong>Modeling:</strong> blockout mesh with clean topology for deformation practice.</li>
+ <li><strong>Animation:</strong> short cycle to check weights + timing, tested volumetric skinning per joint.</li>
+</ul>
+<p><strong>What I learned:</strong> with a small skeleton you don’t need many controls — clean weights on hips/shoulders matter most. Even simple meshes can read if timing is solid.</p>
+<h2>Stone Wall Tool</h2>
+<p>First procedural mesh I textured properly — learning to get Houdini procedural data to work with Substance Painter.</p>
+ <img src="https://filip.renemark.se/wp-content/uploads/2025/08/5e6af923333c7b81cbcdaf7ef9bf219f.png" alt="Stone wall first texture pass" loading="lazy"></p>
+<p>First try — experimenting with Painter + procedural data.</p></p>
+ <img src="https://i.gyazo.com/75ae413cac68aa4957486b6f90659919.gif" alt="Stone wall final result" loading="lazy"></p>
+<p>Final result — procedural mesh textured consistently with exported masks.</p></p>
+<p><strong>What I learned:</strong> clean UVs + curvature/ID masks are essential. Exporting procedural masks from Houdini gave me reliable layering in Painter.</p>
+<h2>Material &amp; Lookdev Tests</h2>
+<p>Exploring early shaders for character + environment surfaces.</p>
+ <img src="https://filip.renemark.se/wp-content/uploads/2025/08/6eca4efdbe98362bb490c1c603ed8e76.jpg" alt="Material test character and ice ground" loading="lazy">
+<p>Roughness and color blockouts to prototype tactile read:</p>
+ <img src="https://i.gyazo.com/5997b73e1a047c5e80b1b463afc4980a.gif" alt="Roughness + color blockout" loading="lazy">
+<h2>Lighting Explorations</h2>
+<p>Iterated on multiple blockout setups to find mood and readability.</p>
+ <img src="https://i.gyazo.com/aa29c036e7753bad5ff1347fc68f9237.gif" alt="Lighting blockout 1" loading="lazy">
+ <img src="https://i.gyazo.com/57be28ba19cecf5affdd33dd8254cfd0.gif" alt="Lighting blockout 2" loading="lazy">
+<p><br> <br></p>
+<h2>Centipede Breakdown (Unfinished Study)</h2>
+<p> This centipede started as a modeling + rigging test, but became my crash course in<br> <strong>procedural animation, axis math, and Unreal’s Control Rig workflow</strong>.<br> I didn’t finish the IK setup in Unreal before my time ran out — mostly because I hadn’t scoped the study.<br> But even unfinished, I learned more here about <em>rigs, segment math, and procedural motion</em> than in any other single exercise. </p>
+ <video src="https://filip.renemark.se/wp-content/uploads/2025/08/e912bc141f017c233ec51c2de2131f81.mp4" controls muted loop playsinline preload="metadata"></video>
+<p>Unreal prototype — segments attach to ground, but leg IK needed more work.</p>
+ <video src="https://filip.renemark.se/wp-content/uploads/2025/08/e44215bef8133a4a908188caf9aa525e.mp4" controls muted loop playsinline preload="metadata"></video>
+<p>Procedural Houdini rig — segment count and motion controlled via parameters.</p>
+ <video src="https://filip.renemark.se/wp-content/uploads/2025/08/56f251bc723f22d0bc9b45d55c8121a9.mp4" controls muted loop playsinline preload="metadata"></video>
+<p>Head, tail, and body segments modeled in Maya, then turned into Houdini tool inputs.</p>
+<p><strong>What I learned:</strong></p>
+<ul>
+ <li>Scoping studies matters — I tried to do too much at once.</li>
+ <li>Procedural animation is unforgiving: axis math must be exact or motion falls apart.</li>
+ <li>Control Rig in Unreal gave me a strong foundation in runtime rigging workflows, even if I didn’t finish.</li>
+ <li>Separating modeling (Maya) and procedural rigging (Houdini) gave me flexibility in iteration.</li>
+</ul>

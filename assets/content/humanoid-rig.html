@@ -1,0 +1,47 @@
+<p>Here’s a quick look at some rigging systems I’ve been working on — focusing on practical animation controls that give animators flexibility and precision.</p>
+<h2>🦿 IK/FK Switch — Seamless Leg Control</h2>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/03/ab04072ea4e851c894f57ae2f45d5704.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption> Quick demonstration of IK to FK switching on a leg rig. The system allows animators to seamlessly transition between inverse kinematics (for foot placement) and forward kinematics (for procedural motion) without losing pose data. </figcaption>
+</figure>
+<p><strong>Why this matters:</strong> IK/FK switching is essential for realistic character animation. Animators need IK when planting feet on the ground, but FK gives better control for actions like kicking or swinging legs. A good switch system lets you transition mid-animation without jarring pops or resets.</p>
+<p><strong>Technical approach:</strong></p>
+<ul>
+ <li>Custom attribute to blend between IK and FK chains</li>
+ <li>Constraint-based switching with offset preservation</li>
+ <li>Seamless transitioning without pose loss</li>
+ <li>Clean controller hierarchy for animator-friendly workflows</li>
+</ul>
+<h2>👟 Advanced Foot Controls — Heel, Toe, and Local Transforms</h2>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/03/f72a581f7457949d85f508b174981840.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption> Demonstration of foot rig controllers with local transform pivots. The setup includes heel roll, toe flap, and ball rotation — all accessible through intuitive placement and clean channel box attributes. </figcaption>
+</figure>
+<p><strong>What’s happening here:</strong> The foot rig uses strategically placed pivot points and local transform controls to give animators natural foot motion. Instead of rotating the entire foot from a single point, the rig breaks motion into heel, ball, and toe sections — exactly how real feet move.</p>
+<p><strong>Key features:</strong></p>
+<ul>
+ <li><strong>Heel pivot:</strong> Controls backward roll when lifting the foot</li>
+ <li><strong>Ball pivot:</strong> Natural bending point for walking and running</li>
+ <li><strong>Toe flap:</strong> Independent toe control for tip-toe poses and detail work</li>
+ <li><strong>Local transforms:</strong> All pivots respect world space while maintaining animator control</li>
+ <li><strong>Clean controllers:</strong> Visually distinct shapes that don’t clutter the viewport</li>
+</ul>
+<h2>💡 Why This Matters for Production</h2>
+<p>Good rigging isn’t just about making joints bend — it’s about <strong>empowering animators</strong> to work faster and more intuitively. These systems are designed with production workflows in mind:</p>
+<ul>
+ <li><strong>Speed:</strong> Animators can switch control methods on the fly without breaking poses</li>
+ <li><strong>Flexibility:</strong> Multiple pivot points mean more natural motion with fewer keyframes</li>
+ <li><strong>Clarity:</strong> Clean controller shapes and logical naming make rigs easy to learn</li>
+ <li><strong>Reliability:</strong> Constraint-based systems reduce errors and unexpected behavior</li>
+</ul>
+<h2>🔧 Technical Notes</h2>
+<p>Both rigs were built in <strong>Maya</strong> using a combination of:</p>
+<ul>
+ <li>Parent and orient constraints for IK/FK blending</li>
+ <li>Custom attributes with Set Driven Key for automated switching</li>
+ <li>Hierarchical controller setup with proper zeroed offset groups</li>
+ <li>Local pivot placement for anatomically accurate foot motion</li>
+ <li>Clean channel box organization for animator accessibility</li>
+</ul>
+<p>The goal was to create <strong>production-ready rigs</strong> that feel responsive, predictable, and artist-friendly — the kind of rigs that animators actually <em>want</em> to use.</p>
+<p><strong>Want to see more rigging work or discuss technical art pipelines?</strong> Feel free to reach out!</p>

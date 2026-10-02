@@ -30,6 +30,17 @@ body {
   display: block;  /* En canvas är "inline" från början, vilket ger en liten glipa under den. */
 }
 
+/* Toningen vid resor mellan världar. Täcker hela fönstret, ovanpå canvasen men
+   under guiden och panelen (de kommer senare i index.html och hamnar därför ovanpå).
+   js/main.js ändrar opacity (0 = osynlig, 1 = helt täckande) och bakgrundsfärgen. */
+.fade {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  background: var(--bg);
+  pointer-events: none; /* Klick och touch går rakt igenom. */
+}
+
 /* Guiden i nedre vänstra hörnet. */
 .guide {
   position: fixed;  /* Sitter fast i fönstret, ovanpå canvasen. */
@@ -289,4 +300,158 @@ html, body {
 .panel-body {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ------------------------------------------------------------------ */
+/* STARTSKÄRMEN                                                        */
+/* ------------------------------------------------------------------ */
+/* Ligger ovanpå allt, men täcker inte scenen: bara en mörk toning från vänster
+   (där texten står) som blir genomskinlig mot mitten, så att bilen och huset syns. */
+.intro {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;  /* Kortet i mitten på höjden. */
+  padding: 40px clamp(20px, 6vw, 90px); /* clamp(min, helst, max): 6 % av fönstrets bredd, men aldrig under 20 eller över 90 px. */
+  background: linear-gradient(90deg, rgba(25, 18, 40, 0.82) 0%, rgba(25, 18, 40, 0.5) 30%, rgba(25, 18, 40, 0) 55%);
+  color: #fff3d6;
+  font-family: system-ui, sans-serif;
+  z-index: 10;          /* Ovanpå guiden och touchknapparna. */
+  transition: opacity 0.6s ease; /* När den gömms tonas den bort under 0.6 sekunder. */
+}
+/* Sätts av js/main.js när man trycker Start: tona bort och släpp igenom klick. */
+.intro.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.intro[hidden] { display: none; }
+
+.intro-card {
+  max-width: 440px;
+  /* Glider in underifrån när sidan laddas (se @keyframes nedan). */
+  animation: intro-in 0.8s ease both;
+}
+@keyframes intro-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.intro-kicker {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;  /* Glesare bokstäver, typiskt för små rubriker. */
+  text-transform: uppercase;
+  color: #ffb45e;          /* Samma varma gula som lampan över garaget. */
+}
+.intro-name {
+  margin: 6px 0 4px;
+  font-size: clamp(36px, 5vw, 56px);
+  line-height: 1.05;
+  font-weight: 800;
+  /* En mjuk skugga gör texten läsbar även om något ljust ligger bakom. */
+  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.45);
+}
+.intro-role {
+  font-size: 17px;
+  font-weight: 600;
+  color: #f0561a;
+  filter: brightness(1.25); /* Lite ljusare orange, så att den syns mot det mörka. */
+}
+.intro-text {
+  margin: 18px 0 16px;
+  font-size: 16px;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.intro-legend {
+  list-style: none;     /* Inga punkter framför raderna. */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  font-size: 15px;
+}
+.intro-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.intro-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;  /* Ikonen i mitten av den runda bakgrunden. */
+  border-radius: 50%;
+  background: rgba(255, 243, 214, 0.14);
+  font-size: 17px;
+}
+
+/* Startknappen: samma orange "spelknapp" som mobilens Read more. */
+.intro-start {
+  padding: 15px 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #f0561a;
+  color: #fff3d6;
+  box-shadow: 0 5px 0 #b03a0c, 0 8px 22px rgba(0, 0, 0, 0.35);
+  font: 800 18px system-ui, sans-serif;
+  cursor: pointer;
+  animation: intro-pulse 2s ease-in-out infinite; /* Pulserar svagt: "tryck här". */
+}
+.intro-start:hover { filter: brightness(1.1); }
+.intro-start:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #b03a0c;
+}
+@keyframes intro-pulse {
+  50% { transform: scale(1.04); }
+}
+
+.intro-hint {
+  margin-top: 14px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+.intro kbd {
+  margin: 0 1px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(255, 243, 214, 0.18);
+  font-family: inherit;
+}
+
+.intro-links {
+  display: flex;
+  flex-wrap: wrap;  /* Bryt till en ny rad om de inte får plats. */
+  gap: 6px 18px;
+  margin-top: 22px;
+  font-size: 14px;
+}
+.intro-links a {
+  color: #fff3d6;
+  opacity: 0.8;
+  text-underline-offset: 3px;
+}
+.intro-links a:hover { opacity: 1; }
+
+/* Medan startskärmen syns behövs varken tangentguiden eller touchknapparna. */
+body.intro-open .guide,
+body.intro-open .touch {
+  display: none;
+}
+
+/* Mobil: toningen kommer uppifrån i stället, och kortet står högst upp, så att
+   bilen och huset syns på nedre halvan. Ingen tangenttips – det finns inget tangentbord. */
+@media (max-width: 600px) {
+  .intro {
+    align-items: flex-start;
+    background: linear-gradient(180deg, rgba(25, 18, 40, 0.88) 0%, rgba(25, 18, 40, 0.6) 55%, rgba(25, 18, 40, 0) 85%);
+    padding-top: calc(28px + env(safe-area-inset-top));
+  }
+  .intro-text { margin: 12px 0; font-size: 15px; }
+  .intro-legend { font-size: 14px; margin-bottom: 18px; }
+}
+@media (pointer: coarse) {
+  .intro-keys { display: none; }
 }

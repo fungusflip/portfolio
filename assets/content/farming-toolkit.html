@@ -1,0 +1,69 @@
+<p>I created a complete farming environment pack featuring realistic water VFX, a procedural farmland tile generator, and interactive props with vertex shader-driven growth mechanics. Built with a <strong>PBR (Physically Based Rendering) workflow</strong>, the pack delivers realistic material properties and natural lighting response. The water system uses vertex shaders, particles, and refraction to create an animated surface, while the tile tool generates customizable farmland with vertex color-driven terrain blending — all optimized for real-time rendering.</p>
+<h2>Realistic Water VFX System</h2>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/01/306ee2f31a6e22b2c2af4707b6a6e28f.mp4" controls muted loop playsinline preload="metadata"></video>
+</figure>
+<p><strong>Water Shader &amp; Particle System</strong><br>The water VFX combines multiple techniques to achieve a realistic, believable surface. The foundation is a <strong>vertex shader</strong> that animates the water surface with sine-wave displacement, creating gentle ripples and motion without expensive simulation.</p>
+<p>Layered on top are <strong>particle effects</strong> for foam, bubbles, and surface detail — strategically placed to enhance areas of interest. The shader also features <strong>refraction</strong> to distort what’s beneath the water surface, selling the illusion of depth and transparency.</p>
+<p>The entire system follows <strong>PBR principles</strong> with physically accurate roughness, metallic, and normal maps, allowing it to respond naturally to lighting. The watering VFX also triggers <strong>vertex shader-driven crop growth</strong> — vertex colors packed into carrot meshes allow them to visually “grow” when watered, creating responsive gameplay feedback.</p>
+<h2>Procedural Farmland Tile &amp; Rock Wall System</h2>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/01/41058eef991726739e52ede88f60537e.mp4" controls muted loop playsinline preload="metadata"></video>
+</figure>
+<p><strong>Vertex Color-Driven Terrain System</strong><br>The farmland tile generator creates modular environment pieces that seamlessly blend together. The system bakes <strong>vertex colors</strong> during generation, which the vertex shader reads to drive two key behaviors:</p>
+<p><strong>1. Texture Masking</strong> — Vertex colors determine which PBR texture sets appear where, allowing smooth transitions between soil, grass, stone paths, and rock walls without visible seams.</p>
+<p><strong>2. Vertex Displacement</strong> — The shader uses vertex color data to control whether sections are tiled (flat farmland) or displaced (raised paths, stone borders). This creates natural height variation across the terrain.</p>
+<p>All materials use full <strong>PBR texture sets</strong> (albedo, normal, roughness, metallic, AO) ensuring realistic lighting response across different times of day. The tiles also feature <strong>socket placement</strong> (pivot points) for props like crops, fences, and tools.</p>
+<h2>Socket Placement System</h2>
+<p>Embedded Anchor Points for Props &amp; Crops</p>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/02/1d798bea54027ce1300e17c17fa798ee.mp4" controls muted loop playsinline preload="metadata"></video>
+</figure>
+<p><strong>Automated Prop Placement</strong><br>Each farmland tile includes <strong>socket points</strong> (anchor points) embedded directly into the mesh during procedural generation. These sockets define exact positions and orientations for props, crops, fences, and tools.</p>
+<p>The system allows for <strong>consistent, snap-to-grid placement</strong> without manual positioning. Sockets are strategically placed along paths, field edges, and at plot centers, making level design fast and ensuring visual consistency across the entire farm environment.</p>
+<p>This approach streamlines the workflow for environment artists — simply spawn props at socket locations and they automatically align with the terrain, maintaining proper rotation and height offset. The result is clean, organized scenes that can be iterated on quickly.</p>
+<h2>Vertex Color Visualization</h2>
+<p>Farmland Tile System — Technical Breakdown</p>
+<figure>
+ <img src="https://filip.renemark.se/wp-content/uploads/2026/02/82a5b9a05ba7d53a58479b5c4f134bb0.png" alt="Vertex color visualization on farmland tiles showing texture masking zones" loading="lazy">
+ <figcaption>Vertex colors baked into the <strong>farmland tile mesh</strong> drive shader behavior — different colors control PBR texture blending and vertex displacement zones for soil, grass, paths, and rock walls.</figcaption>
+</figure>
+<h2>Realistic Farm Props</h2>
+<p>PBR Workflow — Modeled &amp; Textured</p>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/02/4d947f7ff147a4e334d4ab0df55ebdb3.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Realistic pitchfork with full PBR materials — wood grain and metal respond naturally to lighting</figcaption>
+</figure>
+<figure>
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/02/99edd8ca57946f06f7bc98ed9bb19a55.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Medieval watering can with PBR metallic surfaces and realistic weathering</figcaption>
+</figure>
+<p>All props are modeled and textured following <strong>PBR standards</strong>, with realistic material properties that respond accurately to lighting. The physically-based approach ensures the assets look convincing under any lighting condition.</p>
+<h2>Technical Breakdown</h2>
+<h4>Water VFX &amp; Growth System</h4>
+<ul>
+ <li>PBR-based materials with physical properties</li>
+ <li>Vertex shader-based wave animation</li>
+ <li>Sine-wave displacement patterns</li>
+ <li>Particle system for foam and bubbles</li>
+ <li>Screen-space refraction</li>
+ <li>Depth-based color gradients</li>
+ <li>Fresnel edge glow</li>
+ <li>Vertex color-driven crop growth shader</li>
+ <li>Optimized for real-time rendering</li>
+</ul>
+<h4>Farmland Tile System</h4>
+<ul>
+ <li>Full PBR texture sets (albedo, normal, roughness, metallic, AO)</li>
+ <li>Procedural tile generation</li>
+ <li>Vertex color baking for shader control</li>
+ <li>PBR texture masking via vertex colors</li>
+ <li>Vertex displacement for terrain variation</li>
+ <li>Socket/anchor point placement system</li>
+ <li>Automated prop alignment</li>
+ <li>Modular and tileable design</li>
+ <li>Realistic lighting response</li>
+</ul>
+<p>This farming pack showcases the power of combining <strong>PBR workflows</strong> with vertex color-driven systems — maintaining physical accuracy while baking control data at generation time. From terrain blending to interactive crop growth and automated socket placement, the result is flexible, artist-friendly systems that respond realistically to lighting while staying performance-conscious for real-time environments.</p>
+<p>
+ <img src="https://filip.renemark.se/shaders-rendering/project-water-shader/attachment/tgalogowhite" alt="Logo" loading="lazy"></p>
