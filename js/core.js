@@ -105,7 +105,9 @@ export const PALETTE = {
   fireflies: ['#ffd36b', '#8fefff', '#ffa8e0'],
   bulbs: '#ffd98a',          // Glödlamporna runt skärmarna hemma (de andra världarna får sin egen färg).
   smoke: '#cbbfd6',          // Röken ur skorstenen: ljust lila-grå.
-  tireDust: '#e2d3c0',       // Dammet bakom bilens hjul: varmt grå, som gruset. // Eldflugorna: mest guld, ibland turkos eller rosa.
+  tireDust: '#e2d3c0',
+  matcha: '#8dbf4f',         // Teet i koppen vid garaget.
+  steam: '#f6f1e8',          // Ångan ur tekoppen: nästan vit.       // Dammet bakom bilens hjul: varmt grå, som gruset. // Eldflugorna: mest guld, ibland turkos eller rosa.
   speckle: '#f79824',    // Play-symbolen och laddningssnurran på skärmarna: orange.
   carPaint: '#d8261a',   // Bilens lack: klarröd.
   glass: '#25323d',      // Rutor/hytt: mörkt blågrått glas.

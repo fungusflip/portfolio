@@ -60,21 +60,21 @@ body {
   transform: translate(-50%, var(--lift, 0px));
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 30px 14px 20px;
+  gap: 22px;
+  padding: 22px 46px 22px 30px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #f0561a;
   color: #fff3d6;
-  font: 600 19px system-ui, sans-serif;
+  font: 600 28px system-ui, sans-serif;
   white-space: nowrap;
   cursor: pointer;
   /* Halvcirklar "stansade" ur kortsidorna, som på en biobiljett. */
-  -webkit-mask: radial-gradient(circle at 0 50%, transparent 10px, #000 10.5px) left / 51% 100% no-repeat,
-                radial-gradient(circle at 100% 50%, transparent 10px, #000 10.5px) right / 51% 100% no-repeat;
-  mask: radial-gradient(circle at 0 50%, transparent 10px, #000 10.5px) left / 51% 100% no-repeat,
-        radial-gradient(circle at 100% 50%, transparent 10px, #000 10.5px) right / 51% 100% no-repeat;
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45));
+  -webkit-mask: radial-gradient(circle at 0 50%, transparent 14px, #000 14.5px) left / 51% 100% no-repeat,
+                radial-gradient(circle at 100% 50%, transparent 14px, #000 14.5px) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle at 0 50%, transparent 14px, #000 14.5px) left / 51% 100% no-repeat,
+        radial-gradient(circle at 100% 50%, transparent 14px, #000 14.5px) right / 51% 100% no-repeat;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.5));
   animation: prompt-in 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both, prompt-breathe 1.8s ease-in-out 0.45s infinite;
   z-index: 5;
 }
@@ -88,17 +88,22 @@ body {
 .park-prompt strong { font-weight: 800; }
 /* Tangenten: en gräddvit "tangent" på stubben, med en streckad linje efter. */
 .park-prompt-key {
-  padding: 5px 11px;
-  margin-left: 6px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  margin-left: 8px;
+  border-radius: 8px;
   background: #fff3d6;
   color: #25323d;
-  box-shadow: 0 3px 0 #c9b98f;
-  font: 800 15px system-ui, sans-serif;
+  box-shadow: 0 4px 0 #c9b98f;
+  font: 800 22px system-ui, sans-serif;
 }
 .park-prompt-text {
-  padding-left: 16px;
-  border-left: 2px dashed rgba(255, 243, 214, 0.6);
+  padding-left: 22px;
+  border-left: 3px dashed rgba(255, 243, 214, 0.6);
+}
+/* Smalare fönster: lite mindre, så att långa titlar får plats. */
+@media (max-width: 900px) {
+  .park-prompt { font-size: 22px; padding: 18px 36px 18px 24px; gap: 16px; }
+  .park-prompt-key { font-size: 18px; }
 }
 @keyframes prompt-in {
   from { opacity: 0; transform: translate(-50%, calc(var(--lift, 0px) + 30px)) scale(0.85); }

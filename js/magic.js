@@ -811,8 +811,8 @@ export function makeSwirl(geometry, center, color) {
 // RÖK UR SKORSTENEN
 // ---------------------------------------------------------------------------
 // Mjuka rökpuffar som stiger, växer och bleknar. Varje puff börjar om när den bleknat.
-// origin = skorstenens topp i världen.
-export function makeSmoke(origin) {
+// origin = där röken kommer ut, i världen (skorstenens topp). color = rökens färg.
+export function makeSmoke(origin, color = PALETTE.smoke) {
   const PUFFS = 14;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PUFFS * 3), 3)); // Krävs, men används inte.
@@ -823,7 +823,7 @@ export function makeSmoke(origin) {
       uWind: shared.uWind,
       uBreeze: shared.uBreeze,
       uOrigin: { value: origin.clone() },
-      uColor: { value: new THREE.Color(PALETTE.smoke) },
+      uColor: { value: new THREE.Color(color) },
       uScreenScale: smokeScreenScale,
     },
     vertexShader: `

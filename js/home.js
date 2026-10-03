@@ -13,7 +13,7 @@ import { ROAD_DISTANCE } from './roads.js';
 import { setParkedAt, leaveParking } from './ui.js';
 import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
-import { makeSmoke, makeBulbs, rectanglePoints } from './magic.js';
+import { makeSmoke } from './magic.js';
 
 // Texten på namnskylten.
 const HOME_NAME = 'Filip Renemark';
@@ -160,9 +160,37 @@ nameBoard.add(nameFrame);
 const nameFace = new THREE.Mesh(new THREE.PlaneGeometry(NAME_WIDTH, NAME_HEIGHT), new THREE.MeshBasicMaterial({ map: nameTexture }));
 nameFace.position.set(0, NAME_HEIGHT / 2 + 0.15, 0);
 nameBoard.add(nameFace);
-// Glödlampor runt namnskylten, som runt skärmarna. De springer fortare när bilen står i fickan.
-const nameBulbs = makeBulbs(rectanglePoints(NAME_WIDTH / 2 + 0.32, -0.02, NAME_HEIGHT + 0.32, 0.08, 0.45), PALETTE.bulbs);
-nameBoard.add(nameBulbs.mesh);
+// Ett varmt, stilla sken bakom namnskylten, som en upplyst butiksskylt. Starkare när bilen
+// står i fickan (se updateHome).
+const nameGlow = new THREE.Mesh(new THREE.PlaneGeometry(NAME_WIDTH + 4, NAME_HEIGHT + 3), makeGlowMaterial(0.9));
+nameGlow.position.set(0, NAME_HEIGHT / 2 + 0.15, -0.35);
+nameGlow.userData.noShadow = true;
+const NAME_GLOW_COLOR = new THREE.Color(PALETTE.bulbs);
+nameGlow.material.color.copy(NAME_GLOW_COLOR).multiplyScalar(0.45);
+nameBoard.add(nameGlow);
+markMoving(nameGlow); // Byter styrka: får inte slås ihop.
+
+// --- En stor kopp grönt te bredvid garaget, som ångar ---
+// Samma kopp som på startskärmen: gräddvit kopp, matchagrönt te, ett fat under.
+const teaCup = new THREE.Group();
+teaCup.position.set(-4.5, 0, GARAGE_Z + 1.6); // Till vänster om garaget, lite framför.
+teaCup.scale.setScalar(1.3);
+homeGroup.add(teaCup);
+// emissive = lyser lite av sig själv (som stugans väggar), så att koppen syns även i garagets skugga.
+const cupMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.sign, roughness: 0.5, emissive: PALETTE.sign, emissiveIntensity: 0.4 });
+const saucer = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.25, 0.14, 24), cupMaterial);
+saucer.position.y = 0.07;
+teaCup.add(saucer);
+const cupBody = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.68, 1.35, 24), cupMaterial); // Bredare upptill.
+cupBody.position.y = 0.14 + 1.35 / 2;
+teaCup.add(cupBody);
+const tea = new THREE.Mesh(new THREE.CircleGeometry(0.8, 24), new THREE.MeshStandardMaterial({ color: PALETTE.matcha, roughness: 0.3, emissive: PALETTE.matcha, emissiveIntensity: 0.6 }));
+tea.rotation.x = -Math.PI / 2;
+tea.position.y = 0.14 + 1.35 - 0.08; // Strax under kanten.
+teaCup.add(tea);
+const cupHandle = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.1, 8, 20), cupMaterial);
+cupHandle.position.set(0.98, 0.85, 0);
+teaCup.add(cupHandle);
 
 // --- Korsningen och hubPoint ---
 // Mitt emellan första och sista skylten hemma, flyttat ner till huvudvägen.
@@ -222,6 +250,8 @@ const homePadWorld = homeGroup.localToWorld(new THREE.Vector3(0, 0, HOME_PAD_Z))
 const mailboxWorld = mailbox.getWorldPosition(new THREE.Vector3());
 // Rök ur skorstenen. Pufferna räknar själva ut var de är, från skorstenens topp i världen.
 worldGroup(WORLDS.hub).add(makeSmoke(chimney.localToWorld(new THREE.Vector3(0, 0.8, 0))));
+// Ånga ur tekoppen: samma puffar, men vita.
+worldGroup(WORLDS.hub).add(makeSmoke(tea.localToWorld(new THREE.Vector3(0, 0, 0)), PALETTE.steam));
 export const home = {
   padX: homePadWorld.x,
   padZ: homePadWorld.z,
@@ -248,7 +278,7 @@ export function updateHome(carPosition) {
   const near = padDistance < PAD_RADIUS;
   if (near === home.active) return; // Inget har ändrats.
   home.active = near;
-  nameBulbs.active.value = near ? 1 : 0;
+  nameGlow.material.color.copy(NAME_GLOW_COLOR).multiplyScalar(near ? 0.8 : 0.45);
   lightPad(homePadMaterial, near);
   if (near) setParkedAt(ABOUT);
   else leaveParking(ABOUT);

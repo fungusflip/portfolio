@@ -23,9 +23,9 @@
 import * as THREE from 'three';
 import {
   renderer, scene, camera, cameraOffset, cameraLead, keyLight, SUN_DIRECTION, SUN_DISTANCE,
-  WORLDS, currentWorld, towardCamera, toTheRight, FOG_NEAR, FOG_FAR,
+  WORLDS, currentWorld, towardCamera, toTheRight, FOG_NEAR, FOG_FAR, CAMERA_PITCH,
 } from './core.js';
-import { introOpen, setLoadingProgress, setReady, setFade, placeParkPrompt } from './ui.js';
+import { introOpen, panelOpen, setLoadingProgress, setReady, setFade, placeParkPrompt } from './ui.js';
 import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
 // Projektlistan fungerar direkt, även under laddningen (den behöver bara projektdatan).
 import { setWorldJumper } from './project-list.js';
@@ -213,9 +213,22 @@ function updateLookAhead(delta) {
 // ---------------------------------------------------------------------------
 const cameraTarget = new THREE.Vector3(); // Återanvänds varje bild (nya objekt blir skräp att städa).
 // När bilen står vid en skylt lutar sig kameran mot skärmen och zoomar in lite.
-const FOCUS_PULL = 0.6;   // Hur långt mot skärmen siktpunkten flyttas (0 = inte alls, 1 = hela vägen).
-const FOCUS_ZOOM = 0.62;  // Kamerans avstånd när den zoomat in (1 = som vanligt).
-const focusShift = new THREE.Vector3();
+// Skärmarna lutar bara ca 17° bakåt, men kameran tittar ner med ca 53°: då ser man bilden
+// snett uppifrån och den ser hoptryckt ut. Vid en skylt sänks kameran därför mot ca 29°
+// (nästan rakt mot skärmen), siktar på skärmens mitt och zoomar in.
+const FOCUS_ZOOM = 0.55;     // Kamerans avstånd vid en skylt (1 = som vanligt).
+const PANEL_ZOOM = 0.47;     // ... och när panelen är öppen (Enter): ännu närmare.
+const FOCUS_PITCH = 0.5;     // Kamerans lutning vid en skylt, i radianer (0.5 ≈ 29°). Mindre = mer rakt framifrån.
+const FOCUS_AIM = 0.9;       // Hur mycket kameran siktar på skärmen i stället för bilen (1 = helt på skärmen).
+const SCREEN_CENTER_Y = 5.6; // Ungefär hur högt skärmens mitt sitter när den har vuxit.
+const PANEL_SPACE = 480;     // Panelens bredd i pixlar (med marginal): skylten flyttas till höger om den.
+let focusBlend = 0;          // 0 = vanlig kamera, 1 = helt inriktad på skylten. Glider mjukt.
+let panelBlend = 0;          // Samma sak för "panelen är öppen".
+const focusAim = new THREE.Vector3();   // Skärmens mitt (sparas, så att kameran kan glida tillbaka mjukt).
+const lookPoint = new THREE.Vector3();  // Dit kameran tittar.
+const cameraArm = new THREE.Vector3();  // Från siktpunkten till kameran.
+const CAMERA_ARM_LENGTH = cameraOffset.length();
+const CAMERA_ARM_ANGLE = Math.atan2(cameraOffset.x, cameraOffset.z); // Åt vilket håll kameran står (sett uppifrån).
 const PROMPT_DISTANCE = 3; // Var uppmaningen sitter: så långt framför skylten (fickan är 6 bort).
 const promptPoint = new THREE.Vector3();
 let focusZoom = 1;
@@ -250,22 +263,40 @@ function gameFrame(time) {
   }
   // Luta mot skylten bilen står vid (mjukt in och ut).
   const focus = getFocus();
-  const pullX = focus ? (focus.x - car.position.x) * FOCUS_PULL : 0;
-  const pullZ = focus ? (focus.z - car.position.z) * FOCUS_PULL : 0;
-  focusShift.x = THREE.MathUtils.damp(focusShift.x, pullX, 2.5, delta);
-  focusShift.z = THREE.MathUtils.damp(focusShift.z, pullZ, 2.5, delta);
-  focusZoom = THREE.MathUtils.damp(focusZoom, focus ? FOCUS_ZOOM : 1, 2.5, delta);
-  target.add(focusShift);
-  camera.position.copy(target).addScaledVector(cameraOffset, cameraZoom * focusZoom);
-  camera.lookAt(target);
+  if (focus) focusAim.set(focus.x, SCREEN_CENTER_Y, focus.z);
+  focusBlend = THREE.MathUtils.damp(focusBlend, focus ? 1 : 0, 2.5, delta);
+  const panelSide = focus && panelOpen && window.innerWidth > 700; // Panelen täcker vänstra delen (inte på mobil).
+  panelBlend = THREE.MathUtils.damp(panelBlend, panelSide ? 1 : 0, 3, delta);
+  focusZoom = THREE.MathUtils.damp(focusZoom, focus ? (panelOpen ? PANEL_ZOOM : FOCUS_ZOOM) : 1, 2.5, delta);
+  // Siktpunkten: mellan bilen och skärmens mitt.
+  lookPoint.copy(target).lerp(focusAim, focusBlend * FOCUS_AIM);
+  // Kamerans "arm": samma håll som vanligt sett uppifrån, men lägre lutning vid en skylt.
+  const pitch = THREE.MathUtils.lerp(CAMERA_PITCH, FOCUS_PITCH, focusBlend);
+  const armLength = CAMERA_ARM_LENGTH * cameraZoom * focusZoom;
+  cameraArm.set(
+    Math.sin(CAMERA_ARM_ANGLE) * Math.cos(pitch) * armLength,
+    Math.sin(pitch) * armLength,
+    Math.cos(CAMERA_ARM_ANGLE) * Math.cos(pitch) * armLength,
+  );
+  // Panelen öppen: flytta siktpunkten åt vänster, så att skylten hamnar i mitten av den fria
+  // ytan till höger om panelen. Synlig bredd på det avståndet = 2 × avstånd × tan(15°) × bildförhållande.
+  if (panelBlend > 0.001) {
+    const visibleWidth = 2 * armLength * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+    const shift = visibleWidth * (PANEL_SPACE / 2 / window.innerWidth) * panelBlend;
+    const moved = toTheRight(lookPoint, -shift);
+    lookPoint.x = moved.x;
+    lookPoint.z = moved.z;
+  }
+  camera.position.copy(lookPoint).add(cameraArm);
+  camera.lookAt(lookPoint);
   // Uppmaningen ("Enter · Open ..."): på marken mellan skärmen och fickan, omräknad till
   // en punkt på skärmen. project() gör om en plats i världen till -1..1 på skärmen.
   if (focus) {
     const spot = towardCamera(focus, PROMPT_DISTANCE);
     promptPoint.set(spot.x, 0.5, spot.z).project(camera);
     placeParkPrompt({
-      x: THREE.MathUtils.clamp((promptPoint.x + 1) / 2 * window.innerWidth, 180, window.innerWidth - 180),
-      y: THREE.MathUtils.clamp((1 - promptPoint.y) / 2 * window.innerHeight, 80, window.innerHeight - 60),
+      x: THREE.MathUtils.clamp((promptPoint.x + 1) / 2 * window.innerWidth, 280, window.innerWidth - 280), // Halva biljettens bredd från kanten.
+      y: THREE.MathUtils.clamp((1 - promptPoint.y) / 2 * window.innerHeight, 90, window.innerHeight - 70),
     });
   } else {
     placeParkPrompt(null);
