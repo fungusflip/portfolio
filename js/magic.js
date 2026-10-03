@@ -722,28 +722,28 @@ export function makeMatchaMaterial(hot) {
         // Rörelsen: varmt te virvlar och skummet driver; kallt te rör sig bara knappt.
         float motion = mix(0.15, 1.0, uHot);
         // Virveln: vrid koordinaterna mer nära mitten, och hela tiden lite till.
-        float turn = (1.0 - r) * 1.6 + uTime * 0.45 * motion;
+        float turn = (1.0 - r) * 1.6 + uTime * 0.08 * motion;
         vec2 p = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * vSpot;
         // Vinden: samma våg som får gräset att böja sig (se gräset ovan), så att teet rör sig i
         // takt med gräset och träden. Skummet driver med brisen och knuffas av vindbyarna.
         float windWave = sin(uTime * 1.6 - dot(vWorld, uBreeze) * 0.35);
-        p += vWorld * 1.7 + uBreeze * (uTime * 0.25 + windWave * 0.12) * motion + uWind.xz * 0.15;
+        p += vWorld * 1.7 + uBreeze * (uTime * 0.05 + windWave * 0.03) * motion + uWind.xz * 0.04;
         // Skummet: två lager brus, ett grovt och ett fint.
-        float foam = noise(p * 3.0) * 0.65 + noise(p * 9.0 + uTime * 0.4 * motion) * 0.35;
+        float foam = noise(p * 3.0) * 0.65 + noise(p * 9.0 + uTime * 0.08 * motion) * 0.35;
         vec3 color = mix(uDeep, uFoam, smoothstep(0.5, 0.9, foam) * 0.4);
         // Små ringar som vandrar utåt över ytan, som när någon nyss rört i koppen.
-        float ripple = sin(r * 26.0 - uTime * 3.0) * 0.5 + 0.5;
-        color *= 1.0 + (ripple - 0.5) * 0.08 * motion * (1.0 - r);
+        float ripple = sin(r * 26.0 - uTime * 1.2) * 0.5 + 0.5;
+        color *= 1.0 + (ripple - 0.5) * 0.025 * motion * (1.0 - r);
         // Krusningar i vindens riktning, starkare när det blåser (uWind.y = vindbyns styrka).
-        float windRipple = sin(dot(vWorld, uBreeze) * 30.0 - uTime * 4.0 + noise(vWorld * 6.0) * 2.0);
-        color *= 1.0 + windRipple * (0.03 + 0.07 * uWind.y);
+        float windRipple = sin(dot(vWorld, uBreeze) * 30.0 - uTime * 1.5 + noise(vWorld * 6.0) * 2.0);
+        color *= 1.0 + windRipple * (0.008 + 0.025 * uWind.y);
         // Mörkare kant där teet möter koppen (skugga), och en tunn skumring precis vid kanten.
         color *= 1.0 - smoothstep(0.7, 1.0, r) * 0.35;
         color = mix(color, uFoam, smoothstep(0.88, 0.97, r) * (1.0 - smoothstep(0.97, 1.0, r)) * 0.35);
         // Kallt te: en svag torkad ring en bit in.
         color = mix(color, uDeep * 0.6, (1.0 - uHot) * smoothstep(0.02, 0.0, abs(r - 0.8)) * 0.6);
         // Glansen: en svag ljus fläck snett uppe till vänster som gungar lite med ytan.
-        vec2 shineSpot = vec2(-0.35, 0.3) + vec2(sin(uTime * 1.3), cos(uTime * 1.1)) * 0.04 * motion;
+        vec2 shineSpot = vec2(-0.35, 0.3) + vec2(sin(uTime * 0.6), cos(uTime * 0.5)) * 0.015 * motion;
         float shine = smoothstep(0.3, 0.0, length(vSpot - shineSpot));
         color += vec3(1.0, 0.97, 0.85) * shine * mix(0.05, 0.025, 1.0 - uHot);
         gl_FragColor = vec4(color, 1.0);
