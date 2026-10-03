@@ -12,7 +12,7 @@ import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad } from './roads.js';
 import {
   HOME_X, HOME_Z, GARAGE_Z, GARAGE_DEPTH, CABIN_X, CABIN_Z, CABIN_SIZE,
-  homeGroup, homeRoadPoint, hubPoint, homePoint,
+  homeGroup, homeRoadPoint, hubPoint, homePoint, teaCupSpots,
 } from './home.js';
 import { PORTALS, techartCave, progCave, artCave, buildPortal } from './portals.js';
 import { buildSignposts } from './signposts.js';
@@ -179,8 +179,8 @@ export function buildHubTrees({ roads, lamps, signposts }) {
   // Träd runt stugan på bestämda platser, så att tomten ser likadan ut varje gång.
   // [x, z, storlek, färgnummer], räknat inne i hem-gruppen.
   const HOME_TREES = [
-    [-3, -5, 1.2, 1], [2.5, -6, 1.0, 0], [7, -5.5, 1.2, 2],   // Bakom garaget och stugan.
-    [-6.5, -1, 1.1, 0], [-7, 4, 1.0, 1], [-6, 8, 0.9, 2],     // Till vänster om garaget och uppfarten.
+    [-2, -6.5, 1.2, 1], [2.5, -6, 1.0, 0], [7, -5.5, 1.2, 2],  // Bakom garaget och stugan.
+    [-7.6, -0.6, 1.1, 0], [-7.4, 4.6, 1.0, 1], [-6, 8, 0.9, 2], // Till vänster om garaget (plats för tekopparna).
   ];
   for (const [x, z, scale, colorIndex] of HOME_TREES) {
     const spot = homeGroup.localToWorld(new THREE.Vector3(x, 0, z));
@@ -197,6 +197,7 @@ export function buildHubGrass({ roads, lamps, signposts }) {
   function grassAmount(x, z) {
     let room = DRIVE_RADIUS + 6 - Math.hypot(x - HUB_X, z - HUB_Z); // Ute i kanttoningen.
     room = Math.min(room, Math.hypot(x - HOME_X, z - HOME_Z) - 8.5); // Garaget och stugan.
+    for (const cup of teaCupSpots) room = Math.min(room, Math.hypot(x - cup.x, z - cup.z) - 2.2); // Tekopparna.
     for (const road of roads) room = Math.min(room, distanceToRoad(x, z, road) - (road.width || ROAD_WIDTH) / 2 - 0.3);
     for (const project of PROJECTS) {
       if (project.world === hub) room = Math.min(room, Math.hypot(x - project.x, z - project.z) - 4);

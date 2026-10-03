@@ -812,7 +812,10 @@ export function makeSwirl(geometry, center, color) {
 // ---------------------------------------------------------------------------
 // Mjuka rökpuffar som stiger, växer och bleknar. Varje puff börjar om när den bleknat.
 // origin = där röken kommer ut, i världen (skorstenens topp). color = rökens färg.
-export function makeSmoke(origin, color = PALETTE.smoke) {
+// scale = storlek: 1 = skorstensrök, mindre för ånga ur en liten kopp.
+// spread = hur utspritt pufferna börjar (0 = alla från samma punkt, som ur en skorsten).
+// opacity = hur synlig (1 = som skorstensröken, mindre = mer genomskinlig).
+export function makeSmoke(origin, color = PALETTE.smoke, scale = 1, spread = 0, opacity = 1) {
   const PUFFS = 14;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PUFFS * 3), 3)); // Krävs, men används inte.
@@ -824,6 +827,9 @@ export function makeSmoke(origin, color = PALETTE.smoke) {
       uBreeze: shared.uBreeze,
       uOrigin: { value: origin.clone() },
       uColor: { value: new THREE.Color(color) },
+      uScale: { value: scale },
+      uSpread: { value: spread },
+      uOpacity: { value: opacity },
       uScreenScale: smokeScreenScale,
     },
     vertexShader: `
@@ -833,26 +839,32 @@ export function makeSmoke(origin, color = PALETTE.smoke) {
       uniform vec2 uBreeze;
       uniform vec3 uOrigin;
       uniform float uScreenScale;
+      uniform float uScale;
+      uniform float uSpread;
       varying float vAge;
       void main() {
         float age = fract(uTime * 0.16 + aSeed); // 0 = nyss ute, 1 = borta.
         vec3 p = uOrigin;
-        p.y += age * 5.5;
-        p.xz += (uBreeze * 1.5 + uWind.xz * 0.4) * age * age * 2.0; // Böjer av med vinden.
-        p.x += sin(aSeed * 40.0 + uTime * 0.8) * 0.3 * age;           // Lite slingrigt.
+        // Varje puff börjar på sin egen plats inom en cirkel (spread), i stället för i en punkt.
+        float spot = aSeed * 6.2832 * 7.0 + floor(uTime * 0.16 + aSeed) * 2.4; // Ny plats varje varv.
+        p.xz += vec2(cos(spot), sin(spot)) * uSpread * fract(sin(spot) * 43758.5);
+        p.y += age * 5.5 * uScale;
+        p.xz += (uBreeze * 1.5 + uWind.xz * 0.4) * age * age * 2.0 * uScale; // Böjer av med vinden.
+        p.x += sin(aSeed * 40.0 + uTime * 0.8) * 0.3 * age * uScale;           // Lite slingrigt.
         vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * viewPosition;
-        float size = 0.7 + age * 2.4; // Pufferna växer när de stiger.
+        float size = (0.7 + age * 2.4) * uScale; // Pufferna växer när de stiger.
         gl_PointSize = size * uScreenScale / -viewPosition.z;
         vAge = age;
       }`,
     fragmentShader: `
       uniform vec3 uColor;
+      uniform float uOpacity;
       varying float vAge;
       void main() {
         float r = length(gl_PointCoord - 0.5) * 2.0;
         // Tona in snabbt, ut långsamt.
-        float alpha = smoothstep(1.0, 0.2, r) * smoothstep(0.0, 0.1, vAge) * (1.0 - vAge) * 0.5;
+        float alpha = smoothstep(1.0, 0.2, r) * smoothstep(0.0, 0.1, vAge) * (1.0 - vAge) * 0.5 * uOpacity;
         gl_FragColor = vec4(uColor, alpha);
         #include <colorspace_fragment>
       }`,

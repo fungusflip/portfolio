@@ -170,27 +170,64 @@ nameGlow.material.color.copy(NAME_GLOW_COLOR).multiplyScalar(0.45);
 nameBoard.add(nameGlow);
 markMoving(nameGlow); // Byter styrka: får inte slås ihop.
 
-// --- En stor kopp grönt te bredvid garaget, som ångar ---
-// Samma kopp som på startskärmen: gräddvit kopp, matchagrönt te, ett fat under.
-const teaCup = new THREE.Group();
-teaCup.position.set(-4.5, 0, GARAGE_Z + 1.6); // Till vänster om garaget, lite framför.
-teaCup.scale.setScalar(1.3);
-homeGroup.add(teaCup);
-// emissive = lyser lite av sig själv (som stugans väggar), så att koppen syns även i garagets skugga.
-const cupMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.sign, roughness: 0.5, emissive: PALETTE.sign, emissiveIntensity: 0.4 });
-const saucer = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.25, 0.14, 24), cupMaterial);
-saucer.position.y = 0.07;
-teaCup.add(saucer);
-const cupBody = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.68, 1.35, 24), cupMaterial); // Bredare upptill.
-cupBody.position.y = 0.14 + 1.35 / 2;
-teaCup.add(cupBody);
-const tea = new THREE.Mesh(new THREE.CircleGeometry(0.8, 24), new THREE.MeshStandardMaterial({ color: PALETTE.matcha, roughness: 0.3, emissive: PALETTE.matcha, emissiveIntensity: 0.6 }));
-tea.rotation.x = -Math.PI / 2;
-tea.position.y = 0.14 + 1.35 - 0.08; // Strax under kanten.
-teaCup.add(tea);
-const cupHandle = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.1, 8, 20), cupMaterial);
-cupHandle.position.set(0.98, 0.85, 0);
-teaCup.add(cupHandle);
+// --- Tekoppar runt huset ---
+// En stor kopp matcha uppe till vänster om garaget, och små koppar utspridda runt huset:
+// några fulla och varma (ångar), några halvdruckna, några kalla och några tomma.
+// Koppen är ett rör utan lock (openEnded), så att man ser ner i den: teet är en grön
+// skiva på rätt höjd inuti, och botten en gräddvit skiva.
+// emissive = lyser lite av sig själv (som stugans väggar), så att kopparna syns även i skugga.
+const cupMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.sign, roughness: 0.5, emissive: PALETTE.sign, emissiveIntensity: 0.4, side: THREE.DoubleSide });
+const hotTeaMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.matcha, roughness: 0.3, emissive: PALETTE.matcha, emissiveIntensity: 0.35 });
+const coldTeaMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.matchaCold, roughness: 0.5, emissive: PALETTE.matchaCold, emissiveIntensity: 0.2 });
+const CUP_HEIGHT = 1.35;
+const CUP_TOP = 0.9;     // Radie upptill.
+const CUP_BOTTOM = 0.68; // Radie nertill.
+const saucerGeometry = new THREE.CylinderGeometry(1.35, 1.25, 0.14, 24);
+const cupBodyGeometry = new THREE.CylinderGeometry(CUP_TOP, CUP_BOTTOM, CUP_HEIGHT, 24, 1, true);
+const cupBottomGeometry = new THREE.CircleGeometry(CUP_BOTTOM, 24).rotateX(-Math.PI / 2);
+const cupHandleGeometry = new THREE.TorusGeometry(0.36, 0.1, 8, 20);
+// Kopparna: [x, z (i hem-gruppen), storlek, hur full (0 = tom, 1 = full), värme]. ÄNDRA HÄR.
+// Värme: 'hot' = ångar, 'warm' = färskt grönt men ingen ånga, 'cold' = mörkare grönt, ingen ånga.
+const TEA_CUPS = [
+  [-5.2, -3.1, 1.3, 0.5, 'warm'],  // Den stora, uppe till vänster om garaget: halvdrucken, ljummen.
+  [-4.0, 1.4, 0.5, 0.5, 'hot'],    // Halvdrucken, fortfarande varm.
+  [-4.8, 3.2, 0.45, 0, 'cold'],    // Tom.
+  [-3.5, 4.5, 0.5, 0.45, 'cold'],  // Halvdrucken och kall.
+  [3.5, 3.4, 0.45, 0.2, 'cold'],   // Nästan slut, kall. Mellan garaget och stugan.
+  [9.3, 1.0, 0.55, 0.9, 'hot'],    // Full och varm, till höger om stugan.
+  [9.5, -1.6, 0.45, 0, 'cold'],    // Tom.
+  [8.9, 4.0, 0.5, 0.6, 'hot'],     // Vid stugdörrens gång.
+  [1.4, -3.3, 0.5, 0.85, 'cold'],  // Bakom garaget: full men kall (bortglömd).
+];
+const steamSpots = []; // Var ångan ska komma ut ur de varma kopparna, och hur stor den är.
+for (const [x, z, size, fill, heat] of TEA_CUPS) {
+  const cup = new THREE.Group();
+  cup.position.set(x, 0, z);
+  cup.rotation.y = Math.random() * Math.PI * 2; // Handtaget åt olika håll.
+  cup.scale.setScalar(size);
+  homeGroup.add(cup);
+  const saucer = new THREE.Mesh(saucerGeometry, cupMaterial);
+  saucer.position.y = 0.07;
+  cup.add(saucer);
+  const body = new THREE.Mesh(cupBodyGeometry, cupMaterial);
+  body.position.y = 0.14 + CUP_HEIGHT / 2;
+  cup.add(body);
+  const bottom = new THREE.Mesh(cupBottomGeometry, cupMaterial);
+  bottom.position.y = 0.16;
+  cup.add(bottom);
+  const handle = new THREE.Mesh(cupHandleGeometry, cupMaterial);
+  handle.position.set(0.98, 0.85, 0);
+  cup.add(handle);
+  if (fill > 0) {
+    // Teets yta: på höjden fill, och lika bred som koppen är just där.
+    const radius = THREE.MathUtils.lerp(CUP_BOTTOM, CUP_TOP, fill) - 0.03;
+    const tea = new THREE.Mesh(new THREE.CircleGeometry(radius, 24).rotateX(-Math.PI / 2), heat === 'cold' ? coldTeaMaterial : hotTeaMaterial);
+    tea.position.y = 0.16 + fill * (CUP_HEIGHT - 0.1);
+    cup.add(tea);
+  }
+  // Ångan börjar strax ovanför teets yta, utspridd över hela ytan.
+  if (heat === 'hot') steamSpots.push({ cup, height: 0.16 + fill * CUP_HEIGHT + 0.15, size });
+}
 
 // --- Korsningen och hubPoint ---
 // Mitt emellan första och sista skylten hemma, flyttat ner till huvudvägen.
@@ -246,12 +283,17 @@ markMoving(mailFlag, garageDoor, garageOpening);
 
 // Fickans och brevlådans platser i världen.
 worldGroup(WORLDS.hub).updateMatrixWorld(true);
+// Tekopparnas platser i världen (gräset växer inte under dem, se hub.js).
+export const teaCupSpots = TEA_CUPS.map(([x, z]) => homeGroup.localToWorld(new THREE.Vector3(x, 0, z)));
 const homePadWorld = homeGroup.localToWorld(new THREE.Vector3(0, 0, HOME_PAD_Z));
 const mailboxWorld = mailbox.getWorldPosition(new THREE.Vector3());
 // Rök ur skorstenen. Pufferna räknar själva ut var de är, från skorstenens topp i världen.
 worldGroup(WORLDS.hub).add(makeSmoke(chimney.localToWorld(new THREE.Vector3(0, 0.8, 0))));
-// Ånga ur tekoppen: samma puffar, men vita.
-worldGroup(WORLDS.hub).add(makeSmoke(tea.localToWorld(new THREE.Vector3(0, 0, 0)), PALETTE.steam));
+// Ånga ur de varma kopparna: samma puffar som skorstenen, men mindre, utspridda över hela
+// teytan (koppens radie gånger storleken) och mycket mer genomskinliga (0.3).
+for (const { cup, height, size } of steamSpots) {
+  worldGroup(WORLDS.hub).add(makeSmoke(cup.localToWorld(new THREE.Vector3(0, height, 0)), PALETTE.steam, size, CUP_TOP * size * 0.8, 0.3));
+}
 export const home = {
   padX: homePadWorld.x,
   padZ: homePadWorld.z,

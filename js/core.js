@@ -106,7 +106,8 @@ export const PALETTE = {
   bulbs: '#ffd98a',          // Glödlamporna runt skärmarna hemma (de andra världarna får sin egen färg).
   smoke: '#cbbfd6',          // Röken ur skorstenen: ljust lila-grå.
   tireDust: '#e2d3c0',
-  matcha: '#8dbf4f',         // Teet i koppen vid garaget.
+  matcha: '#3f6e1a',         // Teet i kopparna: djupt matchagrönt.
+  matchaCold: '#4c5a22',     // Kallt te som stått länge: mörkare och gråare grönt.
   steam: '#f6f1e8',          // Ångan ur tekoppen: nästan vit.       // Dammet bakom bilens hjul: varmt grå, som gruset. // Eldflugorna: mest guld, ibland turkos eller rosa.
   speckle: '#f79824',    // Play-symbolen och laddningssnurran på skärmarna: orange.
   carPaint: '#d8261a',   // Bilens lack: klarröd.
