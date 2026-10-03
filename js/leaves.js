@@ -154,7 +154,7 @@ setWeather(WORLDS.hub);
 // sidan och löv på marken hoppar iväg en bit.
 const GUST_SPEED = 3.5;     // Vindens fart när byn är som starkast. ÄNDRA för stormigare/lugnare.
 const GUST_SKITTER = 0.6;   // Hur många av marklöven som hoppar under en by (chans per sekund).
-const wind = { x: 0, z: 0, strength: 0 }; // Vinden just nu. strength = 0..1.
+export const wind = { x: 0, z: 0, strength: 0 }; // Vinden just nu. strength = 0..1.
 let gustLeft = 0;           // Sekunder kvar av pågående vindby.
 let gustLength = 1;
 let gustAngle = 0;          // Åt vilket håll det blåser.

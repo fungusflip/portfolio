@@ -30,6 +30,15 @@ body {
   display: block;  /* En canvas är "inline" från början, vilket ger en liten glipa under den. */
 }
 
+/* Vinjetten: en toning från genomskinligt i mitten till mörkt lila i kanterna.
+   ellipse = följer fönstrets form. ÄNDRA 0.5 (hur mörkt) och 55% (var den börjar). */
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(25, 14, 35, 0.5) 100%);
+}
+
 /* Toningen vid resor mellan världar. Täcker hela fönstret, ovanpå canvasen men
    under guiden och panelen (de kommer senare i index.html och hamnar därför ovanpå).
    js/main.js ändrar opacity (0 = osynlig, 1 = helt täckande) och bakgrundsfärgen. */
@@ -336,77 +345,103 @@ html, body {
   to { opacity: 1; transform: none; }
 }
 
-.intro-kicker {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.14em;  /* Glesare bokstäver, typiskt för små rubriker. */
-  text-transform: uppercase;
-  color: #ffb45e;          /* Samma varma gula som lampan över garaget. */
+/* Namnskylten: en gräddvit skylt med mörk ram, som skyltarna i världen. */
+.intro-marquee {
+  display: inline-block;
+  margin: 14px 14px 22px;   /* Plats för ramen utanför skylten. */
+  padding: 18px 28px 14px;
+  background: #fff3d6;
+  color: #25323d;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 10px #2b2d33,            /* Den mörka ramen. */
+    0 0 60px 18px rgba(255, 190, 110, 0.2); /* Varmt sken runt skylten. */
 }
 .intro-name {
-  margin: 6px 0 4px;
-  font-size: clamp(36px, 5vw, 56px);
-  line-height: 1.05;
-  font-weight: 800;
-  /* En mjuk skugga gör texten läsbar även om något ljust ligger bakom. */
-  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.45);
+  font-family: 'Bungee', system-ui, sans-serif;
+  font-weight: 400;          /* Bungee är redan fett. */
+  font-size: clamp(30px, 4.4vw, 48px);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: #25323d;
 }
 .intro-role {
-  font-size: 17px;
-  font-weight: 600;
-  color: #f0561a;
-  filter: brightness(1.25); /* Lite ljusare orange, så att den syns mot det mörka. */
+  margin-top: 8px;
+  font: 700 15px system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: #f0561a;            /* Samma "tända" orange som skyltarnas titlar. */
+}
+/* Teraden: koppen till vänster, texten bredvid. */
+.intro-tea {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 420px;
+  margin: 4px 0 12px;
+  font-size: 16px;
+  line-height: 1.55;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.tea-cup {
+  flex: none;               /* Krymp inte koppen när texten är lång. */
+  width: 44px;
+  height: 44px;
+  margin-top: -6px;
+}
+.tea-body { fill: #fff3d6; }
+.tea-matcha { fill: #8dbf4f; }  /* Matchagrönt. */
+.tea-handle {
+  fill: none;
+  stroke: #fff3d6;
+  stroke-width: 3;
+}
+/* Ångan: tre slingor som stiger, tonar in och ut, i otakt. */
+.tea-steam {
+  fill: none;
+  stroke: rgba(255, 243, 214, 0.7);
+  stroke-width: 2;
+  stroke-linecap: round;
+  animation: tea-steam 3s ease-in-out infinite;
+}
+.tea-steam:nth-child(2) { animation-delay: -1s; }
+.tea-steam:nth-child(3) { animation-delay: -2s; }
+@keyframes tea-steam {
+  0% { opacity: 0; transform: translateY(4px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-5px); }
 }
 .intro-text {
-  margin: 18px 0 16px;
+  max-width: 400px;
+  margin: 0 0 22px;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
   opacity: 0.92;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); /* Läsbar även mot ljusa saker bakom. */
 }
 
-.intro-legend {
-  list-style: none;     /* Inga punkter framför raderna. */
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 24px;
-  font-size: 15px;
-}
-.intro-legend li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.intro-icon {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;  /* Ikonen i mitten av den runda bakgrunden. */
-  border-radius: 50%;
-  background: rgba(255, 243, 214, 0.14);
-  font-size: 17px;
-}
-
-/* Startknappen: samma orange "spelknapp" som mobilens Read more. */
+/* Startknappen: en biobiljett. Två halvcirklar är "stansade" ur kortsidorna (masken),
+   och en streckad linje skiljer av den lilla stubben till vänster. */
 .intro-start {
-  padding: 15px 34px;
+  position: relative;
+  padding: 14px 30px 14px 46px;
   border: 0;
-  border-radius: 999px;
-  background: #f0561a;
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, transparent 27px, rgba(255, 243, 214, 0.55) 27px 29px, transparent 29px) 0 50% / 100% 70% no-repeat,
+    #f0561a;
   color: #fff3d6;
-  box-shadow: 0 5px 0 #b03a0c, 0 8px 22px rgba(0, 0, 0, 0.35);
-  font: 800 18px system-ui, sans-serif;
+  font: 800 17px system-ui, sans-serif;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  animation: intro-pulse 2s ease-in-out infinite; /* Pulserar svagt: "tryck här". */
+  -webkit-mask: radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px) left / 51% 100% no-repeat,
+                radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px) left / 51% 100% no-repeat,
+        radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px) right / 51% 100% no-repeat;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
-.intro-start:hover { filter: brightness(1.1); }
-.intro-start:active {
-  transform: translateY(3px);
-  box-shadow: 0 2px 0 #b03a0c;
-}
-@keyframes intro-pulse {
-  50% { transform: scale(1.04); }
-}
+.intro-start:hover { transform: rotate(-1.5deg) scale(1.03); } /* Biljetten vickar lite. */
+.intro-start:active { transform: scale(0.98); }
 
 .intro-hint {
   margin-top: 14px;
@@ -449,8 +484,8 @@ body.intro-open .touch {
     background: linear-gradient(180deg, rgba(25, 18, 40, 0.88) 0%, rgba(25, 18, 40, 0.6) 55%, rgba(25, 18, 40, 0) 85%);
     padding-top: calc(28px + env(safe-area-inset-top));
   }
-  .intro-text { margin: 12px 0; font-size: 15px; }
-  .intro-legend { font-size: 14px; margin-bottom: 18px; }
+  .intro-text { margin: 0 0 16px; font-size: 15px; }
+  .intro-tea { font-size: 15px; }
 }
 @media (pointer: coarse) {
   .intro-keys { display: none; }
@@ -479,7 +514,6 @@ body.intro-open .touch {
    och en tunn mätare under den visar hur långt det har kommit. Själva laddnings-
    scenen bakom är 3D (se js/loading-scene.js). */
 body.loading .intro-start {
-  animation: none;
   cursor: progress;
   background: rgba(240, 86, 26, 0.55);
   box-shadow: none;
@@ -508,19 +542,19 @@ body.loading .intro-hint { visibility: hidden; }
 /* ------------------------------------------------------------------ */
 /* PROJEKTLISTAN (js/project-list.js)                                  */
 /* ------------------------------------------------------------------ */
-/* Länken på startskärmen: ser ut som en diskret knapp under startknappen. */
+/* Listlänken på startskärmen: ser ut som de andra länkarna (understruken text), fast det är en knapp. */
 .intro-skip {
-  display: block;
-  margin-top: 16px;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 243, 214, 0.35);
-  border-radius: 999px;
-  background: transparent;
+  padding: 0;
+  border: 0;
+  background: none;
   color: #fff3d6;
-  font: 600 14px system-ui, sans-serif;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
 }
-.intro-skip:hover { background: rgba(255, 243, 214, 0.1); }
+.intro-skip:hover { color: #ffd98a; }
 
 /* Knappen uppe till höger i spelet. Syns inte på startskärmen eller när listan är öppen. */
 .projects-button {
@@ -652,15 +686,12 @@ body.list-open .touch { display: none; }
    rutan rulla om det ändå inte räcker. */
 .intro { overflow-y: auto; }
 @media (max-height: 760px) {
-  .intro-name { font-size: 40px; }
-  .intro-text { margin: 10px 0; font-size: 15px; }
-  .intro-legend { gap: 4px; margin-bottom: 14px; font-size: 14px; }
-  .intro-icon { width: 26px; height: 26px; font-size: 14px; }
-  .intro-start { padding: 12px 28px; font-size: 16px; }
+  .intro-name { font-size: 34px; }
+  .intro-marquee { margin-bottom: 18px; padding: 14px 22px 11px; }
+  .intro-text { margin: 0 0 16px; font-size: 15px; }
+  .intro-tea { font-size: 15px; }
+  .intro-start { padding: 12px 26px 12px 42px; font-size: 16px; }
   .intro-links { margin-top: 12px; }
-}
-@media (max-height: 640px) {
-  .intro-legend { display: none; } /* Teckenförklaringen får stryka på foten först. */
 }
 /* Krysset i projektlistan: mörkt kryss på den vita knappen (annars ärvs listans ljusa text). */
 .projects-head .panel-close { color: #25323d; }

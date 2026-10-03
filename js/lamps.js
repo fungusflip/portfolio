@@ -17,6 +17,7 @@ import {
 import { BILLBOARD_SPACING } from './billboards.js';
 import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE } from './roads.js';
+import { makeMoths } from './magic.js';
 
 export const LAMP_SIDE = ROAD_WIDTH / 2 + 1.2; // Hur långt från vägens mitt stolpen står.
 const LAMP_HEIGHT = 4;          // Stolpens höjd.
@@ -80,6 +81,7 @@ export function buildLamps(world, lamps) {
   }
   const glowColor = new THREE.Color(world.accent);
   const bulbColor = glowColor.clone().lerp(new THREE.Color('#ffffff'), 0.5); // Ljusare än skenet.
+  const mothCenters = [];
   lamps.forEach((lamp, i) => {
     lampBase.position.set(lamp.at.x, 0, lamp.at.z);
     lampBase.rotation.y = lamp.arm;
@@ -93,6 +95,7 @@ export function buildLamps(world, lamps) {
     lampPart.position.set(0, LAMP_HEIGHT - 0.35, LAMP_REACH);
     lampBase.updateMatrixWorld(true);
     haloHelper.position.setFromMatrixPosition(lampPart.matrixWorld);
+    mothCenters.push(haloHelper.position.clone()); // Nattfjärilarna flyger runt glödlampan.
     haloHelper.rotation.set(-CAMERA_PITCH, BILLBOARD_FACING, 0, 'YXZ');
     haloHelper.updateMatrix();
     halos.setMatrixAt(i, haloHelper.matrix);
@@ -103,7 +106,7 @@ export function buildLamps(world, lamps) {
     lamp.faulty = i % 5 === 2;
     lamp.flickerLeft = 0; // Sekunder kvar av en pågående flimmerattack.
   });
-  worldGroup(world).add(posts, arms, heads, bulbs, halos, pools);
+  worldGroup(world).add(posts, arms, heads, bulbs, halos, pools, makeMoths(mothCenters, world.accent));
   lampSets.push({ world, lamps, bulbs, halos, pools, glowColor, bulbColor });
 }
 

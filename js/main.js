@@ -23,7 +23,7 @@
 import * as THREE from 'three';
 import {
   renderer, scene, camera, cameraOffset, cameraLead, keyLight, SUN_DIRECTION, SUN_DISTANCE,
-  WORLDS, currentWorld, towardCamera, toTheRight,
+  WORLDS, currentWorld, towardCamera, toTheRight, FOG_NEAR, FOG_FAR,
 } from './core.js';
 import { introOpen, setLoadingProgress, setReady, setFade } from './ui.js';
 import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
@@ -52,7 +52,7 @@ async function step(fraction, text) {
 // ---------------------------------------------------------------------------
 await step(0.1, 'Starting the engine');
 const { car, beam, HEADLIGHT_STRENGTH, startAutoDrive, updateCar } = await import('./car.js');
-const { billboards, padTextureActive, updateBillboards } = await import('./billboards.js');
+const { billboards, padTextureActive, updateBillboards, getFocus } = await import('./billboards.js');
 await step(0.2, 'Building the garage');
 const { HOME_X, HOME_Z, GARAGE_Z, home, garageDoor, updateHome } = await import('./home.js');
 await step(0.3, 'Painting the ground');
@@ -64,10 +64,13 @@ await step(0.5, 'Paving the roads');
 const roadsAndLamps = hub.buildHubRoads();
 await step(0.6, 'Planting trees');
 hub.buildHubTrees(roadsAndLamps);
+await step(0.65, 'Growing grass');
+hub.buildHubGrass(roadsAndLamps);
 // OBS: portals.travel läses som portals.travel varje gång (inte "const { travel } = ..."),
 // för då skulle vi bara få värdet det hade just nu – och det ändras när en resa startar.
 const portals = await import('./portals.js');
-const { fallingLeaves, fallingLeafMaterial, moteMaterial, updateLeaves } = await import('./leaves.js');
+const { fallingLeaves, fallingLeafMaterial, moteMaterial, updateLeaves, wind } = await import('./leaves.js');
+const { updateMagic } = await import('./magic.js');
 const { optimizeWorld, prepareWorld, setShadows } = await import('./optimize.js');
 const { updateLamps } = await import('./lamps.js');
 const perf = await import('./perf.js');
@@ -159,6 +162,8 @@ setWorldJumper((world) => {
 let cameraZoom = 1;
 function updateCameraZoom() {
   cameraZoom = THREE.MathUtils.clamp(1.6 / (window.innerWidth / window.innerHeight), 1, 2.2);
+  scene.fog.near = FOG_NEAR * cameraZoom; // Längre bort kamera = dimman börjar längre bort.
+  scene.fog.far = FOG_FAR * cameraZoom;
 }
 updateCameraZoom();
 window.addEventListener('resize', () => {
@@ -207,6 +212,11 @@ function updateLookAhead(delta) {
 // RENDERLOOPEN – hjärtat i programmet. Körs en gång per skärmuppdatering.
 // ---------------------------------------------------------------------------
 const cameraTarget = new THREE.Vector3(); // Återanvänds varje bild (nya objekt blir skräp att städa).
+// När bilen står vid en skylt lutar sig kameran mot skärmen och zoomar in lite.
+const FOCUS_PULL = 0.6;   // Hur långt mot skärmen siktpunkten flyttas (0 = inte alls, 1 = hela vägen).
+const FOCUS_ZOOM = 0.62;  // Kamerans avstånd när den zoomat in (1 = som vanligt).
+const focusShift = new THREE.Vector3();
+let focusZoom = 1;
 function gameFrame(time) {
   if (perf.skipFrame(time)) return; // 30-låset (se perf.js).
   const frameStart = performance.now();
@@ -236,9 +246,18 @@ function gameFrame(time) {
     target.x += shift.x;
     target.z += shift.z;
   }
-  camera.position.copy(target).addScaledVector(cameraOffset, cameraZoom);
+  // Luta mot skylten bilen står vid (mjukt in och ut).
+  const focus = getFocus();
+  const pullX = focus ? (focus.x - car.position.x) * FOCUS_PULL : 0;
+  const pullZ = focus ? (focus.z - car.position.z) * FOCUS_PULL : 0;
+  focusShift.x = THREE.MathUtils.damp(focusShift.x, pullX, 2.5, delta);
+  focusShift.z = THREE.MathUtils.damp(focusShift.z, pullZ, 2.5, delta);
+  focusZoom = THREE.MathUtils.damp(focusZoom, focus ? FOCUS_ZOOM : 1, 2.5, delta);
+  target.add(focusShift);
+  camera.position.copy(target).addScaledVector(cameraOffset, cameraZoom * focusZoom);
   camera.lookAt(target);
   updateLeaves(delta, target); // Löven hålls i en låda runt samma punkt.
+  updateMagic(delta, car.position, wind, car.rotation.y); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
   const afterLeaves = performance.now();
 
   // Solen (och rutan där skuggor räknas ut) följer med bilen.

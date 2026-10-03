@@ -29,12 +29,17 @@
   <meta property="og:image:height" content="630">
   <!-- Säger till X/Twitter (och Discord) att visa bilden stort i stället för som en liten ruta. -->
   <meta name="twitter:card" content="summary_large_image">
+  <!-- Typsnittet Bungee: gjort för skyltar och biografer. Används bara till namnskylten
+       på startskärmen. Finns det inte (t.ex. offline) används ett vanligt fett typsnitt. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&display=swap">
   <!-- Laddar utseendet från css/style.css. -->
-  <!-- ?v=34 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
+  <!-- ?v=60 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=34">
+  <link rel="stylesheet" href="css/style.css?v=60">
 
   <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
        import ... from 'three' slår webbläsaren upp 'three' här och hämtar
@@ -57,6 +62,8 @@
   <!-- En canvas är en tom rityta. three.js ritar 3D-scenen i den.
        id="scene" är namnet som både style.css (#scene) och main.js letar efter. -->
   <canvas id="scene"></canvas>
+  <!-- Mörkare kanter runt bilden, så att blicken dras mot mitten (se .vignette i style.css). -->
+  <div class="vignette"></div>
 
   <!-- Toningen när bilen kör in i en portal: en ruta över hela fönstret som är
        osynlig (opacity 0) tills js/main.js tonar fram den i den nya världens färg. -->
@@ -72,31 +79,35 @@
        (eller valfri tangent). js/main.js gömmer den. -->
   <section class="intro" id="intro" aria-labelledby="introName">
     <div class="intro-card">
-      <p class="intro-kicker">Interactive portfolio</p>
-      <h1 class="intro-name" id="introName">Filip Renemark</h1>
-      <p class="intro-role">Technical Artist · Houdini · Shaders · Tools</p>
-      <p class="intro-text">
-        Drive around town. Park at a billboard to see a project.
+      <!-- Namnet på en skylt, som skyltarna i världen. -->
+      <div class="intro-marquee">
+        <h1 class="intro-name" id="introName">Filip Renemark</h1>
+        <p class="intro-role">Technical artist with a love for systems</p>
+      </div>
+      <!-- Teraden, med en liten kopp grönt te som ångar (ritad som SVG, ångan rör sig med CSS). -->
+      <p class="intro-tea">
+        <svg class="tea-cup" viewBox="0 0 48 48" aria-hidden="true">
+          <path class="tea-steam" d="M17 15c-3-4 3-6 0-10" />
+          <path class="tea-steam" d="M24 15c-3-4 3-6 0-10" />
+          <path class="tea-steam" d="M31 15c-3-4 3-6 0-10" />
+          <path class="tea-handle" d="M38 24h3a5 5 0 0 1 0 10h-4" />
+          <path class="tea-body" d="M9 20h30v8a15 15 0 0 1-30 0z" />
+          <ellipse class="tea-matcha" cx="24" cy="21" rx="13" ry="2.6" />
+        </svg>
+        <span>Procedural work, shaders and tools, brewed with SOLID principles, DRY leaves and a hint of green tea.</span>
       </p>
-      <!-- Teckenförklaringen: vad saker i världen betyder. -->
-      <ul class="intro-legend">
-        <li><span class="intro-icon">🎬</span><span><strong>Billboards:</strong> my projects</span></li>
-        <li><span class="intro-icon">⛰️</span><span><strong>Caves:</strong> Tech Art, Programming &amp; Art worlds</span></li>
-        <li><span class="intro-icon">🏠</span><span><strong>Garage:</strong> about me &amp; contact</span></li>
-      </ul>
-      <!-- Under laddningen är knappen avstängd (disabled) och visar hur långt det kommit.
-           js/ui.js gör den till "Start driving" när världen är klar. -->
+      <p class="intro-text">Drive around town and park in front of a screen to watch a project.</p>
+      <!-- Startknappen ser ut som en biobiljett. Under laddningen är den avstängd (disabled)
+           och visar hur långt det kommit. js/ui.js gör den till "Start driving" när världen är klar. -->
       <button class="intro-start" id="introStart" disabled>Loading…</button>
       <div class="intro-progress"><div class="intro-progress-fill" id="introProgress"></div></div>
       <p class="intro-hint"><span class="intro-keys">or press any key · drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></p>
-      <!-- För den som har bråttom (t.ex. en rekryterare): CV och mejl direkt. -->
-      <!-- För den som inte vill köra: alla projekt i en vanlig lista (se js/project-list.js).
-           Fungerar direkt, även medan världen laddas. -->
-      <button class="intro-skip" id="introProjects" type="button">Just show me the projects (P)</button>
+      <!-- För den som inte vill köra (t.ex. en rekryterare): alla projekt i en vanlig lista
+           (se js/project-list.js), CV och mejl. Fungerar direkt, även medan världen laddas. -->
       <p class="intro-links">
+        <button class="intro-skip" id="introProjects" type="button">See all projects as a list (P)</button>
         <a href="https://filip.renemark.se/wp-content/uploads/2026/05/Filip_Renemark_CV.pdf" target="_blank" rel="noopener">CV (PDF)</a>
         <a href="mailto:filip@renemark.me">filip@renemark.me</a>
-        <a href="https://filip.renemark.se" target="_blank" rel="noopener">Classic site</a>
       </p>
     </div>
   </section>
@@ -164,6 +175,6 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="js/main.js?v=34"></script>
+  <script type="module" src="js/main.js?v=60"></script>
 </body>
 </html>

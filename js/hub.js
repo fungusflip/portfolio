@@ -18,6 +18,7 @@ import { PORTALS, techartCave, progCave, artCave, buildPortal } from './portals.
 import { buildSignposts } from './signposts.js';
 import { buildLamps, rowLamps, LAMP_SIDE, ARM_UP, ARM_LEFT } from './lamps.js';
 import { makeTrees, randomTree, leafColors } from './trees.js';
+import { makeGrass, addSaturation } from './magic.js';
 
 const hub = WORLDS.hub;
 
@@ -36,8 +37,37 @@ export function buildHubGround() {
   const pen = tile.getContext('2d');
   pen.fillStyle = PALETTE.ground;
   pen.fillRect(0, 0, TILE_PIXELS, TILE_PIXELS);
-  // 160 små löv på slumpade platser. Det är "bruset" som gör att man ser att bilen rör sig.
-  for (let i = 0; i < 160; i++) {
+  // Stora mjuka fläckar av mörkare och torrare gräs, så att marken inte är en enda platt färg.
+  // Varje fläck ritas tre gånger: där den hamnar och "runt hörnet" på andra sidan bilden,
+  // så att skarven mellan kopiorna inte syns.
+  for (let i = 0; i < 14; i++) {
+    const radius = 40 + Math.random() * 70;
+    const x = Math.random() * TILE_PIXELS;
+    const y = Math.random() * TILE_PIXELS;
+    const color = i % 2 ? PALETTE.groundDark : PALETTE.groundDry;
+    for (const dx of [-TILE_PIXELS, 0, TILE_PIXELS]) {
+      for (const dy of [-TILE_PIXELS, 0, TILE_PIXELS]) {
+        const blob = pen.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, radius);
+        blob.addColorStop(0, color + 'aa'); // aa = ganska täckande i mitten ...
+        blob.addColorStop(1, color + '00'); // ... och helt genomskinlig i kanten.
+        pen.fillStyle = blob;
+        pen.fillRect(x + dx - radius, y + dy - radius, radius * 2, radius * 2);
+      }
+    }
+  }
+  // Små grässtrån: korta streck i mörkt och ljust. Ger marken struktur på nära håll.
+  for (let i = 0; i < 900; i++) {
+    const x = Math.random() * TILE_PIXELS;
+    const y = Math.random() * TILE_PIXELS;
+    pen.strokeStyle = i % 2 ? 'rgba(40, 50, 20, 0.25)' : 'rgba(220, 210, 140, 0.2)';
+    pen.lineWidth = 1.5;
+    pen.beginPath();
+    pen.moveTo(x, y);
+    pen.lineTo(x + (Math.random() - 0.5) * 4, y - 4 - Math.random() * 4);
+    pen.stroke();
+  }
+  // 70 små löv på slumpade platser. Det är "bruset" som gör att man ser att bilen rör sig.
+  for (let i = 0; i < 70; i++) {
     const size = 7 + Math.random() * 9; // Lövets halva längd i pixlar.
     // Håll lövet helt innanför bilden, annars klipps det av i skarven mellan kopiorna.
     const x = size + Math.random() * (TILE_PIXELS - size * 2);
@@ -64,6 +94,7 @@ export function buildHubGround() {
     // MeshLambertMaterial: enkelt och snabbt, blir ljusare/mörkare av lamporna och tar emot skuggor.
     new THREE.MeshLambertMaterial({ map: makeTileTexture(tile, GROUND_SIZE / TILE_UNITS) })
   );
+  addSaturation(ground.material, 1.2); // Lite starkare gräsfärg.
   ground.rotation.x = -Math.PI / 2; // Ett plan skapas stående; lägg ner det.
   ground.renderOrder = -10;          // Marken ritas allra först (se roads.js).
   ground.position.set(HUB_X, 0, HUB_Z);
@@ -156,4 +187,24 @@ export function buildHubTrees({ roads, lamps, signposts }) {
     trees.push({ x: spot.x, z: spot.z, angle: Math.random() * Math.PI * 2, scale, color: leafColors[colorIndex] });
   }
   worldGroup(hub).add(...makeTrees(trees));
+}
+
+// Gräs överallt där det får plats: inte på vägarna, tomten, skyltarnas fickor eller i grottorna.
+// grassAmount räknar ut hur långt det är till närmaste hinder. Nära ett hinder blir gräset
+// kortare, och på hindret finns inget (0). Så får gräset mjuka kanter mot vägarna.
+export function buildHubGrass({ roads, lamps, signposts }) {
+  const hubPortals = PORTALS.filter((portal) => portal.world === hub);
+  function grassAmount(x, z) {
+    let room = DRIVE_RADIUS + 6 - Math.hypot(x - HUB_X, z - HUB_Z); // Ute i kanttoningen.
+    room = Math.min(room, Math.hypot(x - HOME_X, z - HOME_Z) - 8.5); // Garaget och stugan.
+    for (const road of roads) room = Math.min(room, distanceToRoad(x, z, road) - (road.width || ROAD_WIDTH) / 2 - 0.3);
+    for (const project of PROJECTS) {
+      if (project.world === hub) room = Math.min(room, Math.hypot(x - project.x, z - project.z) - 4);
+    }
+    for (const portal of hubPortals) room = Math.min(room, Math.hypot(x - portal.at.x, z - portal.at.z) - 8);
+    for (const lamp of lamps) room = Math.min(room, Math.hypot(x - lamp.at.x, z - lamp.at.z) - 0.6);
+    for (const sign of signposts) room = Math.min(room, Math.hypot(x - sign.at.x, z - sign.at.z) - 2.4);
+    return THREE.MathUtils.clamp(room / 1.5, 0, 1); // 1.5 enheter från hindret är gräset fullt.
+  }
+  makeGrass(hub, grassAmount, { x: HUB_X, z: HUB_Z, size: GROUND_SIZE });
 }

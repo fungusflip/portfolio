@@ -12,6 +12,8 @@ import {
 } from './core.js';
 import { setParkedAt } from './ui.js';
 import { PROJECTS } from './projects.js'; // Projektlistan (ÄNDRA projekten där).
+import { makeBulbs, rectanglePoints, makeSearchlight, makePadGlow, burstAt } from './magic.js';
+import { markMoving } from './optimize.js';
 
 // ---------------------------------------------------------------------------
 // MÅTT
@@ -50,21 +52,40 @@ for (const world of Object.values(WORLDS)) {
 // och stillbilder ritas i den. (Video går en snabbare väg direkt till grafikkortet,
 // se makeVideoPlayer.) brush.canvas är canvasen som pennan hör till.
 
-// Play-symbolen som visas när skärmen är avstängd.
-function drawPlaceholder(brush) {
+// Det som visas när skärmen är avstängd: en stillbild ur projektet (affischen), precis som
+// den är. Innan affischen har laddats (eller om den saknas): en play-symbol.
+// Affischerna ligger i assets/posters och är en bild ur varje klipp.
+function drawPlaceholder(brush, poster) {
   const width = brush.canvas.width;
   const height = brush.canvas.height;
-  brush.fillStyle = PALETTE.glass;
-  brush.fillRect(0, 0, width, height);
-  // En triangel räknad från mitten (cx, cy), så symbolen hamnar rätt oavsett skärmens form.
-  const cx = width / 2;
+  const cx = width / 2; // Mitten, så att symbolen hamnar rätt oavsett skärmens form.
   const cy = height / 2;
+  if (poster && poster.complete && poster.naturalWidth > 0) {
+    // "Fyll skärmen" som videon: skala så att bilden täcker allt och beskär kanterna.
+    const scale = Math.max(width / poster.naturalWidth, height / poster.naturalHeight);
+    const drawWidth = poster.naturalWidth * scale;
+    const drawHeight = poster.naturalHeight * scale;
+    brush.drawImage(poster, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+  } else {
+    brush.fillStyle = PALETTE.glass;
+    brush.fillRect(0, 0, width, height);
+    drawPlayTriangle(brush, cx, cy, 1);
+  }
+}
+// Play-symbolen: en triangel runt (cx, cy). size 1 = full storlek.
+function drawPlayTriangle(brush, cx, cy, size) {
   brush.fillStyle = PALETTE.speckle;
   brush.beginPath();
-  brush.moveTo(cx - 50, cy - 80);
-  brush.lineTo(cx - 50, cy + 80);
-  brush.lineTo(cx + 80, cy);
+  brush.moveTo(cx - 50 * size, cy - 80 * size);
+  brush.lineTo(cx - 50 * size, cy + 80 * size);
+  brush.lineTo(cx + 80 * size, cy);
   brush.fill();
+}
+
+// Var affischen till ett projekt ligger: samma namn som klippet, fast .jpg i assets/posters.
+function posterPath(media) {
+  const name = media.split('/').pop().replace(/\.[^.]+$/, ''); // "assets/videos/x.mp4" → "x"
+  return `assets/posters/${name}.jpg`;
 }
 
 // Laddningssnurran: en båge som snurrar runt mitten, lite mer vriden varje bild.
@@ -104,7 +125,8 @@ function drawOnScreen(billboard, source, width, height) {
 // SPELARE – en per filtyp, med samma tre funktioner: play(), update(delta), stop().
 // ---------------------------------------------------------------------------
 // En spelare lever bara medan bilen står i fickan. Då ligger aldrig mer än ett klipp
-// i minnet åt gången. sample() ger en bild att läsa skärmens färg från (se sken nedan).
+// i minnet åt gången. sample() ger en bild att läsa skärmens färg från (se sken nedan), och
+// ready() säger om klippet har börjat synas (innan dess visas laddningssnurran).
 
 // Video: <video>-elementet blir en VideoTexture som grafikkortet läser direkt.
 // (Förut ritades varje videobild först på en 2D-canvas och skickades sedan till
@@ -149,6 +171,7 @@ function makeVideoPlayer(billboard) {
       note('video starts');
     },
     sample() { return videoTexture ? video : billboard.brush.canvas; },
+    ready() { return videoTexture !== null; },
   };
 }
 
@@ -219,6 +242,7 @@ function makeGifPlayer(billboard) {
       }
     },
     sample() { return billboard.brush.canvas; },
+    ready() { return index >= 0; }, // Första gif-bilden är ritad.
   };
 }
 
@@ -241,6 +265,7 @@ function makeImagePlayer(billboard) {
       image.src = '';
     },
     sample() { return billboard.brush.canvas; },
+    ready() { return loaded; },
   };
 }
 
@@ -327,23 +352,60 @@ const bayMaterial = new THREE.MeshLambertMaterial({ map: bayTexture, depthTest: 
 
 // Ger en ny parkeringsficka med ENTER-text, liggande på marken z enheter framför
 // gruppens mitt. Returnerar ENTER-textens material, så att den kan tändas.
-export function addParkingBay(group, z) {
+// Glödande pollare vid fickans infart: en mörk stolpe med en lysande topp.
+const bollardGeometry = new THREE.BoxGeometry(0.28, 0.8, 0.28);
+const bollardTopGeometry = new THREE.BoxGeometry(0.34, 0.22, 0.34);
+
+export function addParkingBay(group, z, color = PALETTE.bulbs) {
   const bay = new THREE.Mesh(new THREE.PlaneGeometry(BAY_WIDTH, BAY_LENGTH), bayMaterial);
   bay.rotation.x = -Math.PI / 2; // Lägg planet ner på marken.
   bay.position.set(0, 0.035, z); // Över grusvägarna, under ENTER-texten.
   bay.renderOrder = -5;          // Ritas efter mark och grus, före allt som står på marken.
   group.add(bay);
-  // opacity: 0.6 = lite nedtonad tills bilen står i fickan.
-  const padMaterial = new THREE.MeshBasicMaterial({ map: padTexture, transparent: true, opacity: 0.6 });
+  // opacity: 0.85 = nästan full styrka redan innan bilen är där, så att ENTER syns.
+  const padMaterial = new THREE.MeshBasicMaterial({ map: padTexture, transparent: true, opacity: 0.85 });
   const pad = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.5), padMaterial);
   pad.rotation.x = -Math.PI / 2;
   pad.position.set(0, 0.05, z); // 0.05 upp, annars flimrar den mot asfalten.
   group.add(pad);
+  // Den lysande kanten runt fickan (se magic.js). Starkare ju närmare bilen kommer.
+  const padGlow = makePadGlow(BAY_WIDTH, BAY_LENGTH, color);
+  padGlow.mesh.position.set(0, 0.06, z);
+  group.add(padGlow.mesh);
+  padMaterial.userData.near = padGlow.near; // Så att updateBillboards/updateHome kan nå den.
+  // Två pollare vid infarten (mot vägen), med ett litet sken på marken runt foten.
+  for (const side of [-1, 1]) {
+    const x = side * (BAY_WIDTH / 2 + 0.35);
+    const zEnd = z + BAY_LENGTH / 2 - 0.4;
+    const post = new THREE.Mesh(bollardGeometry, frameMaterial);
+    post.position.set(x, 0.4, zEnd);
+    group.add(post);
+    const top = new THREE.Mesh(bollardTopGeometry, bollardGlow(color));
+    top.position.set(x, 0.9, zEnd);
+    group.add(top);
+    const shine = new THREE.Mesh(bollardShineGeometry, bollardShine(color));
+    shine.position.set(x, 0.08, zEnd);
+    group.add(shine);
+  }
   return padMaterial;
+}
+const bollardShineGeometry = new THREE.PlaneGeometry(2.2, 2.2).rotateX(-Math.PI / 2);
+const bollardGlows = {};
+function bollardGlow(color) {
+  if (!bollardGlows[color]) bollardGlows[color] = new THREE.MeshBasicMaterial({ color });
+  return bollardGlows[color];
+}
+const bollardShines = {};
+function bollardShine(color) {
+  if (!bollardShines[color]) {
+    bollardShines[color] = makeGlowMaterial(0.7);
+    bollardShines[color].color.set(color).multiplyScalar(0.6);
+  }
+  return bollardShines[color];
 }
 // Tänder eller släcker en ENTER-text.
 export function lightPad(padMaterial, lit) {
-  padMaterial.opacity = lit ? 1 : 0.6;
+  padMaterial.opacity = lit ? 1 : 0.85;
   padMaterial.map = lit ? padTextureActive : padTexture;
 }
 
@@ -500,6 +562,23 @@ const DISPLAYS = {
   },
 };
 
+const stageLightGeometry = new THREE.PlaneGeometry(11, 7).rotateX(-Math.PI / 2);
+// När bilen parkerar växer skärmen (med ram, lampor och titel) till så här många gånger
+// sin storlek, med en liten studs. ÄNDRA för större/mindre.
+const POP_SCALE = 1.3;
+// Fjädern som gör studsen: STIFFNESS = hur hårt den drar mot målet, DAMPING = hur fort
+// gungningen dör ut. Mindre DAMPING = mer studs.
+const POP_STIFFNESS = 140;
+const POP_DAMPING = 11;
+// Skylten bilen står vid, eller null. Kameran i main.js lutar sig mot den.
+let focusedBillboard = null;
+export function getFocus() {
+  return focusedBillboard ? focusedBillboard.project : null;
+}
+const screenColor = new THREE.Color();
+const WHITE = new THREE.Color('#ffffff');
+const tintHSL = {}; // Återanvänds varje bild.
+
 export function buildBillboards(world) {
   const display = DISPLAYS[world.display || 'cinema'];
   for (const project of PROJECTS) {
@@ -515,6 +594,7 @@ export function buildBillboards(world) {
     panel.position.y = baseY;
     panel.rotation.x = -SCREEN_TILT;
     group.add(panel);
+    markMoving(panel); // Panelen växer när bilen parkerar (se POP_SCALE): får inte slås ihop.
     display.build({ group, panel, width, height, border, baseY, isPhone });
 
     // Skärmens canvas, med play-symbolen från början. Mobilen får en stående canvas.
@@ -523,13 +603,14 @@ export function buildBillboards(world) {
     screenImage.height = isPhone ? SCREEN_PIXELS_LONG : SCREEN_PIXELS_SHORT;
     const brush = screenImage.getContext('2d');
     drawPlaceholder(brush);
+    const poster = new Image(); // Laddas klart nedan; då ritas skärmen om.
     const texture = new THREE.CanvasTexture(screenImage);
     texture.colorSpace = THREE.SRGBColorSpace;
     // Inga mipmaps (förminskade kopior): de skulle räknas om varje gång bilden ändras.
     texture.generateMipmaps = false;
     texture.minFilter = THREE.LinearFilter;
-    // MeshBasicMaterial = alltid full ljusstyrka, som en riktig skärm. Grå = nedtonad (avstängd).
-    const screenMaterial = new THREE.MeshBasicMaterial({ map: texture, color: '#777777' });
+    // MeshBasicMaterial = alltid full ljusstyrka, som en riktig skärm: bilden visas precis som den är.
+    const screenMaterial = new THREE.MeshBasicMaterial({ map: texture, fog: false }); // fog: false = ingen dimma.
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(width, height), screenMaterial);
     screen.position.set(0, height / 2 + border, 0);
     panel.add(screen);
@@ -539,12 +620,40 @@ export function buildBillboards(world) {
     const signHeight = SIGN_HEIGHT * (signWidth / SCREEN_WIDTH);
     const titleTexture = makeTitleTexture(project.title);
     const titleTextureActive = makeTitleTexture(project.title, true);
-    const signMaterial = new THREE.MeshBasicMaterial({ map: titleTexture });
+    const signMaterial = new THREE.MeshBasicMaterial({ map: titleTexture, fog: false });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(signWidth, signHeight), signMaterial);
     sign.position.set(0, height + border * 2 + 0.2 + display.signGap + signHeight / 2, 0);
     panel.add(sign);
+    markMoving(sign); // Skylten gungar lite (se updateBillboards).
 
-    const padMaterial = addParkingBay(group, PAD_DISTANCE);
+    // Ljusslingan runt ramen: varma glödlampor hemma, världens färg i de andra världarna.
+    const bulbs = makeBulbs(
+      rectanglePoints(width / 2 + border + 0.18, -0.12, height + border * 2 + display.signGap + 0.12, 0.06, 0.5),
+      world === WORLDS.hub ? PALETTE.bulbs : world.accent
+    );
+    panel.add(bulbs.mesh);
+
+    // Skenet runt skärmen: ett mjukt ljus bakom ramen, i affischens medelfärg (sätts när
+    // affischen laddats). Gör att skärmen ser ut att lysa ut i kvällen.
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(width + 5, height + 4), makeGlowMaterial(0.9));
+    halo.position.set(0, height / 2 + border, -0.4);
+    halo.material.color.set(world === WORLDS.hub ? PALETTE.bulbs : world.accent).multiplyScalar(0.4);
+    halo.userData.noShadow = true;
+    markMoving(halo);
+    panel.add(halo);
+
+    // Strålkastaren bakom skylten, och en ljuspöl på marken under skärmen som alltid lyser.
+    const searchlight = makeSearchlight(world === WORLDS.hub ? PALETTE.bulbs : world.accent, Math.random());
+    searchlight.position.set((Math.random() < 0.5 ? -1 : 1) * width * 0.35, 0, -2);
+    group.add(searchlight);
+    const stageLight = new THREE.Mesh(stageLightGeometry, makeGlowMaterial(0.8));
+    stageLight.position.set(0, 0.08, 2.4);
+    stageLight.userData.noShadow = true;
+    markMoving(stageLight); // Byter styrka med bilens avstånd.
+    group.add(stageLight);
+
+    const accent = world === WORLDS.hub ? PALETTE.bulbs : world.accent;
+    const padMaterial = addParkingBay(group, PAD_DISTANCE, accent);
     group.position.set(project.x, 0, project.z);
     group.rotation.y = BILLBOARD_FACING;
     worldGroup(world).add(group);
@@ -552,12 +661,37 @@ export function buildBillboards(world) {
     const padSpot = towardCamera(project, PAD_DISTANCE); // Fickans mitt i världen.
     billboards.push({
       project, brush, texture, screenMaterial, padMaterial, signMaterial, titleTexture, titleTextureActive,
+      bulbs: bulbs.active, bulbTint: bulbs.tint, sign, signY: sign.position.y, swing: Math.random() * 10, // Rörelserna.
+      halo, haloColor: halo.material.color.clone(),
+      posterColor: new THREE.Color(world === WORLDS.hub ? PALETTE.bulbs : world.accent), // Byts mot affischens färg.
+      panel, popScale: 1, popSpeed: 0, // Hur stor panelen är just nu, och hur fort den växer.
+      stageLight, stageColor: new THREE.Color(world === WORLDS.hub ? PALETTE.bulbs : world.accent),
+      poster,
       width, height,  // Skärmens mått, för videons beskärning.
       padX: padSpot.x,
       padZ: padSpot.z,
       player: null,   // Finns bara medan bilen står i fickan.
       active: false,  // Står bilen i fickan just nu?
     });
+    // Affischen: när den laddats ritas skärmen om (om inte klippet redan spelar).
+    const billboard = billboards[billboards.length - 1];
+    if (project.media) {
+      poster.onload = () => {
+        // Skenets färg = affischens medelfärg: bilden ritas ihoptryckt till en enda pixel.
+        glowSamplerPen.drawImage(poster, 0, 0, 1, 1);
+        const [red, green, blue] = glowSamplerPen.getImageData(0, 0, 1, 1).data;
+        billboard.haloColor.setRGB(red / 255, green / 255, blue / 255, THREE.SRGBColorSpace);
+        billboard.posterColor.copy(billboard.haloColor); // Affischens färg som den är (lamporna börjar i den).
+        // Mer färg i skenet än i bilden: dra bort från grått och gör det ljusare.
+        const hsl = {};
+        billboard.haloColor.getHSL(hsl);
+        billboard.haloColor.setHSL(hsl.h, Math.min(1, hsl.s * 1.8 + 0.2), 0.5);
+        if (billboard.player) return;
+        drawPlaceholder(brush, poster);
+        texture.needsUpdate = true;
+      };
+      poster.src = posterPath(project.media);
+    }
   }
 }
 
@@ -588,7 +722,8 @@ let glowJustStarted = false;
 function updateScreenGlow(delta) {
   if (!glowingBillboard) return;
   glowSampleWait -= delta;
-  if (glowSampleWait <= 0 && glowingBillboard.player) {
+  // Läs bara av skärmen när klippet syns. Innan dess (laddningssnurran) behålls affischens färg.
+  if (glowSampleWait <= 0 && glowingBillboard.player && glowingBillboard.player.ready()) {
     glowSampleWait = GLOW_SAMPLE_TIME;
     note('screen colour sample');
     glowSamplerPen.drawImage(glowingBillboard.player.sample(), 0, 0, 1, 1);
@@ -615,12 +750,14 @@ export function updateBillboards(delta, carPosition) {
     // Bara när läget ÄNDRAS (bilen kör in eller ut) behöver något göras.
     if (near !== billboard.active) {
       billboard.active = near;
-      billboard.screenMaterial.color.set(near ? '#ffffff' : '#777777');
       lightPad(billboard.padMaterial, near);
       billboard.signMaterial.map = near ? billboard.titleTextureActive : billboard.titleTexture;
       setParkedAt(near ? billboard.project : null);
 
       if (near) {
+        focusedBillboard = billboard;
+        // Smällen: gnistor och en ljusring från fickan, i skärmens färg.
+        burstAt(billboard.padX, billboard.padZ, screenColor.copy(billboard.haloColor).lerp(WHITE, 0.3));
         // Skenet: lägg ljuspölen på marken mellan skärmen och fickan.
         glowingBillboard = billboard;
         const spot = towardCamera(billboard.project, PAD_DISTANCE * 0.7);
@@ -630,7 +767,11 @@ export function updateBillboards(delta, carPosition) {
         screenGlowAmount = 0;
         screenGlow.material.color.setRGB(0, 0, 0);
         glowSampleWait = 0;
-        glowJustStarted = true;
+        // Börja i affischens färg (en bild ur samma klipp), så att skenet och lamporna har
+        // rätt färg direkt, i stället för laddningssnurrans blågrå.
+        screenGlowColor.copy(billboard.posterColor);
+        glowTargetColor.copy(billboard.posterColor);
+        glowJustStarted = false;
         // Skapa en spelare. Filen laddas alltså först nu, när den behövs.
         if (billboard.project.media) {
           note('clip starts loading');
@@ -638,6 +779,7 @@ export function updateBillboards(delta, carPosition) {
           billboard.player.play();
         }
       } else {
+        if (focusedBillboard === billboard) focusedBillboard = null;
         if (glowingBillboard === billboard) {
           glowingBillboard = null;
           screenGlow.visible = false;
@@ -646,12 +788,36 @@ export function updateBillboards(delta, carPosition) {
           // Bilen körde ut: stoppa, kasta spelaren och visa play-symbolen igen.
           billboard.player.stop();
           billboard.player = null;
-          drawPlaceholder(billboard.brush);
+          drawPlaceholder(billboard.brush, billboard.poster);
           billboard.texture.needsUpdate = true;
         }
       }
     }
     if (billboard.active && billboard.player) billboard.player.update(delta);
+    // Närhet: 1 när bilen står i fickan, 0 på 18 enheters avstånd. Skylten vaknar när man närmar sig.
+    const distance = Math.hypot(carPosition.x - billboard.padX, carPosition.z - billboard.padZ);
+    const closeness = 1 - THREE.MathUtils.smoothstep(distance, PAD_RADIUS, 18);
+    billboard.padMaterial.userData.near.value = closeness;
+    billboard.stageLight.material.color.copy(billboard.stageColor).multiplyScalar(0.35 + 0.45 * closeness);
+    billboard.halo.material.color.copy(billboard.haloColor).multiplyScalar(0.45 + 0.4 * closeness + (billboard.active ? 0.2 : 0));
+    // Studsen: en fjäder drar panelens storlek mot målet (större när bilen står i fickan).
+    const popGoal = billboard.active ? POP_SCALE : 1;
+    billboard.popSpeed += ((popGoal - billboard.popScale) * POP_STIFFNESS - billboard.popSpeed * POP_DAMPING) * delta;
+    billboard.popScale += billboard.popSpeed * delta;
+    billboard.panel.scale.setScalar(billboard.popScale);
+    // Lamporna: springer när ingen tittar, lyser lugnt när bilen står i fickan (se magic.js).
+    billboard.bulbs.value = THREE.MathUtils.damp(billboard.bulbs.value, billboard.active ? 1 : 0, 3, delta);
+    // Lamporna lyser i skärmens färg (samma utjämnade färg som skenet på marken).
+    if (billboard === glowingBillboard) {
+      // Skärmens färg, men klarare: mer mättad och lagom ljus, så att lamporna verkligen lyser i den.
+      billboard.bulbTint.value.copy(screenGlowColor).getHSL(tintHSL);
+      billboard.bulbTint.value.setHSL(tintHSL.h, Math.min(1, tintHSL.s * 1.6 + 0.2), THREE.MathUtils.clamp(tintHSL.l, 0.45, 0.65));
+    }
+    // Titelskylten gungar lätt, men står still medan man tittar (bulbs.value går mot 1).
+    const time = performance.now() / 1000 + billboard.swing;
+    const sway = 1 - billboard.bulbs.value;
+    billboard.sign.position.y = billboard.signY + Math.sin(time * 1.4) * 0.07 * sway;
+    billboard.sign.rotation.z = Math.sin(time * 0.9) * 0.02 * sway;
   }
   updateScreenGlow(delta);
 }

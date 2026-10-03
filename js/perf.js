@@ -8,6 +8,7 @@ import {
 } from './core.js';
 import { beam } from './car.js';
 import { fallingLeaves, groundLeaves } from './leaves.js';
+import { setGrassDensity } from './magic.js';
 
 // ---------------------------------------------------------------------------
 // 30-LÅSET
@@ -46,6 +47,8 @@ const QUALITY_STEPS = [
   { name: 'headlight shadows off', apply() { beam.castShadow = false; } },
   // Mindre skuggkarta = färre pixlar att rita för solens skuggor.
   { name: 'smaller sun shadows', apply() { setSunShadowSize(1024); } },
+  // Hälften så många grästuvor.
+  { name: 'less grass', apply() { setGrassDensity(0.5); } },
   // Sista steget: jämna 30 bilder per sekund (se 30-LÅSET).
   { name: 'steady 30 fps', apply() { lock30 = true; } },
 ];

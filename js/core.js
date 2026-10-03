@@ -95,9 +95,19 @@ export const PALETTE = {
   screenGlow: '#cfe0ff',    // Skenet från en projektskärm som är igång: svalt vitt, som en bioduk.
   warmLamp: '#ffb45e',      // Lampan över garageporten och ljuset ur stugfönstret: varmt gult.
   windowGlow: '#ffd27a',    // Själva fönsterrutan när det lyser inne.
-  ground: '#ffd166',     // Marken: gyllengul.
+  ground: '#9ba257',     // Marken: höstgräs, dovt olivgrönt. Gör att de röda och orange träden syns.
+  groundDark: '#7b8646', // Mörkare gräsfläckar.
+  groundDry: '#bdb066',  // Torra, ljusare gräsfläckar.
+  grassRoot: '#6d7a3c',      // Grässtråna vid roten: som de mörka fläckarna, så att de smälter in.
+  grassTip: '#c9c46e',       // Grässtrånas toppar: ljust, torrt.
+  grassTipAutumn: '#e39a3f', // Var sjunde tuva har orange toppar.
+  grassShimmer: '#ffe9a8',   // Skimret som drar över topparna med vinden.
+  fireflies: ['#ffd36b', '#8fefff', '#ffa8e0'],
+  bulbs: '#ffd98a',          // Glödlamporna runt skärmarna hemma (de andra världarna får sin egen färg).
+  smoke: '#cbbfd6',          // Röken ur skorstenen: ljust lila-grå.
+  tireDust: '#e2d3c0',       // Dammet bakom bilens hjul: varmt grå, som gruset. // Eldflugorna: mest guld, ibland turkos eller rosa.
   speckle: '#f79824',    // Play-symbolen och laddningssnurran på skärmarna: orange.
-  carPaint: '#c8321e',   // Bilens lack: djupröd.
+  carPaint: '#d8261a',   // Bilens lack: klarröd.
   glass: '#25323d',      // Rutor/hytt: mörkt blågrått glas.
   tire: '#1e1e20',       // Däck: nästan svart gummi.
   rim: '#cfd2d6',        // Fälgar: silver.
@@ -107,7 +117,7 @@ export const PALETTE = {
   leaves: ['#c1121f', '#e85d04', '#f48c06'], // Lönnlöv: rött, orange, gulorange. [ ] = en lista.
   // Löven som faller och ligger på marken, och löven i markens textur. Hälften röda,
   // hälften orange. Lite mörkare än trädens, eftersom de ritas utan ljus (se leaves.js).
-  fallenLeaves: ['#c4262e', '#d93a2b', '#e8701e', '#f08a24', '#e8a53a'],
+  fallenLeaves: ['#d61a24', '#e8301f', '#f56a10', '#ff8a14', '#f5a623'],
   frame: '#2b2d33',      // Ramen runt skyltarnas skärm: mörkgrå.
   sign: '#fff3d6',       // Textskyltens bakgrund: grädde.
   signText: '#25323d',   // Textens färg.
@@ -141,6 +151,14 @@ export const PALETTE = {
   caveMouth: '#120e18',      // Grottöppningen: nästan svart.
 };
 scene.background = new THREE.Color(PALETTE.background);
+
+// DIMMA – Fog(färg, nära, långt): allt längre bort än "nära" tonas mot färgen, och vid
+// "långt" syns bara färgen. Kameran står ca 42–64 enheter från marken (nederkant–överkant),
+// så överst i bilden blir det lite disigt. Det ger djup nästan gratis.
+// main.js gångrar talen med kamerans zoom. ÄNDRA FOG_NEAR/FOG_FAR för mer/mindre dis.
+export const FOG_NEAR = 46;
+export const FOG_FAR = 120;
+scene.fog = new THREE.Fog(PALETTE.background, FOG_NEAR, FOG_FAR);
 
 // ---------------------------------------------------------------------------
 // KAMERA
@@ -299,6 +317,7 @@ export let currentWorld = WORLDS.hub;
 export function setCurrentWorld(world) {
   currentWorld = world;
   scene.background.set(world.background);
+  scene.fog.color.set(world.background); // Dimman får världens färg.
   showWorld(world);
 }
 

@@ -51,7 +51,7 @@ function cheaperMaterial(material) {
 // plan (ENTER-text, sken, kanttoning) är inte med.
 export function setShadows(root) {
   root.traverse((object) => {
-    if (!object.isMesh || object.material.transparent) return;
+    if (!object.isMesh || object.material.transparent || object.userData.noShadow) return;
     object.receiveShadow = true;
     if (object.renderOrder >= 0) object.castShadow = true;
   });

@@ -14,6 +14,7 @@ import { car, speed, stopCar, setHeading, autoDrive, startAutoDrive, cancelAutoD
 import { hubPoint } from './home.js';
 import { setWeather } from './leaves.js';
 import { optimizeWorld, prepareWorld, markMoving } from './optimize.js';
+import { makeSwirl } from './magic.js';
 
 // ---------------------------------------------------------------------------
 // INGÅNGARNA
@@ -87,8 +88,17 @@ const CAVE_ROCKS = [
   [2.8, 3.2, -3.6, 2, 2.3, 2, 1],
   [-5.4, 0.4, 0.6, 0.9, 0.7, 0.9, 0],  // Småsten framför.
   [5.2, 0.3, 0.9, 0.7, 0.5, 0.7, 1],
+  // Stenar som täcker portalens hörn: nere vid marken på båda sidor, och "axlarna" där valvet börjar.
+  [-2.9, 0.4, 0.4, 1.2, 1.0, 1.1, 1],
+  [3.0, 0.35, 0.5, 1.1, 0.9, 1.0, 0],
+  [-2.7, 3.3, -0.2, 1.5, 1.3, 1.4, 0],
+  [2.8, 3.1, -0.3, 1.4, 1.4, 1.3, 1],
 ];
 const CAVE_MOUTH_WIDTH = 4.4;
+// Hur djupt in i berget portalen sitter (minus = inåt) och hur mycket större än hålet den är.
+// Stenarna runt öppningen når fram till ungefär z = 1, så kanterna göms bakom dem.
+const PORTAL_DEPTH = -0.8;
+const PORTAL_SCALE = 1.45;
 const CAVE_MOUTH_HEIGHT = 3.4;
 const caveMouthMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.caveMouth });
 // Öppningens form: rakt upp, en halvcirkel över, rakt ner (en Shape ritas som med en penna).
@@ -125,13 +135,25 @@ function buildCave(portal, group) {
     rock.scale.set(width, height, depth);
     group.add(rock);
   }
-  group.add(new THREE.Mesh(mouthGeometry, caveMouthMaterial));
+  // Öppningen, ljuset och virveln sitter en bit INNE i berget (PORTAL_DEPTH) och är större
+  // än hålet. Då skymmer stenarna runt öppningen deras kanter, och det ser ut som att
+  // virveln fyller grottan i stället för att vara en skiva som sitter framför den.
+  const mouth = new THREE.Mesh(mouthGeometry, caveMouthMaterial);
+  mouth.scale.setScalar(PORTAL_SCALE);
+  mouth.position.z = PORTAL_DEPTH - 0.1;
+  group.add(mouth);
   const light = new THREE.Mesh(
     new THREE.PlaneGeometry(3.2, 2.8),
     new THREE.MeshBasicMaterial({ map: makeCaveLightTexture(portal.leadsTo.accent), transparent: true, depthWrite: false })
   );
-  light.position.set(0, 1.5, 0.02); // En aning framför öppningen, annars flimrar de.
+  light.scale.setScalar(PORTAL_SCALE);
+  light.position.set(0, 1.5, PORTAL_DEPTH - 0.05); // En aning framför den mörka öppningen, annars flimrar de.
   group.add(light);
+  // Virveln: en snurrande spiral i världens färg, lite framför ljuset (se magic.js).
+  const swirl = makeSwirl(mouthGeometry, { x: 0, y: 1.5 }, portal.leadsTo.accent);
+  swirl.scale.setScalar(PORTAL_SCALE);
+  swirl.position.z = PORTAL_DEPTH;
+  group.add(swirl);
   addEntranceSign(portal, group, 5.3, 0.3); // Skylten sitter på stenen över öppningen.
 }
 

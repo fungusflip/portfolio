@@ -5,13 +5,17 @@
 // och ritar dem på många platser i ett enda svep. Mycket snabbare än hundratals objekt.
 import * as THREE from 'three';
 import { PALETTE, postMaterial } from './core.js';
+import { addSway, addSaturation } from './magic.js';
 
 const trunkGeometry = new THREE.CylinderGeometry(0.18, 0.28, 1.8, 7);
 // IcosahedronGeometry(radie, detalj): en boll av 20 trianglar. Detalj 0 = kantig "low poly".
 const leafGeometry = new THREE.IcosahedronGeometry(1.3, 0);
 // Vitt material: varje lövboll får sin egen färg (vitt gånger färg = färgen).
 // flatShading: varje triangel får en egen jämn nyans, så kanterna syns tydligt.
-const leafMaterial = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.9, flatShading: true });
+// Lambert direkt (inte Standard), så att optimize.js inte byter ut det och tappar gungningen.
+const leafMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff', flatShading: true });
+addSway(leafMaterial); // Kronorna gungar i vinden (se magic.js).
+addSaturation(leafMaterial, 1.2); // Lite starkare röda och orange kronor, men skyltarna ska synas mest.
 export const leafColors = PALETTE.leaves.map((hex) => new THREE.Color(hex));
 // En lönn har en bred, rund krona: tre kantiga bollar [x, y, z, storlek] som överlappar.
 const CROWN_BLOBS = [[0, 2.8, 0, 1], [0.9, 2.3, 0.3, 0.7], [-0.8, 2.4, -0.4, 0.75]];

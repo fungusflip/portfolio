@@ -13,6 +13,7 @@ import { ROAD_DISTANCE } from './roads.js';
 import { setParkedAt } from './ui.js';
 import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
+import { makeSmoke, makeBulbs, rectanglePoints } from './magic.js';
 
 // Texten på namnskylten.
 const HOME_NAME = 'Filip Renemark';
@@ -32,7 +33,7 @@ worldGroup(WORLDS.hub).add(homeGroup);
 
 // emissive = färg som ytan "lyser" med själv, så att väggarna inte blir grå i skuggan.
 const wallMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.sign, roughness: 0.9, emissive: PALETTE.sign, emissiveIntensity: 0.4 });
-const roofMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.leaves[0], roughness: 0.8, flatShading: true });
+const roofMaterial = new THREE.MeshStandardMaterial({ color: '#e0101f', roughness: 0.8, flatShading: true }); // Klarrött tak.
 
 // --- Garaget: porten vetter mot kameran, bilen står parkerad framför ---
 const GARAGE_WIDTH = 5.6;
@@ -159,6 +160,9 @@ nameBoard.add(nameFrame);
 const nameFace = new THREE.Mesh(new THREE.PlaneGeometry(NAME_WIDTH, NAME_HEIGHT), new THREE.MeshBasicMaterial({ map: nameTexture }));
 nameFace.position.set(0, NAME_HEIGHT / 2 + 0.15, 0);
 nameBoard.add(nameFace);
+// Glödlampor runt namnskylten, som runt skärmarna. De springer fortare när bilen står i fickan.
+const nameBulbs = makeBulbs(rectanglePoints(NAME_WIDTH / 2 + 0.32, -0.02, NAME_HEIGHT + 0.32, 0.08, 0.45), PALETTE.bulbs);
+nameBoard.add(nameBulbs.mesh);
 
 // --- Korsningen och hubPoint ---
 // Mitt emellan första och sista skylten hemma, flyttat ner till huvudvägen.
@@ -216,6 +220,8 @@ markMoving(mailFlag, garageDoor, garageOpening);
 worldGroup(WORLDS.hub).updateMatrixWorld(true);
 const homePadWorld = homeGroup.localToWorld(new THREE.Vector3(0, 0, HOME_PAD_Z));
 const mailboxWorld = mailbox.getWorldPosition(new THREE.Vector3());
+// Rök ur skorstenen. Pufferna räknar själva ut var de är, från skorstenens topp i världen.
+worldGroup(WORLDS.hub).add(makeSmoke(chimney.localToWorld(new THREE.Vector3(0, 0.8, 0))));
 export const home = {
   padX: homePadWorld.x,
   padZ: homePadWorld.z,
@@ -225,15 +231,24 @@ export const home = {
 
 // Körs en gång per bild (bara hemma): brevlådans flagga och fickan utanför garaget.
 export function updateHome(carPosition) {
+  // Fönstret fladdrar svagt, som levande ljus där inne. Två sinusvågar i olika takt
+  // gör att det aldrig ser ut att upprepa sig.
+  const time = performance.now() / 1000;
+  const flicker = 0.85 + 0.15 * Math.sin(time * 7.3) * Math.sin(time * 3.1 + 1);
+  cabinWindow.material.color.set(PALETTE.windowGlow).multiplyScalar(flicker);
   const mailNear = Math.hypot(carPosition.x - mailboxWorld.x, carPosition.z - mailboxWorld.z) < MAILBOX_RADIUS;
   if (mailNear !== home.mailNear) {
     home.mailNear = mailNear;
     mailFlag.rotation.x = mailNear ? 0 : FLAG_DOWN;
     flagMaterial.color.set(mailNear ? PALETTE.signGlow : PALETTE.signText);
   }
-  const near = Math.hypot(carPosition.x - home.padX, carPosition.z - home.padZ) < PAD_RADIUS;
+  const padDistance = Math.hypot(carPosition.x - home.padX, carPosition.z - home.padZ);
+  // Fickans kant lyser starkare ju närmare bilen är (som vid skyltarna).
+  homePadMaterial.userData.near.value = 1 - THREE.MathUtils.smoothstep(padDistance, PAD_RADIUS, 18);
+  const near = padDistance < PAD_RADIUS;
   if (near === home.active) return; // Inget har ändrats.
   home.active = near;
+  nameBulbs.active.value = near ? 1 : 0;
   lightPad(homePadMaterial, near);
   setParkedAt(near ? ABOUT : null);
 }
