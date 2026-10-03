@@ -675,6 +675,68 @@ export function burstAt(x, z, color) {
 }
 
 // ---------------------------------------------------------------------------
+// MATCHA – teets yta i kopparna
+// ---------------------------------------------------------------------------
+// Djupgrönt te med ett ljusare skum som virvlar sakta (i varmt te), en mörkare kant där
+// teet möter koppen, en tunn skumring längs kanten och en mjuk glans. Kallt te är
+// mörkare, står helt still och har en svag ring där det torkat.
+// Ingen riktig belysning: färgerna är valda för skymningen, så det blir billigt.
+export function makeMatchaMaterial(hot) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: shared.uTime,
+      uHot: { value: hot ? 1 : 0 },
+      uDeep: { value: new THREE.Color(hot ? PALETTE.matcha : PALETTE.matchaCold) },
+      uFoam: { value: new THREE.Color(hot ? PALETTE.matchaFoam : PALETTE.matchaCold).multiplyScalar(hot ? 1 : 1.25) },
+    },
+    vertexShader: `
+      varying vec2 vSpot;
+      varying vec2 vWorld;
+      void main() {
+        vSpot = uv * 2.0 - 1.0; // -1..1 över skivan, 0 i mitten.
+        vec4 world = modelMatrix * vec4(position, 1.0);
+        vWorld = world.xz;      // Ger varje kopp sitt eget mönster.
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }`,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uHot;
+      uniform vec3 uDeep;
+      uniform vec3 uFoam;
+      varying vec2 vSpot;
+      varying vec2 vWorld;
+      // Enkelt "brus": mjuka slumpade fläckar (value noise).
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+      }
+      void main() {
+        float r = length(vSpot);
+        // Virveln: vrid koordinaterna mer nära mitten, och långsamt med tiden (bara varmt te).
+        float turn = (1.0 - r) * 1.6 + uTime * 0.12 * uHot;
+        vec2 p = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * vSpot;
+        p += vWorld * 1.7;
+        // Skummet: två lager brus, ett grovt och ett fint.
+        float foam = noise(p * 3.0) * 0.65 + noise(p * 9.0) * 0.35;
+        vec3 color = mix(uDeep, uFoam, smoothstep(0.42, 0.85, foam) * 0.75);
+        // Mörkare kant där teet möter koppen (skugga), och en tunn ljus skumring precis vid kanten.
+        color *= 1.0 - smoothstep(0.7, 1.0, r) * 0.35;
+        color = mix(color, uFoam * 1.15, smoothstep(0.88, 0.97, r) * (1.0 - smoothstep(0.97, 1.0, r)) * 0.8);
+        // Kallt te: en svag torkad ring en bit in.
+        color = mix(color, uDeep * 0.6, (1.0 - uHot) * smoothstep(0.02, 0.0, abs(r - 0.8)) * 0.6);
+        // Glansen: en mjuk ljus fläck snett uppe till vänster.
+        float shine = smoothstep(0.35, 0.0, length(vSpot - vec2(-0.35, 0.3)));
+        color += vec3(1.0, 0.97, 0.85) * shine * mix(0.12, 0.05, 1.0 - uHot);
+        gl_FragColor = vec4(color, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // VARJE BILD
 // ---------------------------------------------------------------------------
 // wind = vinden från leaves.js { x, z, strength }.
@@ -811,11 +873,17 @@ export function makeSwirl(geometry, center, color) {
 // RÖK UR SKORSTENEN
 // ---------------------------------------------------------------------------
 // Mjuka rökpuffar som stiger, växer och bleknar. Varje puff börjar om när den bleknat.
-// origin = där röken kommer ut, i världen (skorstenens topp). color = rökens färg.
-// scale = storlek: 1 = skorstensrök, mindre för ånga ur en liten kopp.
-// spread = hur utspritt pufferna börjar (0 = alla från samma punkt, som ur en skorsten).
-// opacity = hur synlig (1 = som skorstensröken, mindre = mer genomskinlig).
-export function makeSmoke(origin, color = PALETTE.smoke, scale = 1, spread = 0, opacity = 1) {
+// origin = där röken kommer ut, i världen (skorstenens topp). Inställningar (alla valfria):
+//   color   – rökens färg.
+//   scale   – storlek: 1 = skorstensrök, mindre för ånga ur en liten kopp.
+//   spread  – hur utspritt pufferna börjar (0 = alla från samma punkt, som ur en skorsten).
+//   opacity – hur synlig (1 = som skorstensröken, mindre = mer genomskinlig).
+//   speed   – hur fort en puff lever sitt liv (0.16 = skorstenen, högre = försvinner fortare).
+//   rise    – hur högt den hinner stiga (5.5 = skorstenen).
+//   fade    – hur snabbt den bleknar (1 = jämnt, högre = mest synlig precis i början).
+export function makeSmoke(origin, {
+  color = PALETTE.smoke, scale = 1, spread = 0, opacity = 1, speed = 0.16, rise = 5.5, fade = 1,
+} = {}) {
   const PUFFS = 14;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PUFFS * 3), 3)); // Krävs, men används inte.
@@ -830,6 +898,9 @@ export function makeSmoke(origin, color = PALETTE.smoke, scale = 1, spread = 0, 
       uScale: { value: scale },
       uSpread: { value: spread },
       uOpacity: { value: opacity },
+      uSpeed: { value: speed },
+      uRise: { value: rise },
+      uFade: { value: fade },
       uScreenScale: smokeScreenScale,
     },
     vertexShader: `
@@ -841,14 +912,16 @@ export function makeSmoke(origin, color = PALETTE.smoke, scale = 1, spread = 0, 
       uniform float uScreenScale;
       uniform float uScale;
       uniform float uSpread;
+      uniform float uSpeed;
+      uniform float uRise;
       varying float vAge;
       void main() {
-        float age = fract(uTime * 0.16 + aSeed); // 0 = nyss ute, 1 = borta.
+        float age = fract(uTime * uSpeed + aSeed); // 0 = nyss ute, 1 = borta.
         vec3 p = uOrigin;
         // Varje puff börjar på sin egen plats inom en cirkel (spread), i stället för i en punkt.
-        float spot = aSeed * 6.2832 * 7.0 + floor(uTime * 0.16 + aSeed) * 2.4; // Ny plats varje varv.
+        float spot = aSeed * 6.2832 * 7.0 + floor(uTime * uSpeed + aSeed) * 2.4; // Ny plats varje varv.
         p.xz += vec2(cos(spot), sin(spot)) * uSpread * fract(sin(spot) * 43758.5);
-        p.y += age * 5.5 * uScale;
+        p.y += age * uRise * uScale;
         p.xz += (uBreeze * 1.5 + uWind.xz * 0.4) * age * age * 2.0 * uScale; // Böjer av med vinden.
         p.x += sin(aSeed * 40.0 + uTime * 0.8) * 0.3 * age * uScale;           // Lite slingrigt.
         vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
@@ -860,11 +933,12 @@ export function makeSmoke(origin, color = PALETTE.smoke, scale = 1, spread = 0, 
     fragmentShader: `
       uniform vec3 uColor;
       uniform float uOpacity;
+      uniform float uFade;
       varying float vAge;
       void main() {
         float r = length(gl_PointCoord - 0.5) * 2.0;
-        // Tona in snabbt, ut långsamt.
-        float alpha = smoothstep(1.0, 0.2, r) * smoothstep(0.0, 0.1, vAge) * (1.0 - vAge) * 0.5 * uOpacity;
+        // Tona in snabbt, ut långsamt (uFade > 1: ut ännu fortare).
+        float alpha = smoothstep(1.0, 0.2, r) * smoothstep(0.0, 0.1, vAge) * pow(1.0 - vAge, uFade) * 0.5 * uOpacity;
         gl_FragColor = vec4(uColor, alpha);
         #include <colorspace_fragment>
       }`,

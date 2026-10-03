@@ -13,7 +13,7 @@ import { ROAD_DISTANCE } from './roads.js';
 import { setParkedAt, leaveParking } from './ui.js';
 import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
-import { makeSmoke } from './magic.js';
+import { makeSmoke, makeMatchaMaterial } from './magic.js';
 
 // Texten på namnskylten.
 const HOME_NAME = 'Filip Renemark';
@@ -177,8 +177,9 @@ markMoving(nameGlow); // Byter styrka: får inte slås ihop.
 // skiva på rätt höjd inuti, och botten en gräddvit skiva.
 // emissive = lyser lite av sig själv (som stugans väggar), så att kopparna syns även i skugga.
 const cupMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.sign, roughness: 0.5, emissive: PALETTE.sign, emissiveIntensity: 0.4, side: THREE.DoubleSide });
-const hotTeaMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.matcha, roughness: 0.3, emissive: PALETTE.matcha, emissiveIntensity: 0.35 });
-const coldTeaMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.matchaCold, roughness: 0.5, emissive: PALETTE.matchaCold, emissiveIntensity: 0.2 });
+// Teets yta: en egen shader med skum, virvel och glans (se makeMatchaMaterial i magic.js).
+const hotTeaMaterial = makeMatchaMaterial(true);
+const coldTeaMaterial = makeMatchaMaterial(false);
 const CUP_HEIGHT = 1.35;
 const CUP_TOP = 0.9;     // Radie upptill.
 const CUP_BOTTOM = 0.68; // Radie nertill.
@@ -288,11 +289,13 @@ export const teaCupSpots = TEA_CUPS.map(([x, z]) => homeGroup.localToWorld(new T
 const homePadWorld = homeGroup.localToWorld(new THREE.Vector3(0, 0, HOME_PAD_Z));
 const mailboxWorld = mailbox.getWorldPosition(new THREE.Vector3());
 // Rök ur skorstenen. Pufferna räknar själva ut var de är, från skorstenens topp i världen.
-worldGroup(WORLDS.hub).add(makeSmoke(chimney.localToWorld(new THREE.Vector3(0, 0.8, 0))));
-// Ånga ur de varma kopparna: samma puffar som skorstenen, men mindre, utspridda över hela
-// teytan (koppens radie gånger storleken) och mycket mer genomskinliga (0.3).
+worldGroup(WORLDS.hub).add(makeSmoke(chimney.localToWorld(new THREE.Vector3(0, 0.8, 0)), { color: PALETTE.smoke }));
+// Ånga ur de varma kopparna. Inte som skorstensröken: små, tunna slingor utspridda över
+// teytan, som lever kort (speed 0.5), stiger lite (rise 2.2) och bleknar nästan direkt (fade 2.5).
 for (const { cup, height, size } of steamSpots) {
-  worldGroup(WORLDS.hub).add(makeSmoke(cup.localToWorld(new THREE.Vector3(0, height, 0)), PALETTE.steam, size, CUP_TOP * size * 0.8, 0.3));
+  worldGroup(WORLDS.hub).add(makeSmoke(cup.localToWorld(new THREE.Vector3(0, height, 0)), {
+    color: PALETTE.steam, scale: size * 0.8, spread: CUP_TOP * size * 0.8, opacity: 0.3, speed: 0.5, rise: 2.2, fade: 2.5,
+  }));
 }
 export const home = {
   padX: homePadWorld.x,
