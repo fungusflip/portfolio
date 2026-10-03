@@ -107,7 +107,7 @@ export const PALETTE = {
   smoke: '#cbbfd6',          // Röken ur skorstenen: ljust lila-grå.
   tireDust: '#e2d3c0',
   matcha: '#3f6e1a',         // Teet i kopparna: djupt matchagrönt.
-  matchaFoam: '#9cc25a',     // Skummet på varmt te: ljusare gulgrönt.
+  matchaFoam: '#76a03a',     // Skummet på varmt te: lite ljusare grönt.
   matchaCold: '#4c5a22',     // Kallt te som stått länge: mörkare och gråare grönt.
   steam: '#f6f1e8',          // Ångan ur tekoppen: nästan vit.       // Dammet bakom bilens hjul: varmt grå, som gruset. // Eldflugorna: mest guld, ibland turkos eller rosa.
   speckle: '#f79824',    // Play-symbolen och laddningssnurran på skärmarna: orange.
