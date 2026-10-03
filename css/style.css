@@ -50,6 +50,72 @@ body {
   pointer-events: none; /* Klick och touch går rakt igenom. */
 }
 
+/* Uppmaningen när bilen står i en ficka: en orange biljett nere i mitten (samma form
+   som startknappen), med Enter-tangenten på den lilla stubben till vänster.
+   Den poppar upp med en studs och "andas" sedan svagt, så att man inte missar den. */
+.park-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: calc(34px + env(safe-area-inset-bottom));
+  transform: translate(-50%, var(--lift, 0px));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 30px 14px 20px;
+  border: 0;
+  border-radius: 4px;
+  background: #f0561a;
+  color: #fff3d6;
+  font: 600 19px system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  /* Halvcirklar "stansade" ur kortsidorna, som på en biobiljett. */
+  -webkit-mask: radial-gradient(circle at 0 50%, transparent 10px, #000 10.5px) left / 51% 100% no-repeat,
+                radial-gradient(circle at 100% 50%, transparent 10px, #000 10.5px) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle at 0 50%, transparent 10px, #000 10.5px) left / 51% 100% no-repeat,
+        radial-gradient(circle at 100% 50%, transparent 10px, #000 10.5px) right / 51% 100% no-repeat;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45));
+  animation: prompt-in 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both, prompt-breathe 1.8s ease-in-out 0.45s infinite;
+  z-index: 5;
+}
+.park-prompt[hidden] { display: none; }
+/* Vid en skylt: placerad med left/top (js/main.js), centrerad på punkten. --lift = hur
+   mycket den flyttas uppåt från punkten (används av animationerna nedan). */
+.park-prompt.anchored {
+  bottom: auto;
+  --lift: -50%;
+}
+.park-prompt strong { font-weight: 800; }
+/* Tangenten: en gräddvit "tangent" på stubben, med en streckad linje efter. */
+.park-prompt-key {
+  padding: 5px 11px;
+  margin-left: 6px;
+  border-radius: 6px;
+  background: #fff3d6;
+  color: #25323d;
+  box-shadow: 0 3px 0 #c9b98f;
+  font: 800 15px system-ui, sans-serif;
+}
+.park-prompt-text {
+  padding-left: 16px;
+  border-left: 2px dashed rgba(255, 243, 214, 0.6);
+}
+@keyframes prompt-in {
+  from { opacity: 0; transform: translate(-50%, calc(var(--lift, 0px) + 30px)) scale(0.85); }
+  to { opacity: 1; transform: translate(-50%, var(--lift, 0px)) scale(1); }
+}
+@keyframes prompt-breathe {
+  0%, 100% { transform: translate(-50%, var(--lift, 0px)) scale(1); }
+  50% { transform: translate(-50%, var(--lift, 0px)) scale(1.04); }
+}
+/* Inte när panelen, startskärmen eller listan är öppen, och inte på mobil (där finns "Read more"). */
+body.panel-open .park-prompt,
+body.intro-open .park-prompt,
+body.list-open .park-prompt { display: none; }
+@media (pointer: coarse) {
+  .park-prompt { display: none; }
+}
+
 /* Guiden i nedre vänstra hörnet. */
 .guide {
   position: fixed;  /* Sitter fast i fönstret, ovanpå canvasen. */

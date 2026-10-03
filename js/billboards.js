@@ -10,7 +10,7 @@ import {
   towardCamera, toTheRight, worldGroup, currentWorld, note, postMaterial, frameMaterial,
   makeTitleTexture, makeGlowMaterial,
 } from './core.js';
-import { setParkedAt } from './ui.js';
+import { setParkedAt, leaveParking } from './ui.js';
 import { PROJECTS } from './projects.js'; // Projektlistan (ÄNDRA projekten där).
 import { makeBulbs, rectanglePoints, makeSearchlight, makePadGlow, burstAt } from './magic.js';
 import { markMoving } from './optimize.js';
@@ -752,7 +752,8 @@ export function updateBillboards(delta, carPosition) {
       billboard.active = near;
       lightPad(billboard.padMaterial, near);
       billboard.signMaterial.map = near ? billboard.titleTextureActive : billboard.titleTexture;
-      setParkedAt(near ? billboard.project : null);
+      if (near) setParkedAt(billboard.project);
+      else leaveParking(billboard.project);
 
       if (near) {
         focusedBillboard = billboard;

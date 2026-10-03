@@ -25,7 +25,7 @@ import {
   renderer, scene, camera, cameraOffset, cameraLead, keyLight, SUN_DIRECTION, SUN_DISTANCE,
   WORLDS, currentWorld, towardCamera, toTheRight, FOG_NEAR, FOG_FAR,
 } from './core.js';
-import { introOpen, setLoadingProgress, setReady, setFade } from './ui.js';
+import { introOpen, setLoadingProgress, setReady, setFade, placeParkPrompt } from './ui.js';
 import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
 // Projektlistan fungerar direkt, även under laddningen (den behöver bara projektdatan).
 import { setWorldJumper } from './project-list.js';
@@ -216,6 +216,8 @@ const cameraTarget = new THREE.Vector3(); // Återanvänds varje bild (nya objek
 const FOCUS_PULL = 0.6;   // Hur långt mot skärmen siktpunkten flyttas (0 = inte alls, 1 = hela vägen).
 const FOCUS_ZOOM = 0.62;  // Kamerans avstånd när den zoomat in (1 = som vanligt).
 const focusShift = new THREE.Vector3();
+const PROMPT_DISTANCE = 3; // Var uppmaningen sitter: så långt framför skylten (fickan är 6 bort).
+const promptPoint = new THREE.Vector3();
 let focusZoom = 1;
 function gameFrame(time) {
   if (perf.skipFrame(time)) return; // 30-låset (se perf.js).
@@ -256,6 +258,18 @@ function gameFrame(time) {
   target.add(focusShift);
   camera.position.copy(target).addScaledVector(cameraOffset, cameraZoom * focusZoom);
   camera.lookAt(target);
+  // Uppmaningen ("Enter · Open ..."): på marken mellan skärmen och fickan, omräknad till
+  // en punkt på skärmen. project() gör om en plats i världen till -1..1 på skärmen.
+  if (focus) {
+    const spot = towardCamera(focus, PROMPT_DISTANCE);
+    promptPoint.set(spot.x, 0.5, spot.z).project(camera);
+    placeParkPrompt({
+      x: THREE.MathUtils.clamp((promptPoint.x + 1) / 2 * window.innerWidth, 180, window.innerWidth - 180),
+      y: THREE.MathUtils.clamp((1 - promptPoint.y) / 2 * window.innerHeight, 80, window.innerHeight - 60),
+    });
+  } else {
+    placeParkPrompt(null);
+  }
   updateLeaves(delta, target); // Löven hålls i en låda runt samma punkt.
   updateMagic(delta, car.position, wind, car.rotation.y); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
   const afterLeaves = performance.now();

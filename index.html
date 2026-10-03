@@ -35,11 +35,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&display=swap">
   <!-- Laddar utseendet från css/style.css. -->
-  <!-- ?v=60 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
+  <!-- ?v=63 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=60">
+  <link rel="stylesheet" href="css/style.css?v=63">
 
   <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
        import ... from 'three' slår webbläsaren upp 'three' här och hämtar
@@ -133,13 +133,16 @@
       <span class="guide-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
       <span>Drive</span>
     </div>
-    <!-- Rad 2 visas bara när bilen står framför en skylt. "hidden" gömmer den från början;
-         js/main.js tar bort och sätter tillbaka "hidden" och fyller i texten. -->
-    <div class="guide-row" id="guideEnter" hidden>
-      <span class="guide-keys"><kbd>Enter</kbd><kbd>Tab</kbd></span>
-      <span id="guideText"></span>
-    </div>
   </div>
+
+  <!-- Uppmaningen när bilen står i en ficka: en stor biljett som poppar upp. Vid en skylt
+       sitter den i mellanrummet mellan skärmen och fickan (js/main.js flyttar den dit),
+       vid garaget nere i mitten. Klickbar, och Enter (eller Tab) gör samma sak.
+       (På mobil finns i stället den orange "Read more"-knappen.) -->
+  <button class="park-prompt" id="parkPrompt" type="button" hidden>
+    <span class="park-prompt-key">Enter</span>
+    <span class="park-prompt-text">Open <strong id="parkPromptTitle"></strong></span>
+  </button>
 
   <!-- Touchkontroller för mobil och surfplatta. De syns bara på skärmar med touch
        (se @media (pointer: coarse) i css/style.css). Varje knapp låtsas vara en tangent:
@@ -175,6 +178,6 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="js/main.js?v=60"></script>
+  <script type="module" src="js/main.js?v=63"></script>
 </body>
 </html>

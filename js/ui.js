@@ -57,24 +57,29 @@ for (const button of document.querySelectorAll('.touch-btn')) {
 // Skyltarna och garaget säger till med setParkedAt när bilen kör in i eller ut ur
 // deras parkeringsficka. Då vet guiden vad den ska visa, och Enter vad den ska öppna.
 // info = ett projekt (eller "About me"), eller null när bilen inte står någonstans.
-const guideEnter = document.getElementById('guideEnter');
-const guideText = document.getElementById('guideText');
 const touchAction = document.getElementById('touchAction'); // Mobilens "Read more"-knapp.
+const parkPrompt = document.getElementById('parkPrompt');           // Den stora uppmaningen nere i mitten.
+const parkPromptTitle = document.getElementById('parkPromptTitle');
 let parkedAt = null;
 
 export function setParkedAt(info) {
   parkedAt = info;
   if (info && info.content) {
-    guideText.textContent = `Read more: ${info.title}`; // textContent = elementets text.
-    guideEnter.hidden = false;
     touchAction.textContent = 'Read more'; // Kort text: titeln syns redan på skylten.
     touchAction.hidden = false;
+    parkPromptTitle.textContent = info.title;
+    parkPrompt.hidden = false;
   } else {
-    guideEnter.hidden = true;
     touchAction.hidden = true;
+    parkPrompt.hidden = true;
   }
   // Kör bilen därifrån stängs panelen för det stället.
   if (panelOpen && panelProject !== info) closePanel();
+}
+// Bilen har lämnat fickan för info. Glöm den bara om det fortfarande är den guiden visar
+// (har bilen redan hunnit parkera någon annanstans ska det nya stället vara kvar).
+export function leaveParking(info) {
+  if (parkedAt === info) setParkedAt(null);
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +161,23 @@ function togglePanel() {
 
 document.getElementById('panelClose').addEventListener('click', closePanel);
 touchAction.addEventListener('click', togglePanel);
+parkPrompt.addEventListener('click', () => {
+  togglePanel();
+  parkPrompt.blur(); // Släpp fokus, annars "klickar" Enter på knappen också och panelen stängs direkt igen.
+});
+
+// Flyttar uppmaningen till en punkt på skärmen (i pixlar), eller tillbaka till nere i mitten (null).
+export function placeParkPrompt(spot) {
+  if (spot) {
+    parkPrompt.classList.add('anchored');
+    parkPrompt.style.left = `${spot.x}px`;
+    parkPrompt.style.top = `${spot.y}px`;
+  } else {
+    parkPrompt.classList.remove('anchored');
+    parkPrompt.style.left = '';
+    parkPrompt.style.top = '';
+  }
+}
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && panelOpen) {
     closePanel();

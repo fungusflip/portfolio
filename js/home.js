@@ -10,7 +10,7 @@ import {
 import { PAD_DISTANCE, PAD_RADIUS, addParkingBay, lightPad } from './billboards.js';
 import { PROJECTS } from './projects.js';
 import { ROAD_DISTANCE } from './roads.js';
-import { setParkedAt } from './ui.js';
+import { setParkedAt, leaveParking } from './ui.js';
 import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
 import { makeSmoke, makeBulbs, rectanglePoints } from './magic.js';
@@ -250,5 +250,6 @@ export function updateHome(carPosition) {
   home.active = near;
   nameBulbs.active.value = near ? 1 : 0;
   lightPad(homePadMaterial, near);
-  setParkedAt(near ? ABOUT : null);
+  if (near) setParkedAt(ABOUT);
+  else leaveParking(ABOUT);
 }
