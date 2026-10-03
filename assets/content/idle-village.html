@@ -1,48 +1,25 @@
-<p><strong>Identity-driven idle sim</strong> · Unity · C# · Mobile-first · MVP core (early) · Updated 15 Aug 2025</p>
+<p>An idle sim for phones in Unity/C#, early MVP (Aug 2025). Each villager has a personality (Soul based on the OCEAN model, Flame, Stone, traits, quirks) that a utility AI uses to choose what to do: relax, socialize or work.</p>
 <figure>
  <video src="https://filip.renemark.se/wp-content/uploads/2025/08/ScreenRecording_08-15-2025_23-08-11_1.mov" controls muted loop playsinline preload="metadata"></video>
-  <figcaption>Demo: summon → identity-driven needs → villagers path to tiles.</figcaption>
+  <figcaption>A summoned villager picks a need and walks to the right tile. Filmed on an iPhone 11, iOS 18.5.</figcaption>
 </figure>
-<p>Filmed on iPhone 11 · Tested on iOS 18.5</p>
-<h3>TL;DR</h3>
-<p>Identity-first idle sim. Each villager has a Soul/Flame/Stone + Traits/Quirks stack that drives Utility AI for needs (Relax, Socialize, Work).<br> Current MVP: anonymous login, random-tier summons (no pity/banners yet), 2D NavMesh over Tilemap, needs-based routing, and simple scene persistence mirrored to Firebase.</p></p>
-<h3>Features in MVP</h3>
-<h4>Player Sees</h4>
+
+<h3>Works now</h3>
 <ul>
- <li>One-tap anonymous login with session restore.</li>
- <li>Summoning with random per-tier results (no pity/banners yet).</li>
- <li>Needs System: Relaxation / Socialization / Work target different tile types.</li>
- <li>Navigation: 2D NavMesh + Tilemap pathing; villagers auto-route to chosen tiles.</li>
- <li>State persists between sessions; basic cloud mirror.</li>
+ <li>Anonymous login that remembers you</li>
+ <li>Summoning with random tiers</li>
+ <li>Utility AI picks a need and a target tile</li>
+ <li>2D NavMesh pathing over the Tilemap</li>
+ <li>Save state, mirrored to Firebase</li>
 </ul>
-<h4>Under the Hood</h4>
+
+<h3>Next</h3>
 <ul>
- <li>Identity Stack: Soul (OCEAN), Flame archetypes, Stone origins, Traits &amp; Quirks.</li>
- <li>Utility AI: identity-aware scoring selects need &amp; target tiles.</li>
- <li>Summoning config: tier weights (pity/banners planned but not enabled).</li>
- <li>NavMesh 2D over Tilemap with typed work/relax/social tiles.</li>
- <li>Persistence: scene state + Firebase network mirror.</li>
+ <li>Crafting and economy</li>
+ <li>Pity and banners for summoning</li>
+ <li>Villagers that talk in their own style</li>
 </ul>
-<h3>Core Loop (Current)</h3>
-<p>Summon → Villager spawns → Identity picks need → Path to tile</p>
-<h3>What’s Next</h3>
-<ul>
- <li><strong>Crafting &amp; Economy:</strong> time/XP formula, stations/slots, data-driven recipes.</li>
- <li><strong>Summoning 2.0:</strong> pity thresholds + banner bias within tiers + VFX polish.</li>
- <li><strong>Expression:</strong> identity-tied speech patterns.</li>
-</ul>
-<h3>Acceptance Criteria (MVP So Far)</h3>
-<ul>
- <li>✅ Anonymous login restores session on device.</li>
- <li>✅ Random-tier summoning spawns valid villagers.</li>
- <li>✅ Villagers choose needs via Utility AI and reach appropriate tiles.</li>
- <li>✅ 2D NavMesh pathing works on target devices.</li>
- <li>✅ Scene state persists and mirrors to Firebase.</li>
-</ul>
-<h3>Changelog</h3>
-<ul>
- <li><strong>2025-08-15:</strong> Video capture on device; needs-based routing polish; Tilemap targets.</li>
- <li><strong>2025-08-15:</strong> Summon Revamp, icon card hookup.</li>
- <li><strong>2025-08-10:</strong> Utility AI hooked to identity stack; initial tiers for summoning.</li>
-</ul>
-<p><a href="https://docs.google.com/document/d/1sg9sw09azX95HqQNMAE3EebvAbjB2xtNvtVX-KCMqjY/edit?usp=sharing" target="_blank" rel="noopener">Read full tech spec →</a></p>
+
+<h3>Log</h3>
+<p>10 Aug 2025: utility AI hooked to the personalities, first summon tiers.<br>15 Aug 2025: summon revamp, tile targets, on-device video.</p>
+<p><a href="https://docs.google.com/document/d/1sg9sw09azX95HqQNMAE3EebvAbjB2xtNvtVX-KCMqjY/edit?usp=sharing" target="_blank" rel="noopener">Full tech spec →</a></p>

@@ -1,30 +1,19 @@
-<p>I created a VAT (Vertex Animation Texture) animation because I found them incredibly beautiful when applied to VFX. This project was a joy to work on, and I loved every step of the process. I also wanted to dive deeper into Houdini, as I see the incredible potential and beauty that the software offers for creating stunning VFX.</p>
- <img src="https://filip.renemark.se/wp-content/uploads/2025/03/ezgif-73de167a516905.gif" alt="" loading="lazy">
-<p>Last iteration: added materials, matched animations, and implemented spline camera movement! Cheers!</p>
-<p>
- <img src="https://filip.renemark.se/shaders-rendering/project-water-shader/attachment/tgalogowhite" alt="Logo" loading="lazy"></p> <a href="https://gyazo.com/14b3658dd278291cd8c4d628db0465d4" target="_blank" rel="noopener"><br>
- <video src="https://i.gyazo.com/14b3658dd278291cd8c4d628db0465d4.mp4" controls muted loop playsinline preload="metadata"></video></a>
-<p>Wip: CameraPosition and lighting Changes.</p>
-<p>
- <img src="https://filip.renemark.se/shaders-rendering/project-water-shader/attachment/tgalogowhite" alt="Logo" loading="lazy"></p>
-<p>
- <img src="https://filip.renemark.se/shaders-rendering/project-water-shader/attachment/tgalogowhite" alt="Logo" loading="lazy"></p>
-<p><strong>Animating the Vision: From Maya to Houdini to Unreal</strong><br>Working with animations and lighting was easily one of the most fun parts of the process. Choosing the right materials and pairing them with lighting that complemented their look felt like the cherry on top — it really brought the whole vision to life.</p>
-<p>The real boss fight, though, was understanding how animation data moves through the pipeline. The animation itself was created by my incredibly talented friend <strong><a href="https://www.philipanderson.site/" target="_blank" rel="noopener">Philip Anderson</a></strong>, who worked in <strong>Maya</strong>. From there, I brought the animation into <strong>Houdini</strong> so it could interact with my fluid simulation, and finally into <strong>Unreal Engine</strong> for full project integration.</p>
-<p>That handoff between tools came with a lot of hidden complexity — <strong>FPS mismatches</strong>, <strong>substeps</strong>, and how each software interpreted timing or baked keys could completely change the result. But working through those issues ended up being a super valuable learning experience. It gave me a deeper understanding of how animation data travels and behaves across different platforms — something I’ll definitely carry into future workflows.</p>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2025/03/89bd9880f53c3f7e508be06ef62eb7d7.gif" alt="" loading="lazy">
-</figure>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2025/03/72b60e968cc6264f6478c5fdf5577526.gif" alt="" loading="lazy">
-</figure>
-<p><strong>Getting Fresnel to Work on Translucent VAT Shaders</strong><br>Creating the shader for my VAT came with its own set of challenges — especially when it came to applying <strong>Fresnel effects</strong> to a <strong>translucent material</strong>. By default, Unreal’s translucent materials don’t support traditional Fresnel shading the same way opaque materials do. That’s because the <strong>lighting model for translucency bypasses some of the standard surface shading logic</strong>, making it harder to get that nice edge glow or angle-based falloff you’d expect.</p>
-<p>The fix, though, was surprisingly simple — once you know it. Switching the <strong>lighting mode</strong> in the material settings from <em>default</em> to something like <strong>Surface ForwardShading</strong> or <strong>Surface Translucency Volume</strong> allowed Fresnel to behave more predictably. After that, adding a standard Fresnel node worked just like expected, and the shader finally gave that nice layered depth and light wrap that sells liquid or glass-like surfaces.</p>
-<p><strong>Fixing Jitter: UV Precision, Legacy VAT, and DOP Force Chaos</strong><br>To stabilize things, I eventually had to enable <strong>UV precision</strong> and switch over to the <strong>VAT Legacy solution</strong>. Without that, the vertices were constantly jittering — subtle at first, but enough to ruin the illusion. Another source of jitter turned out to be the forces I was using in my DOP network. Since the simulation wasn’t physically accurate, I had been faking it by applying forces to keep the liquid inside the cup. It got the general look across, but the setup was messy. The imbalanced forces introduced instability that showed up loud and clear once baked into the VAT. Tiny missteps in the physics became huge visual artifacts in the final mesh.</p>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2025/03/4d60bb89bdd9bd08606a19713be8b39d-1.gif" alt="" loading="lazy">
-</figure>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2025/03/c70ed902cd1f1f7d18fdfcccce738303-1.gif" alt="" loading="lazy">
-</figure>
-<p><strong>Importing the VAT texture came with some frustrating and poorly documented issues.</strong><br>Digging through countless blog posts pushed my patience and mental stamina to the limit. One of the biggest problems was empty data inside the VAT textures — without it, the quads wouldn’t render correctly at all. To make things worse, the import plugin was extremely fragile. In certain versions of Unreal, it was outright broken. The whole process felt like trial and error, with no clear guidance or consistency across tools and engine versions.</p>
+<p>A liquid sim in Houdini, baked to a Vertex Animation Texture and played in Unreal. The animation is by <a href="https://www.philipanderson.site/" target="_blank" rel="noopener">Philip Anderson</a> (Maya).</p>
+<img src="https://filip.renemark.se/wp-content/uploads/2025/03/ezgif-73de167a516905.gif" alt="Final VAT fluid" loading="lazy">
+<p>Final: materials, synced animation and a spline camera.</p>
+<video src="https://i.gyazo.com/14b3658dd278291cd8c4d628db0465d4.mp4" controls muted loop playsinline preload="metadata"></video>
+<p>WIP: camera and lighting.</p>
+
+<h2>Problems I hit</h2>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/89bd9880f53c3f7e508be06ef62eb7d7.gif" alt="" loading="lazy"></figure>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/72b60e968cc6264f6478c5fdf5577526.gif" alt="" loading="lazy"></figure>
+<ul>
+ <li>Maya, Houdini and Unreal disagreed on FPS and substeps.</li>
+ <li>Fresnel didn’t work on the translucent material until I set the lighting mode to Surface ForwardShading.</li>
+ <li>I had faked forces to keep the liquid in the cup, and the bake made every small error visible as jitter. UV precision, legacy VAT and cleaner forces fixed it.</li>
+</ul>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/4d60bb89bdd9bd08606a19713be8b39d-1.gif" alt="" loading="lazy"></figure>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/c70ed902cd1f1f7d18fdfcccce738303-1.gif" alt="" loading="lazy"></figure>
+<ul>
+ <li>On import, empty data in the textures broke the quads, and the plugin was broken in some Unreal versions. Lots of trial and error.</li>
+</ul>

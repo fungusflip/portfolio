@@ -10,7 +10,7 @@
   <!-- Gör att sidan får rätt bredd och skala på mobiler. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Texten på webbläsarfliken. -->
-  <title>Filip Renemark — Technical Artist</title>
+  <title>Filip Renemark · Technical Artist</title>
   <!-- Beskrivningen som sökmotorer (t.ex. Google) visar under titeln. -->
   <meta name="description" content="Drive around Filip Renemark's portfolio: procedural work, shaders, and tools.">
   <!-- Ikonen på webbläsarfliken. -->
@@ -21,7 +21,7 @@
        Bilden MÅSTE ha en hel adress (https://...), eftersom den hämtas utifrån.
        Byter sidan adress måste og:url och og:image ändras. -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Filip Renemark — Technical Artist">
+  <meta property="og:title" content="Filip Renemark · Technical Artist">
   <meta property="og:description" content="Drive around my portfolio: procedural work, shaders, and tools.">
   <meta property="og:url" content="https://fungusflip.github.io/portfolio/">
   <meta property="og:image" content="https://fungusflip.github.io/portfolio/assets/images/preview.jpg">
@@ -30,11 +30,11 @@
   <!-- Säger till X/Twitter (och Discord) att visa bilden stort i stället för som en liten ruta. -->
   <meta name="twitter:card" content="summary_large_image">
   <!-- Laddar utseendet från css/style.css. -->
-  <!-- ?v=33 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
+  <!-- ?v=34 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=33">
+  <link rel="stylesheet" href="css/style.css?v=34">
 
   <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
        import ... from 'three' slår webbläsaren upp 'three' här och hämtar
@@ -76,14 +76,13 @@
       <h1 class="intro-name" id="introName">Filip Renemark</h1>
       <p class="intro-role">Technical Artist · Houdini · Shaders · Tools</p>
       <p class="intro-text">
-        You've landed in my portfolio — a small autumn town you explore by car.
-        Every glowing billboard is a project. Park in front of one to play it and read more.
+        Drive around town. Park at a billboard to see a project.
       </p>
       <!-- Teckenförklaringen: vad saker i världen betyder. -->
       <ul class="intro-legend">
-        <li><span class="intro-icon">🎬</span><span><strong>Billboards</strong> — my projects</span></li>
-        <li><span class="intro-icon">⛰️</span><span><strong>Caves</strong> — Tech Art, Programming &amp; Art worlds</span></li>
-        <li><span class="intro-icon">🏠</span><span><strong>Garage</strong> — about me &amp; contact</span></li>
+        <li><span class="intro-icon">🎬</span><span><strong>Billboards:</strong> my projects</span></li>
+        <li><span class="intro-icon">⛰️</span><span><strong>Caves:</strong> Tech Art, Programming &amp; Art worlds</span></li>
+        <li><span class="intro-icon">🏠</span><span><strong>Garage:</strong> about me &amp; contact</span></li>
       </ul>
       <!-- Under laddningen är knappen avstängd (disabled) och visar hur långt det kommit.
            js/ui.js gör den till "Start driving" när världen är klar. -->
@@ -93,7 +92,7 @@
       <!-- För den som har bråttom (t.ex. en rekryterare): CV och mejl direkt. -->
       <!-- För den som inte vill köra: alla projekt i en vanlig lista (se js/project-list.js).
            Fungerar direkt, även medan världen laddas. -->
-      <button class="intro-skip" id="introProjects" type="button">Skip the drive — browse all projects (P)</button>
+      <button class="intro-skip" id="introProjects" type="button">Just show me the projects (P)</button>
       <p class="intro-links">
         <a href="https://filip.renemark.se/wp-content/uploads/2026/05/Filip_Renemark_CV.pdf" target="_blank" rel="noopener">CV (PDF)</a>
         <a href="mailto:filip@renemark.me">filip@renemark.me</a>
@@ -165,6 +164,6 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="js/main.js?v=33"></script>
+  <script type="module" src="js/main.js?v=34"></script>
 </body>
 </html>

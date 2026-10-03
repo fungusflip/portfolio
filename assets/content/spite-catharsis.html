@@ -1,78 +1,85 @@
-<p>This project ran for a month and a half, including a pre-production phase where we planned, iterated, and eventually built one of the most technically diverse game slices I’ve been part of. I worked across VFX, shaders, procedural tool creation, and animation scripting — and for the first time, I saw my work connect across systems in a production setting. It was also the project where I made my very first team-based VFX, which gave me a huge love for stylized feedback.</p>
-<p><strong>🎮 <a href="https://zominator16.itch.io/spite-catharsis" target="_blank" rel="noopener">Play Spite Catharsis on itch.io</a></strong></p>
-<h2>Technical Breakdown</h2>
-<p>Here’s a breakdown of what I made and what I learned — both technically and personally:</p>
-<h3>💧 First VFX – Water Projectile</h3>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2024/12/Yaup-1.gif" alt="Water projectile VFX demonstration" loading="lazy">
- <figcaption> This was the first VFX I ever made on a team, and it honestly changed how I saw feedback in games. It’s a stylized water projectile that might look simple now, but it taught me a ton about how <strong>meshes, motion, and materials</strong> all come together. </figcaption>
-</figure>
-<p><strong>What I learned:</strong></p>
-<ul>
- <li>How to layer meshes to create convincing motion</li>
- <li>Connecting HLSL into material logic pipelines</li>
- <li>Wrestling with UV seams and polar distortion (I got very stuck there at one point!)</li>
- <li>Working with <strong>Substance 3D Designer</strong> for the first time — designing custom textures specifically for this effect</li>
-</ul>
-<p>It felt like a proper production step, and it’s still a milestone for me.</p>
-<h3>🪨 Procedural Rubble Tool – Houdini RBD Automation</h3>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2024/12/rubble-Falliin.gif" alt="Procedural rubble physics simulation" loading="lazy">
- <figcaption> Artist-friendly Houdini tool that automatically converts FBX files into physics-driven falling rubble </figcaption>
-</figure>
-<p>I wanted to build something that non-technical teammates could use — so I made this tool in Houdini to automatically take a folder of FBX files and turn them into falling rubble with physics.</p>
-<p><strong>Technical approach:</strong></p>
-<ul>
- <li>Uses a <strong>filepattern</strong> node to pull in all files: <code>$HIP/geo/myRubbleFolder/*.fbx</code></li>
- <li>Loops over them using <strong>For-Each by file path</strong></li>
- <li>Loads each into a <strong>file SOP</strong> with a <code>detail()</code> expression:<br> <code>detail("../filepattern1", "filelist", @iteration, "string")</code></li>
- <li>Each piece is fractured with <strong>RBD Material Fracture</strong> and dropped into a simple gravity sim</li>
-</ul>
-<p><strong>Result:</strong> Just drop in a bunch of meshes and hit go. Zero manual setup required.</p>
-<h3>🤖 FK Hand Tool – Maya Rigging Automation</h3>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2024/12/FKHAND-1.gif" alt="FK hand rigging tool demonstration" loading="lazy">
- <figcaption> Automated finger rigging in Maya using Python — one click from knuckle to full FK chain </figcaption>
-</figure>
-<p>This tool was made to automate finger rigging in Maya. Instead of setting up each FK chain by hand, it builds controller hierarchies starting from any selected knuckle. It saved our team a ton of time and reduced errors in the rigging stage.</p>
-<p><strong>🧠 Technical Breakdown:</strong></p>
-<ul>
- <li>Uses Maya’s Python API to find joint hierarchies starting from selection</li>
- <li>Automatically creates <strong>FK controllers</strong> and <strong>zeroed offset groups</strong></li>
- <li>Snaps each controller to its joint (position + rotation)</li>
- <li>Applies <strong>parent constraints</strong> (maintain offset off)</li>
- <li>Parents controllers hierarchically (clean FK chain)</li>
- <li>Includes a <strong>custom UI</strong> so animators can launch it easily</li>
-</ul>
-<p><strong>📜 Full Python Script:</strong></p> <pre><code>import maya.cmds as cmds def create_fk_finger_from_knuckle(scale=1.0, ctrl_shape="cube"): selection = cmds.ls(selection=True, type='joint') if not selection: cmds.error("Please select a knuckle (joint) to start.") return knuckle = selection[0] joints = cmds.listRelatives(knuckle, allDescendents=True, type="joint") if not joints: cmds.error("No child joints found under the selected knuckle.") return joints.reverse() joints.insert(0, knuckle) joints.pop() controllers = [] offset_groups = [] for joint in joints: ctrl_name = f"{joint}_ctrl" ctrl = cmds.circle(name=ctrl_name, degree=1)[0] cmds.matchTransform(ctrl, joint, pos=True, rot=True) cmds.scale(scale, scale, scale, ctrl) cmds.rotate(0, "90deg", 0, ctrl) offset_grp = cmds.group(ctrl, name=f"{joint}_offset_grp") cmds.delete(cmds.parentConstraint(joint, offset_grp)) cmds.makeIdentity(ctrl, apply=True, rotate=True, translate=True, scale=True) cmds.parentConstraint(ctrl, joint, mo=True) controllers.append(ctrl) offset_groups.append(offset_grp) for i in range(1, len(offset_groups)): cmds.parent(offset_groups[i], controllers[i - 1]) if controllers: cmds.parentConstraint(controllers[0], knuckle, mo=True) print(f"FK setup complete starting from knuckle: {knuckle}") class Window(object): def __init__(self): self.window="Window" self.title="FK Tool" self.size=(500,500) if cmds.window(self.window, ex=True): cmds.deleteUI(self.window, wnd=True) self.window = cmds.window(self.window, t=self.title, wh=self.size) cmds.columnLayout(adjustableColumn=True, mar=10, bgc=(0.5,0.5,1)) cmds.button(l="Generate FK Chain", c=self.CreateFKFingerCommand, bgc=(1,0.5,0.5)) cmds.showWindow() def CreateFKFingerCommand(self, *args): create_fk_finger_from_knuckle() print("FK chain generated.") Window()</code></pre>
-<h3>❤️ Health Shader – Animated Pulse Feedback</h3>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2024/12/healthShader_Half.gif" alt="Health shader with pulsing animation" loading="lazy">
- <figcaption> Living, breathing shader that reacts to health values with UV distortion and pulse logic </figcaption>
-</figure>
-<p>This shader was all about building something that <em>feels alive</em>. It reacts to a <code>healthValue</code> parameter and pulses over time like a glowing orb infused with heartbeat logic.</p>
-<p><strong>Key techniques:</strong></p>
-<ul>
- <li>Custom <code>HeartPumpWave()</code> function to simulate pulse rhythm</li>
- <li>Polar UV distortion and swirl via <code>RotateUV()</code></li>
- <li>Scrolling vein masks, alpha fading, and line glow effects</li>
- <li>Dynamic color interpolation based on health percentage</li>
-</ul>
-<p><strong>Core pulse function:</strong></p> <pre><code>float HeartPumpWave(float t) { return 0.9 + 0.2 * (sin(t * 0.6 * 6.28) + sin(t * 1.2 * 6.28)); }</code></pre>
-<h3>⚔️ Weapon Swipe VFX – Flipbook Integration</h3>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2024/12/laserYxa.gif" alt="Weapon swipe VFX effect" loading="lazy">
- <figcaption> EmberGen simulation rendered as flipbook, integrated into custom DX11 engine </figcaption>
-</figure>
-<p>This effect came from a simple idea: <em>“What if a sword swipe felt like it cracked the air?”</em></p>
-<p>I simulated a slash in <strong>EmberGen</strong>, rendered it as a flipbook texture, and hooked it into our custom DirectX 11 engine using an HLSL shader.</p>
-<p><strong>Flipbook sampling logic:</strong></p> <pre><code>int frame = (int)(time * playbackSpeed) % totalFrames; float2 uvOffset = CalculateFlipbookOffset(frame, gridSize); float4 flipbookSample = tex.Sample(sampler, uv + uvOffset);</code></pre>
-<h4>📚 What I Learned: Communication Matters More Than Code</h4>
-<p>The technical implementation worked — but our team communication didn’t. I failed to clearly explain the effect to my TA partner early on. They built something different based on their interpretation, and we didn’t catch the misalignment until late in the process.</p>
-<p>The effect shipped, but not in the form I originally envisioned.</p>
-<p><strong>That mistake taught me more than the shader did.</strong> Next time, I’ll communicate clearer, show visual references sooner, and avoid making assumptions — even when the idea seems obvious in my head.</p>
-<h2>🎮 Try It Yourself</h2>
-<p>Want to see these systems in action? <strong><a href="https://zominator16.itch.io/spite-catharsis" target="_blank" rel="noopener">Play Spite Catharsis on itch.io</a></strong> and experience the VFX, tools, and shaders working together in-game.</p>
-<h2>Final Thoughts</h2>
-<p>This project was a turning point for me. I learned that technical skills matter — but so do communication, iteration, and building tools that empower your team. Every mistake became a lesson, and every tool I built made the next one easier.</p>
-<p>If you’re working on game development projects and want to chat about VFX, procedural tools, or shader work, feel free to reach out!</p>
+<p>A team game, six weeks long. I did VFX, shaders, tools and animation scripts. It was the first time I saw my work connect with everyone else’s.</p>
+<p><a href="https://zominator16.itch.io/spite-catharsis" target="_blank" rel="noopener">Play it on itch.io</a></p>
+
+<h3>Water projectile</h3>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/Yaup-1.gif" alt="Water projectile VFX" loading="lazy"></figure>
+<p>My first VFX on a team. Layered meshes, HLSL in the material, and my first textures made in Substance Designer. I got stuck on UV seams for a long time.</p>
+
+<h3>Rubble tool (Houdini)</h3>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/rubble-Falliin.gif" alt="Falling rubble simulation" loading="lazy"></figure>
+<p>Drop a folder of FBX files in and it breaks them apart and drops them with physics. Filepattern → for-each loop → RBD Material Fracture → gravity sim. I made it for non-technical teammates.</p>
+<pre><code>detail("../filepattern1", "filelist", @iteration, "string")</code></pre>
+
+<h3>FK hand tool (Maya, Python)</h3>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/FKHAND-1.gif" alt="FK finger rig tool" loading="lazy"></figure>
+<p>Pick a knuckle, click one button and you get a full FK finger chain with controllers and offset groups. Animators start it from a small custom window. It saved our riggers a lot of clicking.</p>
+<details>
+<summary>Full Python script</summary>
+<pre><code>import maya.cmds as cmds
+
+def create_fk_finger_from_knuckle(scale=1.0, ctrl_shape="cube"):
+    selection = cmds.ls(selection=True, type='joint')
+    if not selection:
+        cmds.error("Please select a knuckle (joint) to start.")
+        return
+    knuckle = selection[0]
+    joints = cmds.listRelatives(knuckle, allDescendents=True, type="joint")
+    if not joints:
+        cmds.error("No child joints found under the selected knuckle.")
+        return
+    joints.reverse()
+    joints.insert(0, knuckle)
+    joints.pop()
+    controllers = []
+    offset_groups = []
+    for joint in joints:
+        ctrl_name = f"{joint}_ctrl"
+        ctrl = cmds.circle(name=ctrl_name, degree=1)[0]
+        cmds.matchTransform(ctrl, joint, pos=True, rot=True)
+        cmds.scale(scale, scale, scale, ctrl)
+        cmds.rotate(0, "90deg", 0, ctrl)
+        offset_grp = cmds.group(ctrl, name=f"{joint}_offset_grp")
+        cmds.delete(cmds.parentConstraint(joint, offset_grp))
+        cmds.makeIdentity(ctrl, apply=True, rotate=True, translate=True, scale=True)
+        cmds.parentConstraint(ctrl, joint, mo=True)
+        controllers.append(ctrl)
+        offset_groups.append(offset_grp)
+    for i in range(1, len(offset_groups)):
+        cmds.parent(offset_groups[i], controllers[i - 1])
+    if controllers:
+        cmds.parentConstraint(controllers[0], knuckle, mo=True)
+    print(f"FK setup complete starting from knuckle: {knuckle}")
+
+class Window(object):
+    def __init__(self):
+        self.window = "Window"
+        self.title = "FK Tool"
+        self.size = (500, 500)
+        if cmds.window(self.window, ex=True):
+            cmds.deleteUI(self.window, wnd=True)
+        self.window = cmds.window(self.window, t=self.title, wh=self.size)
+        cmds.columnLayout(adjustableColumn=True, mar=10, bgc=(0.5, 0.5, 1))
+        cmds.button(l="Generate FK Chain", c=self.CreateFKFingerCommand, bgc=(1, 0.5, 0.5))
+        cmds.showWindow()
+
+    def CreateFKFingerCommand(self, *args):
+        create_fk_finger_from_knuckle()
+        print("FK chain generated.")
+
+Window()</code></pre>
+</details>
+
+<h3>Health shader</h3>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/healthShader_Half.gif" alt="Pulsing health orb" loading="lazy"></figure>
+<p>Pulses like a heartbeat, swirls with polar UVs and changes color with health.</p>
+<pre><code>float HeartPumpWave(float t) {
+    return 0.9 + 0.2 * (sin(t * 0.6 * 6.28) + sin(t * 1.2 * 6.28));
+}</code></pre>
+
+<h3>Sword swipe</h3>
+<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/laserYxa.gif" alt="Sword swipe VFX" loading="lazy"></figure>
+<p>Simulated in EmberGen, baked to a flipbook and played by an HLSL shader in our DX11 engine.</p>
+<pre><code>int frame = (int)(time * playbackSpeed) % totalFrames;
+float2 uvOffset = CalculateFlipbookOffset(frame, gridSize);
+float4 flipbookSample = tex.Sample(sampler, uv + uvOffset);</code></pre>
+<p>One thing went wrong: I didn’t explain the effect well to my TA partner, so they built something else, and we noticed too late. Now I show references early.</p>

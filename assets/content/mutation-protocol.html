@@ -1,102 +1,41 @@
-<p>A Houdini Digital Asset for fitting and draping clothing onto custom characters. Built to work across any character, the tool was tested in collaboration with artist <a href="https://elinakans.com/" target="_blank" rel="noopener">Elina Kans</a> — who provided feedback and helped push the designs with a banana hat and nuke suit.</p>
-<h2>☢️ Nuke Suit</h2>
-<p>Designed to look brand new — clean, fresh out of the box. A collaboration with <a href="https://elinakans.com/" target="_blank" rel="noopener">Elina Kans</a>.</p>
+<p>Freelance work: a Houdini tool that fits and drapes clothing onto any character without manual retopology. Parameters control how the cloth behaves. Designs made together with <a href="https://elinakans.com/" target="_blank" rel="noopener">Elina Kans</a>.</p>
+
+<h2>Nuke suit</h2>
+<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__8_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__17_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+
+<h2>Banana hat and glasses</h2>
+<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__10_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__13_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+
+<h2>Characters</h2>
+<p>All characters come from one base, and parts are added or removed with parameters. The rat zombie walks on its arms, so I renamed the bones to trick the auto-rigger, and it worked.</p>
 <figure>
-  <video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__8_.mp4" controls muted loop playsinline preload="metadata"></video>
+ <video src="https://i.gyazo.com/be03ef6766c24860e408b286ce63fa77.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Rat zombie animations.</figcaption>
 </figure>
 <figure>
-  <video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__17_.mp4" controls muted loop playsinline preload="metadata"></video>
-</figure>
-<h2>🍌 Banana Hat &amp; 👓 Glasses</h2>
-<figure>
-  <video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__10_.mp4" controls muted loop playsinline preload="metadata"></video>
-  <figcaption>Banana hat — collab with <a href="https://elinakans.com/" target="_blank" rel="noopener">Elina Kans</a>.</figcaption>
+ <video src="https://i.gyazo.com/4edc087a0154802dff78024fbffc029b.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Retargeted to the other variants.</figcaption>
 </figure>
 <figure>
-  <video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__13_.mp4" controls muted loop playsinline preload="metadata"></video>
-  <figcaption>Glasses.</figcaption>
+ <video src="https://i.gyazo.com/e66053b0d80cbe75fb4db7d4ae065c88.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Character parameters.</figcaption>
 </figure>
-<h2>🔧 The Tool</h2>
-<p>The HDA handles fitting and draping clothing to any character — proportions, attachment, and cloth behaviour all driven by parameters. The artist focuses on the design; the tool handles the technical fit.</p>
-<ul>
-  <li><strong>Character-agnostic:</strong> Works across different body types and proportions</li>
-  <li><strong>Parametric fit:</strong> Clothing adjusts to the character without manual retopology</li>
-  <li><strong>HDA packaging:</strong> Clean interface usable by non-technical artists</li>
-  <li><strong>Collaboration-tested:</strong> Refined through real design feedback with <a href="https://elinakans.com/" target="_blank" rel="noopener">Elina Kans</a></li>
-</ul>
-<h2>🤖 Procedural Character Pipeline</h2>
-<p>Characters are built from a shared base — parts added or removed procedurally depending on the design. The rat zombie presented a specific challenge: it walks on its arms instead of legs, which meant the auto-rigger needed to be tricked with an unconventional bone naming convention. It worked. All characters expose parameters directly in the HDA so proportions and details can be dialled in without touching the underlying nodes.</p>
-<ul>
-  <li><strong>Base character system:</strong> One starting point, infinite variations through parameter control</li>
-  <li><strong>Auto-rigger workaround:</strong> Naming convention trick to handle non-standard locomotion</li>
-  <li><strong>Exposed parameters:</strong> Artists adjust proportions and details directly in Houdini</li>
-</ul>
-  <a href="https://gyazo.com/be03ef6766c24860e408b286ce63fa77" target="_blank" rel="noopener">
-    <video controls muted loop playsinline preload="metadata">
-      <source src="https://i.gyazo.com/be03ef6766c24860e408b286ce63fa77.mp4" type="video/mp4">
-    </video>
-  </a>
-  Rat zombie — full animation set.
-  
-    <a href="https://gyazo.com/4edc087a0154802dff78024fbffc029b" target="_blank" rel="noopener">
-      <video controls muted loop playsinline preload="metadata">
-        <source src="https://i.gyazo.com/4edc087a0154802dff78024fbffc029b.mp4" type="video/mp4">
-      </video>
-    </a>
-    Rat zombie — retarget across variants.
-  
-  
-    <a href="https://gyazo.com/e66053b0d80cbe75fb4db7d4ae065c88" target="_blank" rel="noopener">
-      <video controls muted loop playsinline preload="metadata">
-        <source src="https://i.gyazo.com/e66053b0d80cbe75fb4db7d4ae065c88.mp4" type="video/mp4">
-      </video>
-    </a>
-    Character tooling — procedural parameter controls.
-  
-  
-    <img src="https://gyazo.com/81c0008adf889000044fb8037c2e4c3a/raw" alt="Parameter example" loading="lazy">
-    Parameter example.
-  
-<h2>🔩 Development</h2>
-<h3>Tooling</h3>
-<p>Early iterations building out the core system — vellum sim tests, hood fitting, and costume exploration. The first pass was about proving the cloth solver could handle arbitrary characters reliably before committing to the full HDA structure.</p>
-  
-    <img src="https://gyazo.com/4f2cefa469efabca61c2bb0e60c71269/raw" alt="Early vellum sim" loading="lazy">
-    Early vellum sim.
-  
-  
-    <img src="https://gyazo.com/5ef5fd6e3fdfa3b31ab2da18a46a8808/raw" alt="Hood iteration" loading="lazy">
-    Hood iteration.
-  
-  
-    <img src="https://gyazo.com/60a844dca2db226e5084eb2f74503755/raw" alt="Nurse costume iteration" loading="lazy">
-    Nurse costume iteration.
-  
-<h3>Weapons</h3>
-<p>The weapons were modelled using a modular silhouette-first approach — block out the shape, iterate on the design, then bring in surface detail. The machinegun went through multiple passes before the proportions felt right.</p>
-  
-    <img src="https://gyazo.com/5eb3adc5d007b2cb4934e66b29984ab8/raw" alt="Finished machinegun mesh" loading="lazy">
-    Machinegun — finished mesh.
-  
-  
-    <img src="https://gyazo.com/47446541d1cb9de59f3d5f7304c373d4/raw" alt="Handgun" loading="lazy">
-    Handgun.
-  
-<p>VFX for the weapons used a procedural texture system — different textures with varying shapes, strengths, and sizes flip between each other to create an organic, non-repeating feel. The same system was reused on the handgun by adjusting parameters.</p>
-  
-    <img src="https://gyazo.com/7ec4cea286cfff1ac774b9e699d58ed3/raw" alt="Machine gun early Houdini iteration" loading="lazy">
-    Machine gun — early Houdini iteration.
-  
-  
-    <a href="https://gyazo.com/d029cff0e89e4f17edb5ccee12bf8977" target="_blank" rel="noopener">
-      <video controls muted loop playsinline preload="metadata">
-        <source src="https://i.gyazo.com/d029cff0e89e4f17edb5ccee12bf8977.mp4" type="video/mp4">
-      </video>
-    </a>
-    Muzzle flash VFX — machinegun shooting.
-  
-<h3>Props</h3>
-<p>Decorative props designed to be worn as hats — the cupcake sits on the character’s head as a wearable accessory.</p>
-  <img src="https://gyazo.com/29a5ad695343af22ad9d0f7805760fd6/raw" alt="Cupcake hat" loading="lazy">
-  Cupcake — wearable hat prop.
-<p><strong>Interested in procedural clothing tools or character workflows?</strong> Let’s connect!</p>
+<figure><img src="https://gyazo.com/81c0008adf889000044fb8037c2e4c3a/raw" alt="Parameter example" loading="lazy"></figure>
+
+<h2>Early tests</h2>
+<figure><img src="https://gyazo.com/4f2cefa469efabca61c2bb0e60c71269/raw" alt="Early vellum sim" loading="lazy"><figcaption>Vellum sim.</figcaption></figure>
+<figure><img src="https://gyazo.com/5ef5fd6e3fdfa3b31ab2da18a46a8808/raw" alt="Hood iteration" loading="lazy"><figcaption>Hood.</figcaption></figure>
+<figure><img src="https://gyazo.com/60a844dca2db226e5084eb2f74503755/raw" alt="Nurse costume iteration" loading="lazy"><figcaption>Nurse costume.</figcaption></figure>
+
+<h2>Weapons and props</h2>
+<p>Blocked out silhouette-first, then detailed. The machine gun took several passes before the proportions felt right.</p>
+<figure><img src="https://gyazo.com/5eb3adc5d007b2cb4934e66b29984ab8/raw" alt="Machine gun" loading="lazy"><figcaption>Machine gun.</figcaption></figure>
+<figure><img src="https://gyazo.com/47446541d1cb9de59f3d5f7304c373d4/raw" alt="Handgun" loading="lazy"><figcaption>Handgun.</figcaption></figure>
+<figure><img src="https://gyazo.com/7ec4cea286cfff1ac774b9e699d58ed3/raw" alt="Machine gun, early Houdini version" loading="lazy"><figcaption>Early Houdini version.</figcaption></figure>
+<figure>
+ <video src="https://i.gyazo.com/d029cff0e89e4f17edb5ccee12bf8977.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Muzzle flash: random textures swap every frame so it never repeats. The handgun uses the same setup.</figcaption>
+</figure>
+<figure><img src="https://gyazo.com/29a5ad695343af22ad9d0f7805760fd6/raw" alt="Cupcake hat" loading="lazy"><figcaption>Cupcake hat.</figcaption></figure>
