@@ -30,13 +30,13 @@ export const PROJECTS = [
   // --- Tech Art-världen ---
   { world: WORLDS.techart, title: 'VAT Fluid Pipeline', media: 'assets/videos/vat-fluid.mp4', url: 'https://filip.renemark.se/misc/bar-fluid', category: 'Houdini · VAT · VFX · Simulation', content: 'assets/content/vat-fluid.html' },
   { world: WORLDS.techart, title: 'Humanoid Rig', media: 'assets/videos/humanoid-rig.mp4', url: 'https://filip.renemark.se/misc/humanoid-rigg', category: 'Rigging · Animation · Pipeline', content: 'assets/content/humanoid-rig.html' },
-  { world: WORLDS.techart, title: 'Spite: Catharsis', media: 'assets/images/spite-rubble.gif', url: 'https://filip.renemark.se/misc/spite-catharsis', category: 'VFX · HLSL · Pipeline · Tools', content: 'assets/content/spite-catharsis.html' },
+  { world: WORLDS.techart, title: 'Spite: Catharsis', media: 'assets/images/spite-rubble.png', url: 'https://filip.renemark.se/misc/spite-catharsis', category: 'VFX · HLSL · Pipeline · Tools', content: 'assets/content/spite-catharsis.html' },
   { world: WORLDS.techart, title: 'Modular Farming Toolkit', media: 'assets/videos/farming-toolkit.mp4', url: 'https://filip.renemark.se/misc/farming-pack', category: 'Environment · Shaders · VFX', content: 'assets/content/farming-toolkit.html' },
 
   // --- Programming-världen ---
-  { world: WORLDS.prog, title: 'Idle Village', media: 'assets/images/idle-village.gif', url: 'https://filip.renemark.se/misc/idle-village', category: 'C# · Unity · AI · Tools', content: 'assets/content/idle-village.html', phone: true },
-  { world: WORLDS.prog, title: 'Harmonies Ascendent', media: 'assets/images/harmonies-ascendent.gif', url: 'https://filip.renemark.se/c-programming-unity/project-harmonies-ascendent-reflection', category: 'C# · Unity · HLSL', content: 'assets/content/harmonies-ascendent.html' },
-  { world: WORLDS.prog, title: 'OpenGL Foundation', media: 'assets/images/opengl-foundation.gif', url: 'https://filip.renemark.se/shaders-rendering/project-opengl-foundation', category: 'C++ · OpenGL · GLSL', content: 'assets/content/opengl-foundation.html' },
+  { world: WORLDS.prog, title: 'Idle Village', media: 'assets/videos/idle-village.mp4', url: 'https://filip.renemark.se/misc/idle-village', category: 'C# · Unity · AI · Tools', content: 'assets/content/idle-village.html', phone: true },
+  { world: WORLDS.prog, title: 'Harmonies Ascendent', media: 'assets/videos/harmonies-ascendent.mp4', url: 'https://filip.renemark.se/c-programming-unity/project-harmonies-ascendent-reflection', category: 'C# · Unity · HLSL', content: 'assets/content/harmonies-ascendent.html' },
+  { world: WORLDS.prog, title: 'OpenGL Foundation', media: 'assets/videos/opengl-foundation.mp4', url: 'https://filip.renemark.se/shaders-rendering/project-opengl-foundation', category: 'C++ · OpenGL · GLSL', content: 'assets/content/opengl-foundation.html' },
 
   // --- Art-världen ---
   { world: WORLDS.art, title: 'Cat Jam', media: 'assets/videos/cat-jam.mp4', url: 'https://filip.renemark.se/misc/cat-jam', category: 'Character · Animation', content: 'assets/content/cat-jam.html' },

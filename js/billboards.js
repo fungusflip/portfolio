@@ -27,6 +27,9 @@ const PHONE_HEIGHT = 7.1;
 // Skärmens bild i pixlar: 960 på långsidan, 540 på kortsidan. Större = skarpare men tyngre.
 const SCREEN_PIXELS_LONG = 960;
 const SCREEN_PIXELS_SHORT = 540;
+// Snurran visas minst så här länge innan klippet får ta över, även om det är klart snabbare.
+// Annars hinner man knappt se den - en blink i stället för en tydlig övergång.
+const MIN_LOADING_MS = 450;
 
 // --- Var skyltarna står ---
 // I varje värld står skyltarna på en rad, från vänster till höger på skärmen, i
@@ -60,17 +63,24 @@ function drawPlaceholder(brush, poster) {
   const height = brush.canvas.height;
   const cx = width / 2; // Mitten, så att symbolen hamnar rätt oavsett skärmens form.
   const cy = height / 2;
-  if (poster && poster.complete && poster.naturalWidth > 0) {
-    // "Fyll skärmen" som videon: skala så att bilden täcker allt och beskär kanterna.
-    const scale = Math.max(width / poster.naturalWidth, height / poster.naturalHeight);
-    const drawWidth = poster.naturalWidth * scale;
-    const drawHeight = poster.naturalHeight * scale;
-    brush.drawImage(poster, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+  if (hasPoster(poster)) {
+    drawPosterFill(brush, poster, width, height);
   } else {
     brush.fillStyle = PALETTE.glass;
     brush.fillRect(0, 0, width, height);
     drawPlayTriangle(brush, cx, cy, 1);
   }
+}
+// Är affischen klar att ritas?
+function hasPoster(poster) {
+  return !!(poster && poster.complete && poster.naturalWidth > 0);
+}
+// Ritar affischen "fyll skärmen": skalar så att bilden täcker allt och beskär kanterna.
+function drawPosterFill(brush, poster, width, height) {
+  const scale = Math.max(width / poster.naturalWidth, height / poster.naturalHeight);
+  const drawWidth = poster.naturalWidth * scale;
+  const drawHeight = poster.naturalHeight * scale;
+  brush.drawImage(poster, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
 }
 // Play-symbolen: en triangel runt (cx, cy). size 1 = full storlek.
 function drawPlayTriangle(brush, cx, cy, size) {
@@ -89,12 +99,20 @@ function posterPath(media) {
 }
 
 // Laddningssnurran: en båge som snurrar runt mitten, lite mer vriden varje bild.
+// Affischen ligger kvar under snurran (med en mörk slöja) i stället för att försvinna till
+// en tom ruta - annars hinner man bara se en blink innan klippet tar över.
 function drawLoading(billboard) {
   const brush = billboard.brush;
   const width = brush.canvas.width;
   const height = brush.canvas.height;
-  brush.fillStyle = PALETTE.glass;
-  brush.fillRect(0, 0, width, height);
+  if (hasPoster(billboard.poster)) {
+    drawPosterFill(brush, billboard.poster, width, height);
+    brush.fillStyle = 'rgba(10, 8, 6, 0.55)';
+    brush.fillRect(0, 0, width, height);
+  } else {
+    brush.fillStyle = PALETTE.glass;
+    brush.fillRect(0, 0, width, height);
+  }
   const angle = performance.now() * 0.006; // Ungefär ett varv per sekund.
   brush.strokeStyle = PALETTE.speckle;
   brush.lineWidth = 16;
@@ -128,16 +146,36 @@ function drawOnScreen(billboard, source, width, height) {
 // i minnet åt gången. sample() ger en bild att läsa skärmens färg från (se sken nedan), och
 // ready() säger om klippet har börjat synas (innan dess visas laddningssnurran).
 
-// Video: <video>-elementet blir en VideoTexture som grafikkortet läser direkt.
-// (Förut ritades varje videobild först på en 2D-canvas och skickades sedan till
-// grafikkortet – en omväg som tvingade webbläsaren att vänta på grafikkortet, ett hack.)
+// Video: varje bild ritas på samma 2D-canvas som affischen/gif:en använder, och skickas
+// därifrån till grafikkortet (samma väg som är bevisat färgriktig för de andra typerna).
+// (Ett tag gick videon direkt till grafikkortet som en VideoTexture - snabbare, men
+// webbläsarens egen färghantering av <video>-element gjorde bilden för ljus där.)
+function drawVideoFrame(billboard, video) {
+  const brush = billboard.brush;
+  const screenWidth = brush.canvas.width;
+  const screenHeight = brush.canvas.height;
+  const screenAspect = screenWidth / screenHeight;
+  const videoAspect = video.videoWidth / video.videoHeight;
+  // "Fyll skärmen": beskär videons kortaste kant så att den täcker hela ytan utan att töjas.
+  let sx = 0, sy = 0, sw = video.videoWidth, sh = video.videoHeight;
+  if (videoAspect > screenAspect) {
+    sw = video.videoHeight * screenAspect; // Videon är bredare: beskär sidorna.
+    sx = (video.videoWidth - sw) / 2;
+  } else {
+    sh = video.videoWidth / screenAspect;  // Videon är högre: beskär upptill/nedtill.
+    sy = (video.videoHeight - sh) / 2;
+  }
+  brush.drawImage(video, sx, sy, sw, sh, 0, 0, screenWidth, screenHeight);
+  billboard.texture.needsUpdate = true;
+}
 function makeVideoPlayer(billboard) {
   const video = document.createElement('video');
   video.src = billboard.project.media;
   video.loop = true;        // Börja om när den tar slut.
   video.muted = true;       // Webbläsare tillåter bara automatisk start om ljudet är av.
   video.playsInline = true; // Hindrar mobiler från att öppna videon i helskärm.
-  let videoTexture = null;  // Skapas när första bilden finns.
+  let started = false;      // true när första bilden har ritats.
+  const createdAt = performance.now();
   return {
     play() { video.play().catch(() => {}); }, // play() kan nekas; .catch gör att det inte blir ett fel.
     stop() {
@@ -145,33 +183,20 @@ function makeVideoPlayer(billboard) {
       // Ta bort filen och be elementet ladda om (utan fil) = släpp videon ur minnet.
       video.removeAttribute('src');
       video.load();
-      if (videoTexture) videoTexture.dispose();
-      billboard.screenMaterial.map = billboard.texture; // Tillbaka till canvasen (play-symbolen).
+      started = false;
     },
     update() {
-      if (videoTexture) return; // Grafikkortet hämtar själv nya bilder ur videon.
-      // Innan första bilden finns (currentTime 0): visa snurran.
-      if (video.currentTime <= 0 || !video.videoWidth) {
+      // Innan första bilden finns (currentTime 0), eller innan snurran hunnit synas en stund: visa den.
+      if (video.currentTime <= 0 || !video.videoWidth || performance.now() - createdAt < MIN_LOADING_MS) {
         drawLoading(billboard);
         return;
       }
-      videoTexture = new THREE.VideoTexture(video);
-      videoTexture.colorSpace = THREE.SRGBColorSpace;
-      // "Fyll skärmen": skala texturen så att den täcker hela skärmen och beskär kanterna
-      // om formaten inte stämmer. repeat < 1 = visa bara en del av bilden, offset = vilken del.
-      const screenAspect = billboard.width / billboard.height;
-      const videoAspect = video.videoWidth / video.videoHeight;
-      if (videoAspect > screenAspect) {
-        videoTexture.repeat.set(screenAspect / videoAspect, 1);         // Videon är bredare: beskär sidorna.
-      } else {
-        videoTexture.repeat.set(1, videoAspect / screenAspect);         // Videon är högre: beskär upptill/nedtill.
-      }
-      videoTexture.offset.set((1 - videoTexture.repeat.x) / 2, (1 - videoTexture.repeat.y) / 2); // Mitten.
-      billboard.screenMaterial.map = videoTexture;
-      note('video starts');
+      if (!started) note('video starts');
+      started = true;
+      drawVideoFrame(billboard, video);
     },
-    sample() { return videoTexture ? video : billboard.brush.canvas; },
-    ready() { return videoTexture !== null; },
+    sample() { return billboard.brush.canvas; },
+    ready() { return started; },
   };
 }
 
@@ -183,6 +208,7 @@ function makeGifPlayer(billboard) {
   let index = -1;      // Vilken bild som visas nu. -1 = ingen än.
   let wait = 0;        // Sekunder kvar tills nästa bild ska visas.
   let stopped = false; // Blir true när bilen har kört därifrån.
+  const createdAt = performance.now();
   // "full" är hela gif-bilden. "patch" är den bit som ändrats sedan förra bilden.
   const full = document.createElement('canvas');
   const fullBrush = full.getContext('2d');
@@ -231,7 +257,9 @@ function makeGifPlayer(billboard) {
       patch.height = 0;
     },
     update(delta) {
-      if (frames.length === 0) {
+      // Vänta med den FÖRSTA bilden tills snurran hunnit synas en stund. Bilderna därefter
+      // ska fortsätta i sin egen takt, så gränsen gäller bara innan något alls visats (index -1).
+      if (frames.length === 0 || (index < 0 && performance.now() - createdAt < MIN_LOADING_MS)) {
         drawLoading(billboard);
         return;
       }
@@ -250,22 +278,28 @@ function makeGifPlayer(billboard) {
 function makeImagePlayer(billboard) {
   const image = new Image();
   let loaded = false;
-  image.onload = () => {
-    loaded = true;
-    drawOnScreen(billboard, image, image.width, image.height);
-  };
+  let shown = false;
+  const createdAt = performance.now();
+  image.onload = () => { loaded = true; };
   image.src = billboard.project.media;
   return {
     play() {},
     update() {
-      if (!loaded) drawLoading(billboard);
+      if (!loaded || performance.now() - createdAt < MIN_LOADING_MS) {
+        drawLoading(billboard);
+        return;
+      }
+      if (!shown) {
+        shown = true;
+        drawOnScreen(billboard, image, image.width, image.height);
+      }
     },
     stop() {
       image.onload = null;
       image.src = '';
     },
     sample() { return billboard.brush.canvas; },
-    ready() { return loaded; },
+    ready() { return shown; },
   };
 }
 
