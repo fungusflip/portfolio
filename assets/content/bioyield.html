@@ -1,0 +1,40 @@
+<p>BioYield is a first-person survival shooter I'm building in Unreal Engine 5.8. I use it to practise tech art: VFX, materials, post-process and UI.</p>
+
+<h2>Smoke grenade</h2>
+<p>You throw a grenade and it bursts into a smoke cloud. The cloud is a Niagara system. The grenade is a Blueprint.</p>
+<figure>
+ <video src="assets/content-media/bioyield/smoke-cloud.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Smoke grenade thrown across the test level, then the cloud drifting and thinning out.</figcaption>
+</figure>
+<!-- TODO Filip: one line on how the cloud is built (sprite flipbook? lifetime? how it fades out). -->
+
+<h2>Explosion grenade</h2>
+<p>The other grenade is a volumetric explosion. I simulated a Pyro grenade-frag in Houdini, cached it to ZibraVDB and play it in Unreal. On top of that there is a camera shake, Niagara sparks and rock debris made of real meshes.</p>
+<!-- TODO Filip: add the ZibraVDB explosion clip (not captured yet) as a figure here. -->
+
+<h2>Drug effects as post-process</h2>
+<p>Drinking or taking something changes how the screen looks. Beer gives a drunk look and the hallucinogenic gives a colour-split trip look. The same system drives the low-health and winded (out of stamina) vignettes. I ported these from a Godot prototype.</p>
+<figure>
+ <video src="assets/content-media/bioyield/hallucinogenic-look.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>The hallucinogenic look: colours split apart and the sky and floor smear.</figcaption>
+</figure>
+<!-- TODO Filip: how are the vignettes built (one post-process material with parameters? what drives the colour split?). -->
+
+<h2>Pickups and inventory</h2>
+<p>Items on the ground get an outline when you look at them. It is a post-process material driven by custom depth stencil, so only the item you aim at lights up. Press F to pick it up, then use it from the inventory.</p>
+<figure>
+ <video src="assets/content-media/bioyield/pickups-inventory.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Picking up a beer and a hallucinogenic bottle, then the inventory with rations, beer and hallucinogenic.</figcaption>
+</figure>
+<p>Rations heal, beer makes you drunk for a few seconds, and the hallucinogenic starts the trip look. There is also a backpack screen with a grid, a character screen and a perk tree.</p>
+
+<h2>Debug keys</h2>
+<p>I needed a fast way to trigger every effect, so there is a debug keys panel in the corner. A number key turns on a vignette, G throws a grenade, and so on. Sprint is listed too, and the stamina bar at the bottom drains and refills as you run.</p>
+<figure>
+ <video src="assets/content-media/bioyield/debug-keys.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>The debug keys list in the top left and the stamina bar at the bottom of the screen.</figcaption>
+</figure>
+
+<h2>Still to show</h2>
+<p>Bullet impacts differ per surface (metal, flesh, concrete), with dust flipbooks for concrete and a blood mist material. The pistol has muzzle flash, smoke, ejected shell casings and a procedural recoil and slide. I also built a six-way lighting material from a SideFX Labs bake.</p>
+<!-- TODO Filip: add clips for impacts, pistol muzzle/shell casing and the six-way lighting material. The weapon test clip I got shows SMG/shotgun viewmodels, not the pistol, so I left it out. -->

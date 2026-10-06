@@ -1,0 +1,10 @@
+<!-- DRAFT, not live. Insert before "Improved workflow" once the 5 PNGs are saved in assets/content-media/mutation-protocol-new/. -->
+
+<h2>Textured rats</h2>
+<p>These are the rat variants with textures. They all come from the same base, so they share the rig and the animations. I made the textures through the texture parameters on the HDA, which let me try colours and texture details fast.</p>
+<figure><img src="assets/content-media/mutation-protocol-new/rat-purple.png" alt="Purple textured rat" loading="lazy"><figcaption>Purple rat with yellow eyes and red scars.</figcaption></figure>
+<figure><img src="assets/content-media/mutation-protocol-new/rat-purple-head.png" alt="Textured rat head close-up" loading="lazy"><figcaption>Close-up of the purple rat's head.</figcaption></figure>
+<figure><img src="assets/content-media/mutation-protocol-new/rat-green-1.png" alt="Green rat in a suit" loading="lazy"><figcaption>Green rat wearing the clothing from the cloth tool.</figcaption></figure>
+<figure><img src="assets/content-media/mutation-protocol-new/rat-green-2.png" alt="Green rat, second pose" loading="lazy"><figcaption>Green rat, other pose.</figcaption></figure>
+<figure><img src="assets/content-media/mutation-protocol-new/rat-green-3.png" alt="Green rat, third view" loading="lazy"><figcaption>Green rat, other angle.</figcaption></figure>
+<!-- TODO Filip: check the captions (colour names, which rats have clothes) -->
