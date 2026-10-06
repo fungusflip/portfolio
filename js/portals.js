@@ -16,6 +16,7 @@ import { setWeather } from './leaves.js';
 import { optimizeWorld, prepareWorld, markMoving } from './optimize.js';
 import { makeSwirl } from './magic.js';
 import { paintStone } from './moss.js';
+import { decorateCave } from './cavethemes.js';
 
 // ---------------------------------------------------------------------------
 // INGÅNGARNA
@@ -197,6 +198,7 @@ function buildCave(portal, group) {
     signHolder.add(post);
   }
   addEntranceSign(portal, signHolder, 1.2, 0);
+  decorateCave(portal, group); // Varje grotta får sin världs färger och prylar (cavethemes.js).
 }
 
 // Namnskylten vid en ingång: världen den leder till, med tänd text.

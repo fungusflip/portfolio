@@ -95,6 +95,7 @@ setSurfaceSampler((x, z) => {
 const { optimizeWorld, prepareWorld, setShadows } = await import('./optimize.js');
 const { updateLamps } = await import('./lamps.js');
 const { updateKnockables } = await import('./knockables.js');
+const { updateCaveThemes } = await import('./cavethemes.js');
 const perf = await import('./perf.js');
 
 await step(0.7, 'Tidying up the town');
@@ -275,6 +276,7 @@ function gameFrame(time) {
   portals.updateWorldExtras(delta);
   updateLamps(delta);
   updateKnockables(delta); // Lyktor, skyltar och träd som bilen kört över.
+  updateCaveThemes(); // Grottornas rörliga prylar (bara i hemvärlden).
   perf.updateQuality(rawDelta);
   const afterGame = performance.now();
 
