@@ -19,19 +19,21 @@ import { makeSwirl } from './magic.js';
 // ---------------------------------------------------------------------------
 // INGÅNGARNA
 // ---------------------------------------------------------------------------
-// Hemma är ingången till en värld en GROTTA som vetter mot kameran: bilen kör in
-// "uppåt på skärmen" och göms av berget. I den andra världen kommer man upp ur en
-// TELEPORTPLATTA på marken, med nosen uppåt på skärmen.
+// Hemma är ingången till en värld en GROTTA som vetter UPPÅT på skärmen (bort från kameran):
+// vägen går ner till öppningen ovanifrån, bilen kör in nedåt och göms av berget. När man
+// kommer tillbaka kör bilen ut ur grottan FRAMÅT, med nosen uppåt. I den andra världen kommer
+// man upp ur en TELEPORTPLATTA på marken, också med nosen uppåt på skärmen.
 //   world   – världen ingången står i.
 //   leadsTo – världen den leder till.
 //   style   – 'cave' (grotta) eller 'pad' (teleportplatta).
 //   at      – grottöppningens/plattans mitt, { x, z }.
 export const PORTALS = [
-  // Tech Art: i slutet av huvudvägen, en bit till höger om den sista skylten.
-  { world: WORLDS.hub, leadsTo: WORLDS.techart, style: 'cave', at: hubPoint(42, 0) },
-  // Programming: nedanför huvudvägen, mitt under skyltraden (vägen dit gör en U-sväng).
+  // Alla tre grottor ligger NEDANFÖR huvudvägen på en rad, med öppningen uppåt mot vägen.
+  // Tech Art: längst till höger, en bit bortom den sista skylten.
+  { world: WORLDS.hub, leadsTo: WORLDS.techart, style: 'cave', at: hubPoint(42, 28) },
+  // Programming: mitt under skyltraden.
   { world: WORLDS.hub, leadsTo: WORLDS.prog, style: 'cave', at: hubPoint(0, 28) },
-  // Art: bredvid Programming-grottan, längre åt vänster. Samma nedre väg leder dit.
+  // Art: bredvid Programming-grottan, längre åt vänster.
   { world: WORLDS.hub, leadsTo: WORLDS.art, style: 'cave', at: hubPoint(-24, 28) },
   // I de andra världarna ligger plattan hem 8 enheter "nedåt på skärmen" från mitten.
   { world: WORLDS.techart, leadsTo: WORLDS.hub, style: 'pad', at: towardCamera(WORLDS.techart, 8) },
@@ -39,15 +41,23 @@ export const PORTALS = [
   { world: WORLDS.art, leadsTo: WORLDS.hub, style: 'pad', at: towardCamera(WORLDS.art, 8) },
 ];
 export const [techartCave, progCave, artCave] = PORTALS; // De tre första: grottorna hemma.
-// Punkterna bilen kör mellan. För en grotta räknas de från öppningen mot kameran.
+// Hur långt åt höger (från skyltradens mitt) varje grotta ligger. Vägarna ner till dem utgår
+// från huvudvägen på samma sida.
+techartCave.right = 42;
+progCave.right = 0;
+artCave.right = -24;
+// Punkterna bilen kör mellan. För en grotta räknas de från öppningen: öppningen vetter uppåt,
+// så "framför" den är uppåt på skärmen och berget ligger nedåt (mot kameran).
 for (const portal of PORTALS) {
   if (portal.style === 'cave') {
-    portal.door = towardCamera(portal.at, 1.5);    // Precis framför öppningen. Kör bilen hit startar resan.
-    portal.inside = towardCamera(portal.at, -3.5); // Bakom öppningen, där bilen är gömd.
-    portal.outside = towardCamera(portal.at, 8);   // Där bilen stannar när den har backat ut.
+    portal.door = towardCamera(portal.at, -1.5);   // Precis ovanför öppningen. Kör bilen hit startar resan.
+    portal.inside = towardCamera(portal.at, 3.5);  // Inne i berget, där bilen är gömd.
+    portal.outside = towardCamera(portal.at, -8);  // Där bilen stannar när den har kört ut (framåt, uppåt).
+    portal.center = towardCamera(portal.at, 4.5);  // Bergets mitt (för att hålla träd och gräs borta).
   } else {
     portal.door = portal.at;    // Kör upp på mitten av plattan så startar resan.
     portal.outside = portal.at; // Bilen stiger upp mitt på plattan.
+    portal.center = portal.at;
   }
 }
 // Ingången i den andra världen som man kommer ut ur.
@@ -59,14 +69,16 @@ export function padIn(world) {
   return PORTALS.find((portal) => portal.world === world && portal.style === 'pad');
 }
 
-// Bygger en ingång i en grupp som vrids mot kameran. Inne i gruppen gäller:
-//   +x = höger på skärmen, +y = upp, +z = mot kameran, -z = in i berget.
+// Bygger en ingång i en grupp. Inne i gruppen gäller för en grotta (som vetter uppåt på skärmen):
+//   +x = höger på skärmen, +y = upp, +z = uppåt på skärmen (ut ur öppningen), -z = in i berget
+//   (nedåt på skärmen, mot kameran). En platta vetter mot kameran: +z = mot kameran.
 export function buildPortal(portal) {
   const group = new THREE.Group();
   if (portal.style === 'cave') buildCave(portal, group);
   else buildPad(portal, group);
   group.position.set(portal.at.x, 0, portal.at.z);
-  group.rotation.y = BILLBOARD_FACING;
+  // En grotta vänds ett halvt varv så att öppningen vetter bort från kameran.
+  group.rotation.y = BILLBOARD_FACING + (portal.style === 'cave' ? Math.PI : 0);
   worldGroup(portal.world).add(group);
 }
 
@@ -154,7 +166,18 @@ function buildCave(portal, group) {
   swirl.scale.setScalar(PORTAL_SCALE);
   swirl.position.z = PORTAL_DEPTH;
   group.add(swirl);
-  addEntranceSign(portal, group, 5.3, 0.3); // Skylten sitter på stenen över öppningen.
+  // Öppningen vetter bort från kameran och syns inte, så namnskylten står på två stolpar framför
+  // berget på kamerasidan (som skylten vid teleportplattorna), vänd mot kameran.
+  const signHolder = new THREE.Group();
+  signHolder.position.z = -10.4; // Berget når till ca z = -9 bakåt.
+  signHolder.rotation.y = Math.PI; // Vänd mot kameran.
+  group.add(signHolder);
+  for (const x of [-2.4, 2.4]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.4, 0.25), postMaterial);
+    post.position.set(x, 0.7, -0.15);
+    signHolder.add(post);
+  }
+  addEntranceSign(portal, signHolder, 1.2, 0);
 }
 
 // Namnskylten vid en ingång: världen den leder till, med tänd text.
@@ -312,7 +335,7 @@ export function updateWorldExtras(delta) {
 //   'sink'    – (bara platta) bilen sjunker ner genom plattan.
 //   'fadeOut' – bilden tonas till den nya världens färg.
 //   'loading' – (bara första gången) världen byggs medan skärmen är täckt.
-//   'fadeIn'  – toningen försvinner medan bilen backar ut ur grottan / stiger upp ur plattan.
+//   'fadeIn'  – toningen försvinner medan bilen kör ut ur grottan / stiger upp ur plattan.
 const PORTAL_RADIUS = 3;  // Hur nära öppningen/plattans mitt bilen måste komma.
 const PORTAL_SPEED = 7;   // Hur fort bilen kör in och ut.
 const SINK_DEPTH = 2.5;   // Hur långt under marken bilen sjunker.
@@ -339,7 +362,7 @@ function startTravel(portal) {
 }
 
 // Hoppar direkt till en värld, utan att köra dit: skärmen tonas, världen laddas och bilen
-// kommer fram som vanligt (backar ut ur grottan hemma, stiger upp ur plattan i de andra).
+// kommer fram som vanligt (kör ut ur grottan hemma, stiger upp ur plattan i de andra).
 // Används av länkar som .../#art och av "Visit in 3D" i projektlistan.
 export function jumpTo(world) {
   if (travel || world === currentWorld) return;
@@ -376,8 +399,8 @@ function arrive() {
   setHeading(BILLBOARD_FACING + Math.PI);
   travel.stage = 'fadeIn';
   if (exit.style === 'cave') {
-    car.position.set(exit.inside.x, 0, exit.inside.z); // Inne i berget: backa ut.
-    startAutoDrive(exit.outside, true, PORTAL_SPEED);
+    car.position.set(exit.inside.x, 0, exit.inside.z); // Inne i berget: kör ut framåt (nosen uppåt).
+    startAutoDrive(exit.outside, false, PORTAL_SPEED);
   } else {
     car.position.set(exit.at.x, -SINK_DEPTH, exit.at.z); // Under plattan: stig upp.
     justArrivedOn = exit;

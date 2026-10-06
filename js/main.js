@@ -65,13 +65,15 @@ hub.buildHubBillboards();
 await step(0.5, 'Paving the roads');
 const roadsAndLamps = hub.buildHubRoads();
 await step(0.6, 'Planting trees');
-hub.buildHubTrees(roadsAndLamps);
+roadsAndLamps.trees = hub.buildHubTrees(roadsAndLamps);
 await step(0.65, 'Growing grass');
 hub.buildHubGrass(roadsAndLamps);
+hub.buildHubGrounding(roadsAndLamps);
 // OBS: portals.travel läses som portals.travel varje gång (inte "const { travel } = ..."),
 // för då skulle vi bara få värdet det hade just nu – och det ändras när en resa startar.
 const portals = await import('./portals.js');
-const { fallingLeaves, fallingLeafMaterial, moteMaterial, updateLeaves, wind } = await import('./leaves.js');
+const { fallingLeaves, fallingLeafMaterial, moteMaterial, updateLeaves, wind, setLeafTrees } = await import('./leaves.js');
+setLeafTrees(roadsAndLamps.trees); // Löven samlas under träden och faller från kronorna.
 const { updateMagic } = await import('./magic.js');
 const { optimizeWorld, prepareWorld, setShadows } = await import('./optimize.js');
 const { updateLamps } = await import('./lamps.js');
@@ -304,7 +306,7 @@ function gameFrame(time) {
     placeParkPrompt(null);
   }
   updateLeaves(delta, target); // Löven hålls i en låda runt samma punkt.
-  updateMagic(delta, car.position, wind, car.rotation.y, carModule.drifting || carModule.boosting); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
+  updateMagic(delta, car.position, wind, car.rotation.y, carModule.drifting || carModule.sliding || carModule.boosting); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
   nitroFill.style.setProperty('--nitro', carModule.nitro.toFixed(3)); // Nitromätaren i guiden.
   const afterLeaves = performance.now();
 

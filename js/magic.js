@@ -64,7 +64,9 @@ function makeTuftGeometry() {
 // Bygger gräset för en värld. grassAmount(x, z) ska ge 0 (inget gräs, t.ex. på en väg)
 // till 1 (fullt gräs). Svaret ritas in i en liten bild ("masken") som shadern läser av.
 // area = { x, z, size }: den fyrkant på marken som masken täcker.
-export function makeGrass(world, grassAmount, area) {
+const fallbackGround = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+fallbackGround.needsUpdate = true;
+export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
   // --- Masken: 256 x 256 pixlar över hela marken. Varje pixel = hur mycket gräs. ---
   const MASK_SIZE = 256;
   const maskData = new Uint8Array(MASK_SIZE * MASK_SIZE * 4);
@@ -75,7 +77,10 @@ export function makeGrass(world, grassAmount, area) {
       const z = area.z - area.size / 2 + (row + 0.5) * cell;
       const amount = Math.round(grassAmount(x, z) * 255);
       const i = (row * MASK_SIZE + column) * 4;
-      maskData[i] = maskData[i + 1] = maskData[i + 2] = amount;
+      // r = hur mycket gräs, g = hur bränt/torrt det är (0 = grönt, 1 = brunt).
+      maskData[i] = amount;
+      maskData[i + 1] = Math.round(grassBurn(x, z) * 255);
+      maskData[i + 2] = 0;
       maskData[i + 3] = 255;
     }
   }
@@ -106,6 +111,10 @@ export function makeGrass(world, grassAmount, area) {
       uMaskOrigin: { value: new THREE.Vector2(area.x - area.size / 2, area.z - area.size / 2) },
       uMaskSize: { value: area.size },
       uArea: { value: GRASS_AREA },
+      // Markens bild: gräset tar färg från marken under sig, så att det läses som en del av terrängen.
+      uGround: { value: area.groundMap || fallbackGround },
+      uGroundParams: { value: new THREE.Vector3(area.x - area.size / 2, area.z + area.size / 2, area.groundUnits || 16) },
+      uGroundMix: { value: area.groundMap ? 0.7 : 0 },
       // THREE.Color gör om färgen till den "linjära" form som shadern räknar med.
       uRoot: { value: new THREE.Color(PALETTE.grassRoot) },
       uTip: { value: new THREE.Color(PALETTE.grassTip) },
@@ -126,7 +135,11 @@ export function makeGrass(world, grassAmount, area) {
         uniform float uArea;
         varying float vHeight;
         varying float vWave;
-        varying float vSeed;`)
+        varying float vSeed;
+        varying float vBurn;
+        uniform sampler2D uGround;
+        uniform vec3 uGroundParams;
+        varying vec3 vGround;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         // 1. Vrid tuvan efter sitt frö.
         float turn = aSpot.z * 6.2832;
@@ -135,7 +148,11 @@ export function makeGrass(world, grassAmount, area) {
         vec2 spot = mod(aSpot.xy - uCar.xz + uArea, 2.0 * uArea) + uCar.xz - uArea;
         // 3. Hur stor ska den vara? Masken (0 på vägar) gånger en toning ut mot lådans kant.
         float edge = max(abs(spot.x - uCar.x), abs(spot.y - uCar.z));
-        float grow = texture2D(uMask, (spot - uMaskOrigin) / uMaskSize).r;
+        vec4 maskSample = texture2D(uMask, (spot - uMaskOrigin) / uMaskSize);
+        float grow = maskSample.r;
+        vBurn = maskSample.g;
+        // Markens färg precis här (samma kakelbild och uppställning som marken i hub.js).
+        vGround = texture2D(uGround, vec2((spot.x - uGroundParams.x) / uGroundParams.z, (uGroundParams.y - spot.y) / uGroundParams.z)).rgb;
         grow *= smoothstep(uArea, uArea - 6.0, edge) * (0.7 + 0.6 * fract(aSpot.z * 13.7));
         transformed *= grow;
         // 4. Vinden. En våg som rullar över fältet i brisens riktning, plus vindbyn.
@@ -160,11 +177,21 @@ export function makeGrass(world, grassAmount, area) {
         uniform vec3 uShimmer;
         varying float vHeight;
         varying float vWave;
-        varying float vSeed;`)
+        varying float vSeed;
+        varying float vBurn;
+        varying vec3 vGround;
+        uniform float uGroundMix;`)
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
         // Mörkt vid roten, ljust i toppen. Var sjunde tuva har höstgula toppar.
         vec3 tip = mix(uTip, uTipAutumn, step(0.86, fract(vSeed * 7.3)));
-        vec4 diffuseColor = vec4(mix(uRoot, tip, vHeight), 1.0);
+        // Bränt gräs vid vägarna: mörkbrunt vid roten, torrt halmgult i topparna.
+        // Först mot markens färg (roten mest, toppen lite), sedan mot brunt där det är bränt.
+        float groundMix = uGroundMix * (1.0 - 0.5 * vBurn);
+        vec3 baseRoot = mix(uRoot, vGround * 0.8, groundMix);
+        tip = mix(tip, vGround * 1.25 + vec3(0.02), groundMix * 0.5);
+        vec3 root = mix(baseRoot, vec3(0.30, 0.20, 0.10), vBurn);
+        tip = mix(tip, vec3(0.62, 0.47, 0.22), vBurn);
+        vec4 diffuseColor = vec4(mix(root, tip, vHeight), 1.0);
         // Ett svagt skimmer i topparna när vågen passerar: lite magi.
         diffuseColor.rgb += uShimmer * vHeight * smoothstep(0.75, 1.0, vWave) * 0.35;`);
   };
@@ -544,12 +571,17 @@ export function makePadGlow(width, length, color) {
       varying vec2 vSpot;
       void main() {
         // Avstånd till närmaste kant (0 vid kanten).
-        vec2 toEdge = uSize * 0.5 - abs(vSpot);
-        float edge = min(toEdge.x, toEdge.y);
+        // Rundad ruta (inte en skarp kvadrat): avståndet inåt från kanten, med runda hörn.
+        float cornerRadius = 1.0;
+        vec2 q = abs(vSpot) - (uSize * 0.5 - cornerRadius);
+        float edge = -(length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - cornerRadius);
+        // Änden mot vägen (vSpot.y < 0) ska inte ha någon lysande kant: glöden tonar bort
+        // mot vägen, så att fickan smälter in i grusvägen utan en linje.
+        float roadFade = smoothstep(-uSize.y * 0.5, uSize.y * 0.1, vSpot.y);
         float line = smoothstep(0.35, 0.0, edge);          // Smal lysande kant ...
         float inner = smoothstep(0.9, 0.0, edge) * 0.2;    // ... med ett mjukt sken innanför.
         float pulse = 0.7 + 0.3 * sin(uTime * 2.2);        // Andas långsamt.
-        float strength = (line * 0.7 + inner) * pulse * (0.25 + 0.35 * uNear); // Kanten lite svagare: skylten ska vinna.
+        float strength = (line * 0.7 + inner) * pulse * (0.25 + 0.35 * uNear) * roadFade; // Kanten lite svagare: skylten ska vinna.
         gl_FragColor = vec4(uColor * strength, 1.0);
         #include <colorspace_fragment>
       }`,

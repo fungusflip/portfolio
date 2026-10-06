@@ -105,6 +105,9 @@ const DRIFT_GRIP = 1.6;        // ...och under drift (lågt = bilen glider åt s
 const DRIFT_MIN_SPEED = 5;     // Under den här farten går det inte att drifta.
 const DRIFT_TURN_BOOST = 1.7;  // Bilen svänger snabbare i drift.
 const DRIFT_DRAG = 3;          // Farten som går förlorad per sekund i drift.
+const SLIDE_SPEED = 7;         // Över den här farten börjar bilen slira om man svänger hårt.
+const SLIDE_GRIP = 3;          // Greppet vid full slirning (full nitro-fart och full rattutslag).
+const SLIDE_DRAG = 1.5;        // Farten som går förlorad per sekund vid full slirning.
 const GRIP_RECOVERY = 2.5;     // Hur mjukt greppet kommer tillbaka när driften släpps (lågt = längre utglidning).
 const NITRO_MAX_SPEED = 15.5;  // Toppfart med nitro.
 const NITRO_ACCELERATION = 20; // Acceleration med nitro.
@@ -116,6 +119,7 @@ export let speed = 0;  // Nuvarande fart. Negativ = backar.
 export let nitro = 1;  // Nitrotanken, 0–1.
 export let drifting = false; // true medan bilen driftar (magic.js ger då mer damm).
 export let boosting = false; // true medan nitron används.
+export let sliding = false;  // true när bilen slirar av sig själv (för fort i en sväng).
 let heading = Math.PI / 4; // Åt vilket håll bilen pekar. PI / 4 = rakt uppåt på skärmen.
 let grip = GRIP;           // Nuvarande grepp (glider mellan DRIFT_GRIP och GRIP).
 let slide = heading;       // Åt vilket håll bilen RÖR sig. Samma som heading utom i drift.
@@ -125,6 +129,7 @@ export function stopCar() {
   speed = 0;
   drifting = false;
   boosting = false;
+  sliding = false;
 }
 export function setHeading(angle) {
   heading = angle;
@@ -169,6 +174,7 @@ function updateAutoDrive(delta) {
   speed = 0;
   drifting = false;
   boosting = false;
+  sliding = false;
   for (const spinner of spinners) spinner.rotation.x += (autoDrive.reverse ? -step : step) / WHEEL_RADIUS;
   for (const wheel of frontWheels) wheel.rotation.y = THREE.MathUtils.damp(wheel.rotation.y, 0, 12, delta);
   // Framme? Släpp autopiloten FÖRST, så att onDone kan starta en ny körning.
@@ -217,7 +223,14 @@ export function updateCar(delta, travelling) {
   // Rörelseriktningen hakar efter nosen. I drift hakar den långsamt, så bilen glider.
   // Greppet byts mjukt: snabbt ner när driften börjar, långsamt tillbaka när den släpps,
   // så att bilen glider ut i stället för att tvärstanna i sidled.
-  grip = THREE.MathUtils.damp(grip, drifting ? DRIFT_GRIP : GRIP, drifting ? 10 : GRIP_RECOVERY, delta);
+  // Kör man för fort och svänger hårt tappar bilen greppet av sig själv: ju fortare och ju
+  // hårdare sväng, desto mer slirar den. Man har fortfarande kontroll, men får jobba lite.
+  const slip = THREE.MathUtils.clamp((speed - SLIDE_SPEED) / (NITRO_MAX_SPEED - SLIDE_SPEED), 0, 1) * Math.abs(steer);
+  sliding = !drifting && slip > 0.3;
+  if (slip > 0) speed -= SLIDE_DRAG * slip * delta;
+  const gripGoal = drifting ? DRIFT_GRIP : GRIP - (GRIP - SLIDE_GRIP) * slip;
+  // Greppet släpper snabbt och kommer tillbaka långsamt.
+  grip = THREE.MathUtils.damp(grip, gripGoal, gripGoal < grip ? 8 : GRIP_RECOVERY, delta);
   slide = turnTowards(slide, heading, grip, delta);
   // sin/cos gör om vinkeln till en riktning.
   car.position.x += Math.sin(slide) * speed * delta;

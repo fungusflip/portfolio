@@ -2,11 +2,12 @@
 // roads.js — grusvägar. Alla världar bygger sina vägar med buildRoads.
 // ============================================================================
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PALETTE, MAX_ANISOTROPY, worldGroup, towardCamera } from './core.js';
-import { billboards, PAD_DISTANCE } from './billboards.js';
+import { billboards, PAD_DISTANCE, BAY_WIDTH, BAY_LENGTH } from './billboards.js';
 
 export const ROAD_WIDTH = 5;  // Vägarnas bredd i enheter.
-const ROAD_EDGE = 0.2;        // Hur mycket den mörka kantlinjen sticker ut på varje sida.
+const ROAD_EDGE = 0.5;        // Marginal runt en väg (kantsten + lite luft) där inga stenar läggs.
 // Hur långt framför skyltraden huvudvägens mitt ligger (nedanför parkeringsfickorna).
 export const ROAD_DISTANCE = PAD_DISTANCE + 6.5;
 
@@ -19,12 +20,52 @@ gravelImage.height = GRAVEL_PIXELS;
 const gravelPen = gravelImage.getContext('2d');
 gravelPen.fillStyle = PALETTE.gravel;
 gravelPen.fillRect(0, 0, GRAVEL_PIXELS, GRAVEL_PIXELS);
-// 260 småstenar, varannan ljus och varannan mörk.
-for (let i = 0; i < 260; i++) {
-  gravelPen.fillStyle = i % 2 === 0 ? PALETTE.gravelLight : PALETTE.gravelDark;
-  const size = 3 + Math.random() * 6;
-  // Håll stenen helt innanför bilden, annars klipps den av i skarven mellan kopiorna.
-  gravelPen.fillRect(Math.random() * (GRAVEL_PIXELS - size), Math.random() * (GRAVEL_PIXELS - size), size, size);
+// Allt ritas i nio kopior (±bildens storlek) så att det som går över kanten kommer in på
+// andra sidan. Då syns ingen skarv där kopiorna möts.
+function drawWrapped(draw) {
+  const x = Math.random() * GRAVEL_PIXELS;
+  const y = Math.random() * GRAVEL_PIXELS;
+  for (const ox of [-GRAVEL_PIXELS, 0, GRAVEL_PIXELS]) {
+    for (const oy of [-GRAVEL_PIXELS, 0, GRAVEL_PIXELS]) draw(x + ox, y + oy);
+  }
+}
+const lightColor = new THREE.Color(PALETTE.gravelLight);
+const darkColor = new THREE.Color(PALETTE.gravelDark);
+// 1) Stora, svaga fläckar: jorden är inte lika ljus överallt.
+for (let i = 0; i < 38; i++) {
+  const radius = 20 + Math.random() * 40;
+  const color = (i % 2 === 0 ? lightColor : darkColor).getStyle();
+  drawWrapped((x, y) => {
+    const blotch = gravelPen.createRadialGradient(x, y, 0, x, y, radius);
+    blotch.addColorStop(0, color.replace('rgb(', 'rgba(').replace(')', ', 0.16)'));
+    blotch.addColorStop(1, color.replace('rgb(', 'rgba(').replace(')', ', 0)'));
+    gravelPen.fillStyle = blotch;
+    gravelPen.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  });
+}
+// 2) Småstenar: runda, olika stora och olika färg, med en mörk skugga under.
+for (let i = 0; i < 380; i++) {
+  const radiusX = 1.6 + Math.random() * 3.4;
+  const radiusY = radiusX * (0.6 + Math.random() * 0.4);
+  const angle = Math.random() * Math.PI;
+  const stone = lightColor.clone().lerp(darkColor, Math.random()).getStyle();
+  drawWrapped((x, y) => {
+    gravelPen.fillStyle = 'rgba(60, 45, 35, 0.35)';
+    gravelPen.beginPath();
+    gravelPen.ellipse(x + 0.8, y + 1, radiusX, radiusY, angle, 0, Math.PI * 2);
+    gravelPen.fill();
+    gravelPen.fillStyle = stone;
+    gravelPen.beginPath();
+    gravelPen.ellipse(x, y, radiusX, radiusY, angle, 0, Math.PI * 2);
+    gravelPen.fill();
+  });
+}
+// 3) Fint damm: tusentals små prickar som tar bort den släta känslan.
+for (let i = 0; i < 1400; i++) {
+  gravelPen.fillStyle = i % 2 === 0 ? 'rgba(255, 245, 230, 0.18)' : 'rgba(70, 50, 35, 0.2)';
+  const x = Math.random() * GRAVEL_PIXELS;
+  const y = Math.random() * GRAVEL_PIXELS;
+  gravelPen.fillRect(x, y, 1.2, 1.2);
 }
 const gravelTexture = new THREE.CanvasTexture(gravelImage);
 gravelTexture.colorSpace = THREE.SRGBColorSpace;
@@ -40,7 +81,6 @@ gravelTexture.anisotropy = MAX_ANISOTROPY;
 // Marken ritas först (-10), sedan vägkanter (-9), grus (-8) och asfalt (-5). Allt annat
 // (bil, träd, hus) har renderOrder 0, ritas efteråt och hamnar ovanpå som vanligt.
 const gravelMaterial = new THREE.MeshLambertMaterial({ map: gravelTexture, depthTest: false, depthWrite: false });
-const roadEdgeMaterial = new THREE.MeshLambertMaterial({ color: PALETTE.gravelDark, depthTest: false, depthWrite: false });
 
 // Bygger ett lager av en väg: en rak bit och en rund platta i varje ände, så att ändarna
 // blir runda och vägar som möts får en mjuk skarv.
@@ -81,12 +121,309 @@ export function buildRoads(world, roads) {
   const group = worldGroup(world);
   roads.forEach((road, i) => {
     const width = road.width || ROAD_WIDTH;
-    // Alla kantlinjer ligger lägst (samma färg, så de får gärna överlappa).
-    addRoadLayer(group, road, width + ROAD_EDGE * 2, roadEdgeMaterial, 0.006, -9);
     // Gruset ovanpå. Varje väg ritas strax efter den förra (-8, -7.99, ...), så att det
     // alltid är samma väg som ligger överst där två korsar varandra.
     addRoadLayer(group, road, width, gravelMaterial, 0.012 + i * 0.003, -8 + i * 0.01);
   });
+  buildCurbs(world, group, roads);
+  buildEdgeStones(world, group, roads);
+}
+
+// --- Kantsten: en rad rundade stenblock runt ALLA vägkanter ---
+// Ersätter den platta mörka kantlinjen med en riktig 3D-form som fångar ljus och skugga.
+//  * Längs varje väg, hela vägen. I en korsning fortsätter blocken ända fram till den andra
+//    vägens grus och möts med dess kantsten i ett hörn (inga glipor och inga hårda kanter).
+//  * Runt vägens runda, döda ände (och tonar ut till marken sista biten).
+//  * Runt hela parkeringsfickan: två långsidor, de rundade hörnen och kortsidan.
+const CURB_WIDTH = 0.34;   // Blockets bredd (tvärs över kanten).
+const CURB_HEIGHT = 0.17;  // Hur högt blocket står.
+const CURB_LENGTH = 0.72;  // Blockets längd längs kanten.
+const CURB_STEP = 0.74;    // Avstånd mellan blockens mitt (lite större än längden = en tunn fog).
+const BAY_CORNER_RADIUS = 1; // Fickans rundade hörn (samma som BAY_CORNER i billboards.js: 50 px = 1 enhet).
+const curbGeometry = new RoundedBoxGeometry(CURB_WIDTH, CURB_HEIGHT, CURB_LENGTH, 2, 0.045);
+const curbMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+
+// Lägger block med jämna mellanrum längs en linje av punkter [{ x, z }, ...], med ett block
+// i varje ände (så att hörn och skarvar fylls). Blockets längd pekar längs linjen.
+function curbRun(points, blocks, fade, thin) {
+  if (points.length < 2) return;
+  const lengths = [0];
+  for (let i = 1; i < points.length; i++) {
+    lengths.push(lengths[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z));
+  }
+  const total = lengths[lengths.length - 1];
+  // Första och sista blocket står INNANFÖR bitens ändar (med änden precis i blockets kant), så att
+  // blocken som möts i ett hörn inte går över varandra. Däremellan lika långt mellan blocken.
+  const distances = [];
+  const usable = total - CURB_LENGTH;
+  if (usable <= 0.05) {
+    distances.push(total / 2); // En kort bit: ett enda block mitt på.
+  } else {
+    const count = Math.max(1, Math.ceil(usable / (CURB_LENGTH * 0.95))); // Aldrig glesare än blockets längd.
+    for (let k = 0; k <= count; k++) distances.push(CURB_LENGTH / 2 + (usable * k) / count);
+  }
+  let segment = 0;
+  for (const at of distances) {
+    while (segment < points.length - 2 && lengths[segment + 1] < at) segment++;
+    const from = points[segment];
+    const to = points[segment + 1];
+    const span = lengths[segment + 1] - lengths[segment] || 1;
+    const k = THREE.MathUtils.clamp((at - lengths[segment]) / span, 0, 1);
+    blocks.push({
+      x: from.x + (to.x - from.x) * k,
+      z: from.z + (to.z - from.z) * k,
+      yaw: Math.atan2(to.x - from.x, to.z - from.z) + (Math.random() - 0.5) * 0.05,
+      fade,
+      thin,
+    });
+  }
+}
+
+function buildCurbs(world, group, roads) {
+  // Parkeringsfickorna och riktningen från fickan ut mot vägen (u). v = rakt åt sidan.
+  const bays = [];
+  for (const billboard of billboards.filter((entry) => entry.project.world === world)) {
+    const driveway = roads.find((road) => Math.hypot(road.to.x - billboard.padX, road.to.z - billboard.padZ) < 0.05);
+    if (!driveway) continue;
+    const ux = driveway.from.x - billboard.padX;
+    const uz = driveway.from.z - billboard.padZ;
+    const length = Math.hypot(ux, uz);
+    bays.push({ x: billboard.padX, z: billboard.padZ, ux: ux / length, uz: uz / length });
+  }
+  const inBay = (x, z) => bays.some((bay) => Math.hypot(x - bay.x, z - bay.z) < BAY_LENGTH / 2 + 0.2);
+  // Hela vägnätets yttre kontur. Varje väg är en "kapsel" (rak bit med runda ändar). Kantstenens
+  // mittlinje är kapselns omkrets en bit utanför gruset. En punkt på omkretsen räknas bara om den
+  // inte ligger inne i någon annan vägs kapsel, så får man exakt unionens yttre kant: kantstenen
+  // går runt hörn, korsningar och runda ändar utan glipor. (En punkt som ligger exakt på en
+  // tidigare vägs omkrets, t.ex. en delad rund skarv, tas bara med en gång.)
+  const CURB_OFFSET = CURB_WIDTH / 2 - 0.02;
+  const SAMPLE = 0.06;
+  const blocks = [];
+  roads.forEach((road, i) => {
+    const width = road.width || ROAD_WIDTH;
+    const thin = width < ROAD_WIDTH; // Gångvägen får lägre, smalare kantsten.
+    const radius = width / 2 + CURB_OFFSET;
+    const dx = road.to.x - road.from.x;
+    const dz = road.to.z - road.from.z;
+    const length = Math.hypot(dx, dz);
+    const heading = Math.atan2(dz, dx); // Vinkel i x/z-planet: x = cos, z = sin.
+    // Kapselns hela omkrets som tätt tuggade punkter, medsols.
+    const outline = [];
+    const at = (center, angle) => ({ x: center.x + Math.cos(angle) * radius, z: center.z + Math.sin(angle) * radius });
+    const sideSteps = Math.max(1, Math.ceil(length / SAMPLE));
+    const arcSteps = Math.max(8, Math.ceil(Math.PI * radius / SAMPLE));
+    for (let k = 0; k <= sideSteps; k++) { // Ena sidan: från start till mål.
+      const t = k / sideSteps;
+      outline.push(at({ x: road.from.x + dx * t, z: road.from.z + dz * t }, heading + Math.PI / 2));
+    }
+    for (let k = 1; k < arcSteps; k++) outline.push(at(road.to, heading + Math.PI / 2 - (k / arcSteps) * Math.PI)); // Änden vid målet.
+    for (let k = 0; k <= sideSteps; k++) { // Andra sidan: från mål tillbaka till start.
+      const t = 1 - k / sideSteps;
+      outline.push(at({ x: road.from.x + dx * t, z: road.from.z + dz * t }, heading - Math.PI / 2));
+    }
+    for (let k = 1; k < arcSteps; k++) outline.push(at(road.from, heading - Math.PI / 2 - (k / arcSteps) * Math.PI)); // Änden vid start.
+    // Vilka punkter är en del av den yttre konturen?
+    const kept = outline.map((point) => {
+      if (inBay(point.x, point.z)) return false;
+      for (let j = 0; j < roads.length; j++) {
+        if (j === i) continue;
+        const otherRadius = (roads[j].width || ROAD_WIDTH) / 2 + CURB_OFFSET;
+        const distance = distanceToRoad(point.x, point.z, roads[j]);
+        if (distance < otherRadius - 0.01) return false;                 // Inne i en annan väg.
+        if (j < i && Math.abs(distance - otherRadius) < 0.02) return false; // Samma kant som en tidigare väg har redan.
+      }
+      return true;
+    });
+    // Dela upp i sammanhängande bitar. Börja efter en bortvald punkt, så att en bit inte klipps
+    // mitt i där omkretsen "går runt" från slutet till början.
+    let origin = kept.indexOf(false);
+    if (origin === -1) origin = 0; // Hela kapseln syns (en ensam väg): börja var som helst.
+    let run = [];
+    for (let step = 0; step <= outline.length; step++) {
+      const index = (origin + step) % outline.length;
+      if (step < outline.length && kept[index]) {
+        run.push(outline[index]);
+      } else {
+        curbRun(run, blocks, 1, thin);
+        run = [];
+      }
+    }
+  });
+
+  // Runt varje parkeringsficka: långsidor, rundade bakhörn och kortsida. Öppen mot vägen.
+  for (const bay of bays) {
+    const vx = -bay.uz;
+    const vz = bay.ux;
+    const halfWidth = ROAD_WIDTH / 2 + CURB_OFFSET; // Samma linje som uppfartens kantsten: de möts utan hopp.
+    const halfLength = BAY_LENGTH / 2 + CURB_WIDTH / 2 - 0.05;
+    const radius = BAY_CORNER_RADIUS + CURB_WIDTH / 2 - 0.05;
+    const roadEnd = BAY_LENGTH / 2 + 0.2; // Förbi där uppfartens kantsten tar vid (se inBay), så att de överlappar.
+    // Punkter i fickans egna mått (a = mot vägen, b = åt sidan) -> världen.
+    const toWorld = (a, b) => ({ x: bay.x + bay.ux * a + vx * b, z: bay.z + bay.uz * a + vz * b });
+    const line = (a0, b0, a1, b1, count) => Array.from({ length: count + 1 }, (_, k) => toWorld(a0 + (a1 - a0) * k / count, b0 + (b1 - b0) * k / count));
+    const corner = (centerA, centerB, from, to) => Array.from({ length: 13 }, (_, k) => {
+      const angle = from + (to - from) * k / 12;
+      return toWorld(centerA + Math.cos(angle) * radius, centerB + Math.sin(angle) * radius);
+    });
+    const outline = [
+      ...line(roadEnd, -halfWidth, -(halfLength - radius), -halfWidth, 30),
+      ...corner(-(halfLength - radius), -(halfWidth - radius), -Math.PI / 2, -Math.PI),
+      ...line(-halfLength, -(halfWidth - radius), -halfLength, halfWidth - radius, 20),
+      ...corner(-(halfLength - radius), halfWidth - radius, Math.PI, Math.PI / 2),
+      ...line(-(halfLength - radius), halfWidth, roadEnd, halfWidth, 30),
+    ];
+    curbRun(outline, blocks, 1, false);
+  }
+
+  // Gallra: behåll bara block som ligger minst CURB_MIN_GAP från ett redan behållet. Annars går
+  // stenar över varandra där två bitar möts (hörn, skarvar, fickans hopp mot uppfarten).
+  // Ett rutnät med rutor lika stora som avståndet gör sökningen snabb.
+  const CURB_MIN_GAP = 0.36;
+  const grid = new Map();
+  const keptBlocks = [];
+  for (const block of blocks) {
+    const cellX = Math.floor(block.x / CURB_MIN_GAP);
+    const cellZ = Math.floor(block.z / CURB_MIN_GAP);
+    let crowded = false;
+    for (let gx = cellX - 1; gx <= cellX + 1 && !crowded; gx++) {
+      for (let gz = cellZ - 1; gz <= cellZ + 1 && !crowded; gz++) {
+        for (const other of grid.get(gx + ',' + gz) || []) {
+          if (Math.hypot(other.x - block.x, other.z - block.z) >= CURB_MIN_GAP) continue;
+          // Bara block som pekar åt ungefär samma håll är dubbletter. Block som möts i ett
+          // hörn (t.ex. 90 grader) ska båda stå kvar, annars blir det ett hack i hörnet.
+          const turn = Math.abs(Math.atan2(Math.sin(other.yaw - block.yaw), Math.cos(other.yaw - block.yaw)));
+          if (turn < 0.35 || turn > Math.PI - 0.35) { crowded = true; break; }
+        }
+      }
+    }
+    if (crowded) continue;
+    const key = cellX + ',' + cellZ;
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(block);
+    keptBlocks.push(block);
+  }
+  blocks.length = 0;
+  blocks.push(...keptBlocks);
+
+  if (blocks.length === 0) return;
+  const mesh = new THREE.InstancedMesh(curbGeometry, curbMaterial, blocks.length);
+  const matrix = new THREE.Matrix4();
+  const quaternion = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  const scale = new THREE.Vector3();
+  const spot = new THREE.Vector3();
+  const stone = new THREE.Color();
+  const base = new THREE.Color(PALETTE.gravelDark);
+  blocks.forEach((block, index) => {
+    quaternion.setFromAxisAngle(up, block.yaw);
+    const height = (0.85 + Math.random() * 0.3) * block.fade * (block.thin ? 0.7 : 1);
+    scale.set(block.thin ? 0.75 : 1, height, 1);
+    // Nedsänkt så att botten ligger under marken (inga glipor).
+    spot.set(block.x, CURB_HEIGHT * height / 2 - 0.03, block.z);
+    matrix.compose(spot, quaternion, scale);
+    mesh.setMatrixAt(index, matrix);
+    stone.copy(base).multiplyScalar(0.95 + Math.random() * 0.3); // Olika nyans för varje block.
+    mesh.setColorAt(index, stone);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  mesh.frustumCulled = false;
+  mesh.receiveShadow = true;
+  mesh.castShadow = true;
+  group.add(mesh);
+}
+
+// --- Stenar längs vägkanterna: ger vägen en riktig kant som går över i gräset ---
+// Små, halvt nedgrävda stenar i två rader: några större precis vid kanten och en spridning
+// av småsten längre ut. Allt är EN InstancedMesh (en form som ritas på tusentals platser).
+const STONE_SPACING = 0.42;   // Ungefärligt avstånd mellan stenplatserna längs vägen.
+const STONE_DEAD_END = 4.2;   // Inga stenar så här nära en vägs döda ände (parkeringsfickor, grottor, garage).
+const stoneGeometry = new THREE.IcosahedronGeometry(1, 1);
+{
+  // Knuffa varje hörn lite åt ett slumpat håll, så att stenen inte blir en perfekt boll.
+  // Hörnen delas av flera trianglar, så förskjutningen sparas per plats (annars spricker formen).
+  const offsets = new Map();
+  const position = stoneGeometry.attributes.position;
+  for (let i = 0; i < position.count; i++) {
+    const key = [position.getX(i), position.getY(i), position.getZ(i)].map((v) => v.toFixed(3)).join(',');
+    if (!offsets.has(key)) offsets.set(key, 0.82 + Math.random() * 0.3);
+    const scale = offsets.get(key);
+    position.setXYZ(i, position.getX(i) * scale, position.getY(i) * scale, position.getZ(i) * scale);
+  }
+  stoneGeometry.computeVertexNormals();
+}
+const stoneMaterial = new THREE.MeshLambertMaterial({ flatShading: true });
+
+function buildEdgeStones(world, group, roads) {
+  const pads = billboards.filter((billboard) => billboard.project.world === world).map((billboard) => ({ x: billboard.padX, z: billboard.padZ }));
+  // En väg som slutar mitt i en annan är en korsning. Alla andra ändar är döda ändar.
+  const deadEnds = [];
+  roads.forEach((road, i) => {
+    for (const end of [road.from, road.to]) {
+      const joined = roads.some((other, j) => j !== i && distanceToRoad(end.x, end.z, other) < 0.6);
+      if (!joined) deadEnds.push(end);
+    }
+  });
+  const stones = [];
+  const lightColor = new THREE.Color(PALETTE.gravelLight);
+  const darkColor = new THREE.Color(PALETTE.gravelDark);
+  const mossColor = new THREE.Color(PALETTE.grassRoot);
+  roads.forEach((road, i) => {
+    const width = road.width || ROAD_WIDTH;
+    const dx = road.to.x - road.from.x;
+    const dz = road.to.z - road.from.z;
+    const length = Math.hypot(dx, dz);
+    const alongX = dx / length;
+    const alongZ = dz / length;
+    const scaleFactor = Math.min(1, 0.4 + width / ROAD_WIDTH * 0.6); // Smala gångvägar får mindre stenar.
+    for (let t = 0; t < length; t += STONE_SPACING * (0.6 + Math.random() * 0.8)) {
+      for (const side of [-1, 1]) {
+        // Två rader: stora vid kanten (ofta) och småsten längre ut (ibland).
+        for (const row of [0, 1]) {
+          if (Math.random() > (row === 0 ? 0.6 : 0.45)) continue;
+          const offset = width / 2 + (row === 0 ? 0.42 + Math.random() * 0.3 : 0.6 + Math.random() * 0.9);
+          const x = road.from.x + alongX * t - alongZ * offset * side;
+          const z = road.from.z + alongZ * t + alongX * offset * side;
+          // Hoppa över platser som hamnar på en annan väg, vid en parkeringsficka eller en död ände.
+          if (roads.some((other, j) => j !== i && distanceToRoad(x, z, other) < (other.width || ROAD_WIDTH) / 2 + ROAD_EDGE + 0.15)) continue;
+          if (pads.some((pad) => Math.hypot(x - pad.x, z - pad.z) < STONE_DEAD_END)) continue;
+          if (deadEnds.some((end) => Math.hypot(x - end.x, z - end.z) < STONE_DEAD_END)) continue;
+          const size = (row === 0 ? 0.11 + Math.random() * 0.12 : 0.05 + Math.random() * 0.07) * scaleFactor;
+          const color = lightColor.clone().lerp(darkColor, Math.random());
+          if (Math.random() < 0.18) color.lerp(mossColor, 0.5); // Några mossiga.
+          stones.push({ x, z, size, color });
+        }
+      }
+    }
+  });
+  addStoneInstances(group, stones);
+}
+
+// Ritar en lista med stenar { x, z, size, color } som EN InstancedMesh i gruppen.
+// Används också av grounding.js (stenar vid träd, skyltar och grottor).
+export function addStoneInstances(group, stones) {
+  if (stones.length === 0) return;
+  const mesh = new THREE.InstancedMesh(stoneGeometry, stoneMaterial, stones.length);
+  const matrix = new THREE.Matrix4();
+  const rotation = new THREE.Euler();
+  const quaternion = new THREE.Quaternion();
+  const scale = new THREE.Vector3();
+  const spot = new THREE.Vector3();
+  stones.forEach((stone, index) => {
+    rotation.set(Math.random() * Math.PI, Math.random() * Math.PI * 2, Math.random() * Math.PI);
+    quaternion.setFromEuler(rotation);
+    // Tillplattad (y mindre) och halvt nedsjunken i marken.
+    scale.set(stone.size * (0.9 + Math.random() * 0.5), stone.size * (0.5 + Math.random() * 0.35), stone.size * (0.9 + Math.random() * 0.5));
+    spot.set(stone.x, stone.size * 0.12, stone.z);
+    matrix.compose(spot, quaternion, scale);
+    mesh.setMatrixAt(index, matrix);
+    mesh.setColorAt(index, stone.color);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  mesh.frustumCulled = false;
+  mesh.receiveShadow = true;
+  group.add(mesh);
 }
 
 // En kort infart från huvudvägen in till varje skylts parkeringsficka i en värld.

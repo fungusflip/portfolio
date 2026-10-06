@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import { scene, PALETTE, WORLDS, BILLBOARD_FACING } from './core.js';
 import { car } from './car.js';
 
-const LEAF_COUNT = 140;   // Antal löv. ÄNDRA för tätare/glesare (allt är ett enda ritanrop, så det är billigt).
+const LEAF_COUNT = 260;   // Antal löv. ÄNDRA för tätare/glesare (allt är ett enda ritanrop, så det är billigt).
 const LEAF_AREA = 24;     // Lådans halva bredd runt bilen, i enheter.
 const LEAF_TOP = 16;      // Hur högt upp löven börjar.
 
@@ -44,7 +44,7 @@ scene.add(fallingLeaves);
 // Hemma ligger dessutom ett täcke av löv på marken. Det är en egen InstancedMesh med
 // samma form. Även de bor i lådan runt bilen, så det ligger alltid löv där man kör.
 // (Lådans kanter är utanför bild, så man ser aldrig att löv flyttas till andra sidan.)
-const GROUND_LEAF_COUNT = 420; // ÄNDRA för tätare/glesare lövtäcke.
+const GROUND_LEAF_COUNT = 1000; // ÄNDRA för tätare/glesare lövtäcke.
 export const groundLeaves = new THREE.InstancedMesh(leafParticleGeometry, fallingLeafMaterial, GROUND_LEAF_COUNT);
 groundLeaves.frustumCulled = false;
 scene.add(groundLeaves);
@@ -85,6 +85,7 @@ function makeLeaf(onGround) {
     settle: 0,                          // Sekunder kvar av gungningen efter en landning.
     groundTime: 0,                      // (Bara himmelslöv) sekunder kvar att ligga innan det försvinner.
     scale: onGround ? 0.8 + Math.random() * 0.5 : 1,
+    appear: 1,                          // 0 -> 1 när lövet "växer fram" efter att ha flyttats (inget poppar in).
   };
 }
 const leafParticles = [];   // Löven som faller från himlen (eller gnistorna i de andra världarna).
@@ -115,6 +116,8 @@ for (let i = 0; i < GROUND_LEAF_COUNT; i++) {
   const leaf = makeLeaf(true);
   leaf.y = leaf.restY;
   leaf.yaw = leaf.angle;
+  leaf.underTree = Math.random() < 0.8; // Bor under ett träd (se setLeafTrees), annars i en fri hög.
+  leaf.reanchor = false;
   if (Math.random() < 0.7) {
     // I en hög: en slumpad plats inom högens radie. Math.sqrt gör att löven sprids
     // jämnt över hela cirkeln (utan den skulle de klumpa ihop sig i mitten).
@@ -127,6 +130,43 @@ for (let i = 0; i < GROUND_LEAF_COUNT; i++) {
   groundLeafParticles.push(leaf);
   // Samma färger som löven som faller, så att de ser ut att höra ihop.
   groundLeaves.setColorAt(i, fallenLeafColors[i % fallenLeafColors.length]); // Färgerna i tur och ordning = jämn blandning.
+}
+
+// --- Löven hör till träden ---
+// Träden (x, z, scale) som main.js lämnar över. Löven på marken samlas i högar under träden
+// (tätast vid stammen), och löven som faller börjar uppe i trädkronorna. Eftersom löven bara
+// finns i lådan runt bilen flyttas ett löv som hoppar över lådans kant till ett träd inne i lådan.
+let leafTrees = [];
+export function setLeafTrees(trees) {
+  leafTrees = trees;
+  for (const leaf of groundLeafParticles) leaf.reanchor = true; // Placera om alla under träd.
+}
+
+// Ett slumpat träd inne i lådan runt center (eller null om inget finns där).
+function pickTreeNear(center) {
+  let picked = null;
+  let seen = 0;
+  for (const tree of leafTrees) {
+    if (Math.abs(tree.x - center.x) > LEAF_AREA - 3 || Math.abs(tree.z - center.z) > LEAF_AREA - 3) continue;
+    seen++;
+    if (Math.random() * seen < 1) picked = tree; // Slumpat val bland alla (reservoir sampling).
+  }
+  return picked;
+}
+
+// Lägger ett marklöv i en hög under ett träd: tätast nära stammen, tunnare ut mot kronans kant.
+function relocateUnderTree(leaf, center) {
+  const tree = pickTreeNear(center);
+  if (!tree) return false;
+  const angle = Math.random() * Math.PI * 2;
+  const distance = tree.scale * (0.45 + Math.pow(Math.random(), 1.6) * 2.0);
+  leaf.x = tree.x + Math.cos(angle) * distance;
+  leaf.z = tree.z + Math.sin(angle) * distance;
+  leaf.yaw = Math.random() * Math.PI * 2;
+  leaf.onGround = true;
+  leaf.settle = 0;
+  leaf.appear = 0; // Växer fram i stället för att poppa upp.
+  return true;
 }
 
 let weatherDirection = -1; // -1 = faller (löv), +1 = stiger (gnistor).
@@ -204,8 +244,12 @@ const carVelocity = { x: 0, z: 0, speed: 0 };
 
 // Ett steg av fysiken för ett löv. center = mitten av lådan runt bilen.
 function stepLeaf(leaf, delta, center) {
-  leaf.x = wrapAround(leaf.x, center.x);
-  leaf.z = wrapAround(leaf.z, center.z);
+  const wrappedX = wrapAround(leaf.x, center.x);
+  const wrappedZ = wrapAround(leaf.z, center.z);
+  // Ett riktigt hopp till andra sidan lådan (inte bara avrundning): löv bundna till träd flyttas om.
+  if (Math.abs(wrappedX - leaf.x) > 0.5 || Math.abs(wrappedZ - leaf.z) > 0.5) leaf.reanchor = true;
+  leaf.x = wrappedX;
+  leaf.z = wrappedZ;
 
   if (leaf.onGround) {
     leaf.settle = Math.max(0, leaf.settle - delta);
@@ -249,12 +293,27 @@ function stepLeaf(leaf, delta, center) {
   }
 }
 
+// Löven finns bara i lådan runt bilen. På en bred skärm syns lådans kant, så löven tonas ut (de
+// krymper) de sista EDGE_FADE enheterna innan kanten, och växer fram på andra sidan. Då ser man
+// aldrig ett löv försvinna eller dyka upp.
+const EDGE_FADE = 7;
+function edgeFade(leaf, center) {
+  const room = LEAF_AREA - Math.max(Math.abs(leaf.x - center.x), Math.abs(leaf.z - center.z));
+  const t = THREE.MathUtils.clamp(room / EDGE_FADE, 0, 1);
+  return t * t * (3 - 2 * t); // Mjuk S-kurva.
+}
+// Hur mycket av lövets storlek som syns: fram-växten gånger kanttoningen.
+function visibility(leaf, center) {
+  const grow = leaf.appear;
+  return grow * grow * (3 - 2 * grow) * edgeFade(leaf, center);
+}
+
 // Räknar ut lövets plats och vridning och lägger dem i InstancedMesh-listan.
 const leafHelper = new THREE.Object3D();
 const tumbleRotation = new THREE.Quaternion();
 const flatRotation = new THREE.Quaternion();
 const leafEuler = new THREE.Euler();
-function placeLeaf(mesh, i, leaf, time) {
+function placeLeaf(mesh, i, leaf, time, center) {
   if (leaf.onGround) {
     // Platt på marken (-PI / 2 = vänd upp mot himlen). Precis efter landningen gungar det:
     // sin svänger fram och tillbaka, och (settle / LEAF_SETTLE_TIME) gör svängningen mindre och mindre.
@@ -279,12 +338,13 @@ function placeLeaf(mesh, i, leaf, time) {
     const flatness = THREE.MathUtils.clamp(1 - height / LEAF_LAND_HEIGHT, 0, 1);
     leafHelper.quaternion.slerpQuaternions(tumbleRotation, flatRotation, flatness);
   }
-  leafHelper.scale.setScalar(leaf.scale);
+  leafHelper.scale.setScalar(Math.max(leaf.scale * visibility(leaf, center), 0.0001)); // 0 ger ogiltig matris: lite över.
   leafHelper.updateMatrix();
   mesh.setMatrixAt(i, leafHelper.matrix);
 }
 
 let groundLeavesPlaced = false; // Har alla marklöv placerats minst en gång?
+const lastGroundCenter = new THREE.Vector2(Infinity, Infinity);
 export function updateLeaves(delta, center) {
   const time = performance.now() / 1000; // Sekunder, till gungningen.
   updateWind(delta);
@@ -333,9 +393,20 @@ export function updateLeaves(delta, center) {
       if (leaf.groundTime <= 0) {
         Object.assign(leaf, makeLeaf(false), { y: LEAF_TOP }); // Object.assign skriver över alla fält med det nya lövets.
         leaf.vy = -leaf.fall;
+        leaf.appear = 0; // Växer fram (poppar inte upp mitt i luften).
+        // Oftast börjar det fall från ett träds krona (resten singlar ner utifrån, som förut).
+        const tree = Math.random() < 0.85 ? pickTreeNear(center) : null;
+        if (tree) {
+          const angle = Math.random() * Math.PI * 2;
+          const reach = Math.sqrt(Math.random()) * 1.7 * tree.scale;
+          leaf.x = tree.x + Math.cos(angle) * reach;
+          leaf.z = tree.z + Math.sin(angle) * reach;
+          leaf.y = (2.2 + Math.random() * 1.8) * tree.scale; // Kronans höjd.
+        }
       }
     }
-    placeLeaf(fallingLeaves, i, leaf, time);
+    if (leaf.appear < 1) leaf.appear = Math.min(1, leaf.appear + delta * 2.5); // Ca 0.4 s.
+    placeLeaf(fallingLeaves, i, leaf, time, center);
   });
   fallingLeaves.instanceMatrix.needsUpdate = true;
 
@@ -343,15 +414,26 @@ export function updateLeaves(delta, center) {
   // Bara löv som faktiskt rört sig räknas om och skickas till grafikkortet. De flesta
   // ligger still, och då slipper vi skicka alla 420 varje bild.
   let groundChanged = false;
-  const placeAll = !groundLeavesPlaced; // Första bilden: placera ALLA löv en gång.
+  // Första bilden, och varje bild lådan flyttar sig (kanttoningen ändras då för alla löv).
+  const boxMoved = Math.hypot(center.x - lastGroundCenter.x, center.z - lastGroundCenter.z) > 0.001;
+  lastGroundCenter.set(center.x, center.z);
+  const placeAll = !groundLeavesPlaced || boxMoved;
   groundLeavesPlaced = true;
   groundLeafParticles.forEach((leaf, i) => {
     const oldX = leaf.x;
     const oldZ = leaf.z;
     const wasInAir = !leaf.onGround;
     stepLeaf(leaf, delta, center);
-    if (placeAll || wasInAir || !leaf.onGround || leaf.settle > 0 || leaf.x !== oldX || leaf.z !== oldZ) {
-      placeLeaf(groundLeaves, i, leaf, time);
+    // Hoppade över lådans kant (eller första bilden): bundna löv flyttas till en hög under ett träd.
+    let relocated = false;
+    if (leaf.reanchor && leaf.onGround) {
+      if (leaf.underTree && leafTrees.length > 0) relocated = relocateUnderTree(leaf, center);
+      leaf.reanchor = false;
+    }
+    const growing = leaf.appear < 1;
+    if (growing) leaf.appear = Math.min(1, leaf.appear + delta * 2.5);
+    if (placeAll || growing || relocated || wasInAir || !leaf.onGround || leaf.settle > 0 || leaf.x !== oldX || leaf.z !== oldZ) {
+      placeLeaf(groundLeaves, i, leaf, time, center);
       groundChanged = true;
     }
   });

@@ -335,8 +335,8 @@ export const padTextureActive = makePadTexture(true);
 
 // En mörk asfaltsruta med målade linjer. grus = här kör man, asfalt = här parkerar man.
 // Asfalten tonas över i grus i änden mot vägen, så att fickan smälter ihop med infarten.
-const BAY_WIDTH = 5.4; // Samma som en väg inklusive kantlinjer.
-const BAY_LENGTH = 6.5;
+export const BAY_WIDTH = 5.4; // Samma som en väg inklusive kantlinjer.
+export const BAY_LENGTH = 6.5;
 const bayImage = document.createElement('canvas');
 bayImage.width = 270;  // 50 pixlar per enhet: 5.4 x 6.5 enheter.
 bayImage.height = 325;
@@ -373,16 +373,37 @@ bayPen.lineTo(24, 24);
 bayPen.lineTo(bayW - 24, 24);
 bayPen.lineTo(bayW - 24, BLEND_START);
 bayPen.stroke();
-// 5. Mörk kantlinje, samma som vägarnas.
-bayPen.fillStyle = PALETTE.gravelDark;
-bayPen.fillRect(0, 0, 10, bayH);
-bayPen.fillRect(bayW - 10, 0, 10, bayH);
-bayPen.fillRect(0, 0, bayW, 10);
+// 5. Mörk kantlinje, samma som vägarnas, och runda hörn längst bort från vägen.
+// Vägänden förblir öppen (där tonas asfalten ändå över i grus). Hörnen utanför
+// rundningen görs genomskinliga och klipps bort med alphaTest (se bayMaterial).
+const BAY_CORNER = 50; // Hörnradie i pixlar (1 enhet).
+function bayShape() {
+  bayPen.beginPath();
+  bayPen.moveTo(0, bayH);
+  bayPen.lineTo(0, BAY_CORNER);
+  bayPen.arcTo(0, 0, BAY_CORNER, 0, BAY_CORNER);
+  bayPen.lineTo(bayW - BAY_CORNER, 0);
+  bayPen.arcTo(bayW, 0, bayW, BAY_CORNER, BAY_CORNER);
+  bayPen.lineTo(bayW, bayH);
+}
+bayPen.save();
+bayShape();
+bayPen.strokeStyle = PALETTE.gravelDark;
+bayPen.lineWidth = 20; // Halva (10 px) syns innanför kanten.
+bayPen.stroke();
+bayPen.restore();
+bayPen.globalCompositeOperation = 'destination-in';
+bayShape();
+bayPen.closePath();
+bayPen.fillStyle = '#000';
+bayPen.fill();
+bayPen.globalCompositeOperation = 'source-over';
 const bayTexture = new THREE.CanvasTexture(bayImage);
 bayTexture.colorSpace = THREE.SRGBColorSpace;
 bayTexture.anisotropy = MAX_ANISOTROPY;
 // depthTest/depthWrite: false = ett "lager på marken" (se renderOrder i hub.js).
-const bayMaterial = new THREE.MeshLambertMaterial({ map: bayTexture, depthTest: false, depthWrite: false });
+// alphaTest (inte transparent): ett genomskinligt lager ritas efter bilen och hamnar över den.
+const bayMaterial = new THREE.MeshLambertMaterial({ map: bayTexture, depthTest: false, depthWrite: false, alphaTest: 0.5, alphaToCoverage: true });
 
 // Ger en ny parkeringsficka med ENTER-text, liggande på marken z enheter framför
 // gruppens mitt. Returnerar ENTER-textens material, så att den kan tändas.
