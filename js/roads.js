@@ -91,7 +91,7 @@ const CURB_LENGTH = 0.72;  // Blockets längd längs kanten.
 const CURB_STEP = 0.74;    // Avstånd mellan blockens mitt (lite större än längden = en tunn fog).
 const curbGeometry = new RoundedBoxGeometry(CURB_WIDTH, CURB_HEIGHT, CURB_LENGTH, 2, 0.045);
 // Lite moss som kryper in från kanterna på ovansidan och en fuktigt mörk fot (se moss.js).
-paintVertices(curbGeometry, { strength: 0.6, damp: 0.3, bottomY: -CURB_HEIGHT / 2, topY: CURB_HEIGHT / 2 });
+paintVertices(curbGeometry, { strength: 0.5, damp: 0.25, bottomY: -CURB_HEIGHT / 2, topY: CURB_HEIGHT / 2 });
 const curbMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff', vertexColors: true });
 
 // En bit kantsten är en linje av punkter [{ x, z }, ...] där blocken ska stå. curbRun lägger bara
@@ -339,8 +339,8 @@ const stoneGeometry = new THREE.IcosahedronGeometry(1, 1);
     position.setXYZ(i, position.getX(i) * scale, position.getY(i) * scale, position.getZ(i) * scale);
   }
   stoneGeometry.computeVertexNormals();
-  // Moss på ytor som pekar uppåt, fuktigt mörk fot och enstaka orange lav (moss.js).
-  paintStone(stoneGeometry, { mossAmount: 0.55, damp: 0.4, lichen: 0.05 });
+  // Svag, mjuk moss uppåt och fuktigt mörk fot (moss.js).
+  paintStone(stoneGeometry, { mossAmount: 0.5, damp: 0.35 });
 }
 // vertexColors: mossan sitter i formens hörnfärger. Färgen per sten (instanceColor) gångras ovanpå.
 const stoneMaterial = new THREE.MeshLambertMaterial({ flatShading: true, vertexColors: true });

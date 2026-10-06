@@ -96,7 +96,7 @@ const rockMaterials = [
   new THREE.MeshLambertMaterial({ color: PALETTE.rockDark, flatShading: true, vertexColors: true }),
 ];
 // Varje sten får en egen form: utdragen olika mycket, hörnen lite ojämna, och egna mossfläckar.
-const ROCK_MOSS = [0.7, 1.5, 0.6]; // Mossan gångras med stenens gråviolett; lite starkare än på småstenarna.
+const ROCK_MOSS = [0.8, 0.96, 0.72]; // Svag grågrön ton över gråvioletten (aldrig starkare än basfärgen).
 function makeRockGeometry(seed) {
   const geometry = new THREE.IcosahedronGeometry(1, 1);
   const position = geometry.attributes.position;
@@ -107,7 +107,7 @@ function makeRockGeometry(seed) {
     const scale = offsets.get(key);
     position.setXYZ(i, position.getX(i) * scale, position.getY(i) * scale, position.getZ(i) * scale);
   }
-  return paintStone(geometry, { moss: ROCK_MOSS, mossAmount: 0.7, damp: 0.5, lichen: 0.07, seed });
+  return paintStone(geometry, { moss: ROCK_MOSS, mossAmount: 0.6, damp: 0.45, seed });
 }
 // Varje sten: [x, y, z, bredd, höjd, djup (radier), material (0 = ljus, 1 = mörk)].
 const CAVE_ROCKS = [
