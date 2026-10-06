@@ -516,9 +516,13 @@ function updateTrail(delta, carPosition, carAngle, extra) {
   // --- Däckspuffar: bakhjulen, tätare i drift och med nitro. Mindre kraft vid låg fart. ---
   trailRolled += moved;
   const kind = surfaceSampler(carPosition.x, carPosition.z);
-  if (trailRolled >= (extra ? 0.18 : (kind === 0 ? 0.3 : 0.5))) {
+  // Farten som andel: 0 vid ~4 enheter/s och under, 1 vid vanlig toppfart (12), lite över med nitro.
+  const tireShare = THREE.MathUtils.clamp((speedNow - 4) / 8, 0, 1.4);
+  // Glest vid låg fart (nästan inga puffar), tätare ju fortare, tätast i drift/nitro.
+  const spacing = extra ? 0.18 : THREE.MathUtils.lerp(2.5, kind === 0 ? 0.7 : 1.0, Math.min(tireShare, 1));
+  if (trailRolled >= spacing) {
     trailRolled = 0;
-    const power = THREE.MathUtils.clamp(0.25 + speedNow / 12, 0.25, 1);
+    const power = extra ? THREE.MathUtils.clamp(0.45 + speedNow / 20, 0.45, 1) : 0.15 + 0.5 * Math.min(tireShare, 1);
     for (const side of [-1, 1]) {
       tirePuffs.spawn(
         carPosition.x - sinA * 0.9 + cosA * 0.55 * side,
@@ -638,13 +642,16 @@ function updateDebris(delta, carPosition, carAngle, extra) {
   const turnRate = Math.abs(Math.atan2(Math.sin(turned), Math.cos(turned))) / delta;
   const accel = Math.max(speedNow - lastDebrisSpeed, 0) / delta; // Hård gas.
   lastDebrisSpeed = speedNow;
-  if (speedNow < 1.5) return;
-  // Bitar per sekund: några vid vanlig fart, många i drift/slirning/nitro, fler ju fortare man kör.
+  if (speedNow < 4) return; // Under ~4 enheter/s: nästan inget skräp.
+  // Bitar per sekund: bara ett lätt stänk vid vanlig körning, växer med farten (~fart^1.5),
+  // och mycket mer först i drift/slirning/nitro. Vanlig sväng/gas ger inget extra.
   const kind = surfaceSampler(carPosition.x, carPosition.z);
   const onGrass = kind === 0;
-  let rate = speedNow * (onGrass ? 2.4 : 0.9); // Mycket mer skräp på gräs: klumparna ska synas mot stråna.
-  if (extra) rate = rate * 3 + 10;
-  else if (turnRate > 1.2 || accel > 8) rate *= 2;
+  const speedShare = THREE.MathUtils.clamp((speedNow - 4) / 8, 0, 1.5); // 0 vid 4, 1 vid toppfart 12.
+  let rate = (onGrass ? 7 : 2.5) * Math.pow(speedShare, 1.5);
+  if (extra) rate = rate * 3 + (onGrass ? 22 : 8) * Math.max(speedShare, 0.3);
+  // Svag fart = svagt stänk: mindre och kortare kast.
+  const power = 0.55 + 0.45 * Math.min(speedShare, 1);
   debrisBudget += Math.min(rate, 120) * delta;
   const count = Math.min(Math.floor(debrisBudget), 12);
   debrisBudget -= Math.floor(debrisBudget);
@@ -659,7 +666,7 @@ function updateDebris(delta, carPosition, carAngle, extra) {
     debrisNext = (debrisNext + 1) % DEBRIS_SIZE;
     const side = Math.random() < 0.5 ? -1 : 1;
     const back = 0.8 + Math.random() * 0.2;
-    const along = (1 + Math.random() * 2.5 + speedNow * 0.12) * (extra ? 1.3 : 1); // Bakåt.
+    const along = (1 + Math.random() * 2.5 + speedNow * 0.12) * power * (extra ? 1.3 : 1); // Bakåt.
     const out = side * (0.4 + Math.random() * 1.6) * (extra ? 1.8 : 1);           // Åt sidan.
     debrisSpawns[i * 4] = carPosition.x - sinA * back + cosA * 0.55 * side;
     debrisSpawns[i * 4 + 1] = 0.2;
@@ -672,7 +679,7 @@ function updateDebris(delta, carPosition, carAngle, extra) {
     debrisVels[i * 4 + 2] = -dirZ * along - sinA * out;
     debrisVels[i * 4 + 3] = (onGrass ? 0.95 : 0.5) + Math.random() * 0.4; // Livslängd.
     debrisInfos[i * 2] = shred ? 3 : kind;
-    debrisInfos[i * 2 + 1] = (0.1 + Math.random() * 0.1) * (onGrass ? (shred ? 3 : 2.6) : 1);
+    debrisInfos[i * 2 + 1] = (0.1 + Math.random() * 0.1) * (onGrass ? (shred ? 3 : 2.6) : 1) * power;
   }
   for (const attribute of debrisAttributes) attribute.needsUpdate = true;
 }

@@ -15,6 +15,7 @@ import { hubPoint } from './home.js';
 import { setWeather } from './leaves.js';
 import { optimizeWorld, prepareWorld, markMoving } from './optimize.js';
 import { makeSwirl } from './magic.js';
+import { paintStone } from './moss.js';
 
 // ---------------------------------------------------------------------------
 // INGÅNGARNA
@@ -88,11 +89,26 @@ export function buildPortal(portal) {
 // --- Grottan ---
 // Ett berg av kantiga stenar runt en mörk valvöppning. När bilen kört förbi öppningen
 // ligger den inuti det stora berget, så kameran ser den inte längre.
+// Lambert med vertexColors: mossan sitter i formens hörnfärger (se moss.js), så optimize.js
+// behöver inte byta ut materialet och mossan finns kvar när stenarna slås ihop.
 const rockMaterials = [
-  new THREE.MeshStandardMaterial({ color: PALETTE.rock, roughness: 1, flatShading: true }),
-  new THREE.MeshStandardMaterial({ color: PALETTE.rockDark, roughness: 1, flatShading: true }),
+  new THREE.MeshLambertMaterial({ color: PALETTE.rock, flatShading: true, vertexColors: true }),
+  new THREE.MeshLambertMaterial({ color: PALETTE.rockDark, flatShading: true, vertexColors: true }),
 ];
-const rockGeometry = new THREE.IcosahedronGeometry(1, 1); // Varje sten är samma form, utdragen olika mycket.
+// Varje sten får en egen form: utdragen olika mycket, hörnen lite ojämna, och egna mossfläckar.
+const ROCK_MOSS = [0.8, 0.96, 0.72]; // Svag grågrön ton över gråvioletten (aldrig starkare än basfärgen).
+function makeRockGeometry(seed) {
+  const geometry = new THREE.IcosahedronGeometry(1, 1);
+  const position = geometry.attributes.position;
+  const offsets = new Map(); // Delade hörn flyttas lika mycket, annars spricker formen.
+  for (let i = 0; i < position.count; i++) {
+    const key = [position.getX(i), position.getY(i), position.getZ(i)].map((v) => v.toFixed(3)).join(',');
+    if (!offsets.has(key)) offsets.set(key, 0.92 + Math.random() * 0.16);
+    const scale = offsets.get(key);
+    position.setXYZ(i, position.getX(i) * scale, position.getY(i) * scale, position.getZ(i) * scale);
+  }
+  return paintStone(geometry, { moss: ROCK_MOSS, mossAmount: 0.6, damp: 0.45, seed });
+}
 // Varje sten: [x, y, z, bredd, höjd, djup (radier), material (0 = ljus, 1 = mörk)].
 const CAVE_ROCKS = [
   [0, 1.5, -5, 4.8, 4.5, 4, 0],        // Det stora berget bakom öppningen. Bilen göms inuti det.
@@ -144,12 +160,12 @@ function makeCaveLightTexture(color) {
 }
 
 function buildCave(portal, group) {
-  for (const [x, y, z, width, height, depth, materialIndex] of CAVE_ROCKS) {
-    const rock = new THREE.Mesh(rockGeometry, rockMaterials[materialIndex]);
+  CAVE_ROCKS.forEach(([x, y, z, width, height, depth, materialIndex], index) => {
+    const rock = new THREE.Mesh(makeRockGeometry(index + 1), rockMaterials[materialIndex]);
     rock.position.set(x, y, z);
     rock.scale.set(width, height, depth);
     group.add(rock);
-  }
+  });
   // Öppningen, ljuset och virveln sitter en bit INNE i berget (PORTAL_DEPTH) och är större
   // än hålet. Då skymmer stenarna runt öppningen deras kanter, och det ser ut som att
   // virveln fyller grottan i stället för att vara en skiva som sitter framför den.

@@ -35,11 +35,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&display=swap">
   <!-- Laddar utseendet från css/style.css. -->
-  <!-- ?v=77 är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
+  <!-- ?v=NN är ett versionsnummer. Webbläsare (särskilt på mobil) sparar filer och
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=107">
+  <link rel="stylesheet" href="css/style.css?v=113">
+  <!-- Den vanliga webbplatsen under spelet (se site/). site.css laddas EFTER style.css och är
+       avgränsad till .site-root, så att de två inte krockar. -->
+  <link rel="stylesheet" href="site/css/site.css?v=3">
+  <!-- Markerar att JS finns, så att reveal-animationerna bara döljer saker när de kan visas igen. -->
+  <script>document.documentElement.classList.add('js');</script>
 
   <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
        import ... from 'three' slår webbläsaren upp 'three' här och hämtar
@@ -58,7 +63,7 @@
 </head>
 
 <!-- <body> = det som syns på sidan. -->
-<body class="intro-open loading">
+<body class="intro-open loading" id="top">
   <!-- En canvas är en tom rityta. three.js ritar 3D-scenen i den.
        id="scene" är namnet som både style.css (#scene) och main.js letar efter. -->
   <canvas id="scene"></canvas>
@@ -73,11 +78,47 @@
   <!-- FPS-mätaren (tryck F). js/main.js fyller i texten. -->
   <div class="stats" id="stats" hidden></div>
 
+  <!-- Webbplatsens rubrik: ligger fast ovanpå startskärmen och sedan ovanpå sektionerna.
+       Göms medan man kör (body.playing). Samma uppbyggnad som site/index.html. -->
+  <header class="site-header hero-header site-root">
+    <a class="skip-link" href="#work">Skip to the work</a>
+    <div class="wrap header-row">
+      <a class="brand" href="#top" aria-label="Filip Renemark, back to top">
+        <img src="assets/images/favicon.svg" alt="" width="36" height="36">
+        <span class="brand-text"><span class="brand-name">Filip Renemark</span><span class="brand-role">Technical Artist</span></span>
+      </a>
+      <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="siteNav">
+        <span class="visually-hidden">Menu</span>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <nav class="site-nav" id="siteNav" aria-label="Main">
+        <ul>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#skills">Skills</a></li>
+          <li><a href="#words">Kind words</a></li>
+          <li><a href="#cv">CV</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+        <!-- Startar spelet (js/ui.js: alla [data-drive]). -->
+        <button class="nav-drive" type="button" data-drive>Drive my portfolio</button>
+      </nav>
+    </div>
+  </header>
+
   <!-- Startskärmen: det första besökaren ser. Den berättar var man har hamnat och hur
        det fungerar. Den täcker INTE scenen – bilen och omgivningen syns bakom, som
        titelskärmen i ett spel. Bilen backar ut ur garaget först när man trycker Start
        (eller valfri tangent). js/main.js gömmer den. -->
   <section class="intro" id="intro" aria-labelledby="introName">
+    <!-- "Selected work": ett litet urval av de bästa projekten uppe till höger (fylls av site/js/site.js,
+         göms på smala skärmar så att det aldrig täcker texten). -->
+    <aside class="peek" id="peek" hidden aria-labelledby="peekTitle">
+      <h2 class="peek-title" id="peekTitle">Selected work</h2>
+      <ul class="peek-list" id="peekList"></ul>
+      <a class="peek-all" href="#work">All projects &darr;</a>
+    </aside>
+    <a class="scroll-cue" href="#work">Scroll for the work <span aria-hidden="true">&darr;</span></a>
     <div class="intro-card">
       <!-- Namnet på en skylt, som skyltarna i världen. -->
       <div class="intro-marquee">
@@ -107,14 +148,173 @@
       <p class="intro-links">
         <button class="intro-skip" id="introProjects" type="button">See all projects as a list (P)</button>
         <a href="https://filip.renemark.se/wp-content/uploads/2026/05/Filip_Renemark_CV.pdf" target="_blank" rel="noopener">CV (PDF)</a>
-        <a href="site/index.html">Regular site</a>
         <a href="mailto:filip@renemark.me">filip@renemark.me</a>
       </p>
     </div>
   </section>
 
+  <!-- WEBBPLATSEN under startskärmen. Sektionerna, sidfoten och projektdialogen genereras av
+       site/gen-pages.mjs från site/parts/ (samma kod som den fristående site/index.html).
+       Göms medan man kör. -->
+  <div class="site-root site-page" id="site">
+    <main id="main">
+    <!-- @sections -->
+    <!-- WORK -->
+    <section class="section" id="work" aria-labelledby="workTitle">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Selected projects</p>
+          <h2 id="workTitle" class="display">Work</h2>
+          <p class="section-lede">Open a card for the full write-up. On desktop, hover or focus one for a short preview.</p>
+        </div>
+        <div class="chips" role="group" aria-label="Filter projects by category" id="chips">
+          <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-filter="Technical Art" aria-pressed="false">Technical Art</button>
+          <button class="chip" type="button" data-filter="Art" aria-pressed="false">Art</button>
+          <button class="chip" type="button" data-filter="Programming" aria-pressed="false">Programming</button>
+        </div>
+        <p class="visually-hidden" id="filterStatus" role="status" aria-live="polite"></p>
+        <ul class="grid" id="grid">
+          <li class="noscript-note"><noscript>The project grid needs JavaScript. All projects are also listed on <a href="https://filip.renemark.se/">filip.renemark.se</a>.</noscript></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="section section-alt" id="about" aria-labelledby="aboutTitle">
+      <div class="wrap about-grid">
+        <div class="reveal">
+          <p class="eyebrow">Hello!</p>
+          <h2 id="aboutTitle" class="display">About</h2>
+          <p class="big">Technical artist. I build procedural tools, shaders and rigs.</p>
+          <p>I sit between art and code: making the pipelines, materials and tools that let a team move faster and keep a look consistent. Most of my work starts as a Houdini network or a shader graph and ends up as something an artist can use with a few sliders.</p>
+          <p>I like clean systems, small reusable pieces and a good cup of matcha while they compile.</p>
+        </div>
+        <ul class="pillars reveal">
+          <li><h3>Technical Art</h3><p>Procedural generators, vertex animation textures, rigs and the tools that connect DCCs to the engine.</p></li>
+          <li><h3>Art</h3><p>Characters, props, materials and mood: lighting, Substance Designer and stylised looks.</p></li>
+          <li><h3>Programming</h3><p>C# in Unity, C++ with OpenGL, and tools, AI and systems in between.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="section" id="skills" aria-labelledby="skillsTitle">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">What I use</p>
+          <h2 id="skillsTitle" class="display">Skills</h2>
+        </div>
+        <div class="skills reveal">
+          <div>
+            <h3>Engines and content tools</h3>
+            <ul class="tags"><li>Unreal Engine</li><li>Unity</li><li>Godot</li><li>Houdini</li><li>Maya</li><li>Substance Painter</li></ul>
+          </div>
+          <div>
+            <h3>Languages</h3>
+            <ul class="tags"><li>HLSL</li><li>C#</li><li>C++</li><li>Python</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KIND WORDS -->
+    <section class="section section-alt" id="words" aria-labelledby="wordsTitle">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Testimonials</p>
+          <h2 id="wordsTitle" class="display">What people I have worked with say</h2>
+        </div>
+        <ul class="quotes">
+          <li class="reveal"><figure>
+            <blockquote><p>Filip is an outstanding person and a strong asset to any team he’s part of. Over six months working together on my project, he proved reliable, proactive, and solution-driven.</p></blockquote>
+            <figcaption><strong>Michael Tattershall</strong><span>Project Lead &amp; Programmer</span></figcaption>
+          </figure></li>
+          <li class="reveal"><figure>
+            <blockquote><p>Filip is absolutely amazing, very detailed and ensures that projects line up perfectly with my vision.</p></blockquote>
+            <figcaption><strong>Burrito Bandit</strong><span>Project Lead</span></figcaption>
+          </figure></li>
+          <li class="reveal"><figure>
+            <blockquote><p>He’s fast and great, always delivers what you ask. Really good person and strong 3D artist.</p></blockquote>
+            <figcaption><strong>IBO</strong><span>Creative Director</span></figcaption>
+          </figure></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- CV -->
+    <section class="section" id="cv" aria-labelledby="cvTitle">
+      <div class="wrap">
+        <div class="cta-panel reveal">
+          <div>
+            <h2 id="cvTitle" class="display">CV</h2>
+            <p>The short version of everything above, with dates and details.</p>
+          </div>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="https://filip.renemark.se/wp-content/uploads/2026/05/Filip_Renemark_CV.pdf" target="_blank" rel="noopener">Download PDF<span class="visually-hidden"> (opens in a new tab)</span></a>
+            <a class="btn btn-ghost" href="https://filip.renemark.se/975-2" target="_blank" rel="noopener">View online<span class="visually-hidden"> (opens in a new tab)</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="section section-alt" id="contact" aria-labelledby="contactTitle">
+      <div class="wrap contact-grid">
+        <div class="reveal">
+          <p class="eyebrow">Say hello</p>
+          <h2 id="contactTitle" class="display">Contact</h2>
+          <p class="big">Have a project, a pipeline problem or just a question about a shader? Write me.</p>
+          <p><a class="mail" href="mailto:filip@renemark.me">filip@renemark.me</a></p>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="mailto:filip@renemark.me">Contact me</a>
+            <a class="btn btn-ghost" href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a>
+          </div>
+        </div>
+        <a class="drive-mini reveal" href="#top" data-drive>
+          <span class="drive-kicker">One more thing</span>
+          <span class="drive-title">Drive my portfolio</span>
+          <span class="drive-sub">A small 3D autumn world where every project is a screen.</span>
+          <span class="ticket">Start driving</span>
+        </a>
+      </div>
+    </section>
+<!-- @/sections -->
+    </main>
+  <!-- @footer -->
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <p>&copy; 2026 Filip Renemark</p>
+      <nav aria-label="Footer"><a href="#top" data-drive>Drive my portfolio</a><a href="https://filip.renemark.se/">filip.renemark.se</a><a href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a><a href="mailto:filip@renemark.me">Email</a></nav>
+    </div>
+  </footer>
+
+  <!-- PROJEKTVY: en <dialog>. Innehållet hämtas från assets/content/*.html. -->
+  <dialog class="project-dialog" id="projectDialog" aria-labelledby="dlgTitle">
+    <article class="dlg">
+      <header class="dlg-head">
+        <div>
+          <p class="dlg-cat" id="dlgCat"></p>
+          <h2 class="display" id="dlgTitle"></h2>
+          <ul class="tags tags-sm" id="dlgTags"></ul>
+        </div>
+        <button class="dlg-close" id="dlgClose" type="button" aria-label="Close project">&times;</button>
+      </header>
+      <div class="dlg-body" id="dlgBody"></div>
+      <footer class="dlg-foot">
+        <a class="btn btn-primary" id="dlgLink" target="_blank" rel="noopener">Open the full page<span class="visually-hidden"> (opens in a new tab)</span><span class="arrow" aria-hidden="true">&rarr;</span></a>
+        <button class="btn btn-ghost" id="dlgClose2" type="button">Close</button>
+      </footer>
+    </article>
+  </dialog>
+<!-- @/footer -->
+  </div>
+
   <!-- Knappen uppe till höger i spelet som öppnar projektlistan. Göms medan startskärmen syns. -->
   <button class="projects-button" id="projectsButton" type="button">All projects</button>
+
+  <!-- Tillbaka till webbplatsen (syns bara medan man kör, se body.playing). Esc gör samma sak. -->
+  <button class="back-button" id="backButton" type="button" title="Back to site (Esc)">&larr; Back to site</button>
 
   <!-- PROJEKTLISTAN: alla projekt som kort, grupperade per värld. js/project-list.js fyller i den. -->
   <section class="projects" id="projects" hidden aria-labelledby="projectsTitle">
@@ -188,6 +388,7 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="js/main.js?v=107"></script>
+  <script type="module" src="site/js/site.js?v=2"></script>
+  <script type="module" src="js/main.js?v=113"></script>
 </body>
 </html>

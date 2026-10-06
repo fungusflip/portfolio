@@ -1,5 +1,11 @@
 // Den vanliga portfolion: grid, filter, förhandsvideo, projektdialog, reveal.
+// Används av både site/index.html och index.html (3D-startsidan med webbplatsen under).
 import { PROJECTS } from './projects-data.js';
+
+// Sökvägarna i projects-data.js (../assets/...) räknas från site/-mappen. Här görs de om till
+// adresser som stämmer oavsett vilken sida som laddar skriptet.
+const SITE_BASE = new URL('../', import.meta.url);
+const R = (path) => (path ? new URL(path, SITE_BASE).href : path);
 
 const $ = (s, r = document) => r.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,7 +31,7 @@ const cards = PROJECTS.map(p => {
   btn.setAttribute('aria-haspopup', 'dialog');
 
   const media = el('span', 'card-media');
-  const posterSrc = p.poster || p.still;
+  const posterSrc = R(p.poster || p.still);
   if (posterSrc) {
     const img = el('img');
     img.src = posterSrc;
@@ -49,7 +55,7 @@ const cards = PROJECTS.map(p => {
   li.append(btn);
   grid.append(li);
 
-  if (p.video && allowPreview) attachPreview(btn, media, p.video, posterSrc);
+  if (p.video && allowPreview) attachPreview(btn, media, R(p.video), posterSrc);
   btn.addEventListener('click', () => openProject(p, btn));
   return { p, li };
 });
@@ -116,10 +122,10 @@ async function openProject(p, opener, fromHash) {
   const hero = el('figure', 'dlg-hero' + (p.phone ? ' phone' : ''));
   // Bara stillbilden överst: texten under har egna videor, som laddas först när de spelas.
   if (p.poster || p.still) {
-    const i = el('img'); i.src = p.still || p.poster; i.alt = p.title + ' preview'; hero.append(i);
+    const i = el('img'); i.src = R(p.still || p.poster); i.alt = p.title + ' preview'; hero.append(i);
   }
   try {
-    const res = await fetch(p.content);
+    const res = await fetch(R(p.content));
     if (!res.ok) throw new Error(res.status);
     const tpl = document.createElement('template');
     tpl.innerHTML = await res.text();
@@ -178,14 +184,35 @@ if ('IntersectionObserver' in window) {
 }
 
 // ---------- Höstlöv i hero (billigt: CSS-animation, 12 stycken) ----------
-if (!reduceMotion) {
-  const box = $('#leaves');
+const box = $('#leaves'); // Finns bara på den fristående sidan.
+if (!reduceMotion && box) {
   const colors = ['var(--leaf-1)', 'var(--leaf-2)', 'var(--leaf-3)'];
   for (let i = 0; i < 12; i++) {
     const l = el('span', 'leaf');
     l.style.cssText = `left:${Math.round(Math.random() * 100)}%;--s:${10 + Math.round(Math.random() * 12)}px;--c:${colors[i % 3]};--d:${9 + Math.round(Math.random() * 8)}s;--delay:${-Math.round(Math.random() * 14)}s;--sway:${Math.round(Math.random() * 120 - 60)}px`;
     box.append(l);
   }
+}
+
+// ---------- "Selected work" uppe till höger på startskärmen (bara i index.html) ----------
+const peek = $('#peek'), peekList = $('#peekList');
+if (peek && peekList) {
+  PROJECTS.filter(p => p.featured).slice(0, 4).forEach(p => {
+    const li = el('li');
+    const b = el('button', 'peek-item');
+    b.type = 'button';
+    b.setAttribute('aria-haspopup', 'dialog');
+    const thumb = el('span', 'peek-thumb');
+    const src = R(p.poster || p.still);
+    if (src) { const i = el('img'); i.src = src; i.alt = ''; i.width = 96; i.height = 60; i.decoding = 'async'; thumb.append(i); }
+    const txt = el('span', 'peek-text');
+    txt.append(el('span', 'peek-cat', p.category), el('span', 'peek-name', p.title));
+    b.append(thumb, txt);
+    b.addEventListener('click', () => openProject(p, b));
+    li.append(b);
+    peekList.append(li);
+  });
+  peek.hidden = false;
 }
 
 applyFilter('all');

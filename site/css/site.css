@@ -1,6 +1,9 @@
-/* Den vanliga portfolion. Samma färger som 3D-spelet (PALETTE i js/core.js). */
+/* Den vanliga portfolion. Samma färger som 3D-spelet (PALETTE i js/core.js).
+   Allt är avgränsat till .site-root (body på site/index.html, och rubriken + sektionerna i
+   index.html under 3D-spelet), så att reglerna inte krockar med css/style.css. Grundreglerna för
+   element ligger i :where(), vilket ger dem samma (låga) styrka som de hade förut. */
 
-:root {
+.site-root {
   /* Mörk skymningslila är standard, som spelets bakgrund. */
   --bg: #3d3358;          /* PALETTE.background */
   --bg-deep: #2f2745;     /* lite mörkare, för hero och sidfot */
@@ -28,7 +31,7 @@
 
 /* Ljus variant: krämfärgad bakgrund, samma accenter. */
 @media (prefers-color-scheme: light) {
-  :root {
+  .site-root {
     --bg: #fff3d6;
     --bg-deep: #ffe8bd;
     --surface: #ffffff;
@@ -47,23 +50,22 @@
   }
 }
 
-* { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
+.site-root, .site-root * { box-sizing: border-box; }
+.site-root {
   background: var(--bg);
   color: var(--text);
   font: 400 17px/1.65 var(--body);
-  overflow-x: hidden;
+  overflow-x: clip;
 }
-img, video { max-width: 100%; display: block; }
-a { color: var(--accent); text-underline-offset: 3px; }
-a:hover { text-decoration-thickness: 2px; }
-h1, h2, h3 { line-height: 1.15; margin: 0 0 0.5em; }
-p { margin: 0 0 1em; }
-ul { margin: 0; padding: 0; list-style: none; }
+:where(.site-root) :is(img, video) { max-width: 100%; display: block; }
+:where(.site-root) a { color: var(--accent); text-underline-offset: 3px; }
+:where(.site-root) a:hover { text-decoration-thickness: 2px; }
+:where(.site-root) :is(h1, h2, h3) { line-height: 1.15; margin: 0 0 0.5em; }
+:where(.site-root) p { margin: 0 0 1em; }
+:where(.site-root) ul { margin: 0; padding: 0; list-style: none; }
 
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+:where(.site-root) :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
 
 .wrap { width: min(1160px, 100% - 32px); margin-inline: auto; }
 .display { font-family: var(--display); font-weight: 400; letter-spacing: 0.01em; }
@@ -86,6 +88,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .site-nav a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; padding: 0 12px; color: var(--text); text-decoration: none; font-weight: 600; font-size: 15px; border-radius: 999px; }
 .site-nav ul a:hover { background: var(--line); }
 .site-nav ul a.active { color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); border-radius: 0; }
+.site-nav button.nav-drive { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; font: 600 15px var(--body); cursor: pointer; }
 .nav-drive { background: var(--btn); color: var(--btn-text) !important; }
 .nav-drive:hover { filter: brightness(1.1); }
 .icon-link { gap: 6px; border: 1.5px solid var(--line); }
@@ -228,7 +231,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .footer-row nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; }
 
 /* ---------- Projektdialog ---------- */
-.project-dialog { width: min(860px, 100% - 24px); max-height: calc(100dvh - 24px); padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); color: var(--text); box-shadow: 0 30px 80px rgba(0, 0, 0, .55); overflow: hidden; }
+.project-dialog { margin: auto; width: min(860px, 100% - 24px); max-height: calc(100dvh - 24px); padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); color: var(--text); box-shadow: 0 30px 80px rgba(0, 0, 0, .55); overflow: hidden; }
 .project-dialog[open] { display: flex; }
 .project-dialog::backdrop { background: rgba(20, 12, 34, .72); backdrop-filter: blur(3px); }
 .dlg { display: flex; flex-direction: column; width: 100%; max-height: calc(100dvh - 24px); }
@@ -264,8 +267,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* ---------- Utskrift: bara det viktiga ---------- */
 @media print {
   .site-header, .skip-link, .leaves, .chips, .hero .btn-row, .drive-card, .drive-mini, .grid, #work .section-lede, .nav-toggle, .site-footer a[href^="mailto"] { display: none !important; }
-  :root { --bg: #fff; --bg-deep: #fff; --surface: #fff; --text: #000; --text-dim: #333; --accent: #7a2a08; --line: #bbb; }
-  body { background: #fff; color: #000; font-size: 11pt; }
+  .site-root { --bg: #fff; --bg-deep: #fff; --surface: #fff; --text: #000; --text-dim: #333; --accent: #7a2a08; --line: #bbb; }
+  .site-root { background: #fff; color: #000; font-size: 11pt; }
   .hero, .section, .section-alt { background: none; padding: 16pt 0; }
   .js .reveal { opacity: 1 !important; transform: none !important; }
   a { color: #000; }
@@ -274,9 +277,12 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 
 @media (max-width: 480px) {
-  body { font-size: 16.5px; }
+  .site-root { font-size: 16.5px; }
   .brand-name { font-size: 16px; }
   .btn-row .btn { flex: 1 1 100%; }
   .dlg-foot .btn { flex: 1 1 100%; }
 }
 .arrow { margin-left: .5em; }
+.brand-role { display: block; font: 600 12px/1.1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
+.brand-text { display: flex; flex-direction: column; gap: 3px; }
+@media (max-width: 520px) { .brand-role { display: none; } }

@@ -102,14 +102,15 @@ const MAX_STEER = 0.5;     // Hur mycket framhjulen vrids, radianer (ca 29°).
 
 // --- DRIFT (Space) och NITRO (Shift) ---
 const GRIP = 14;               // Hur snabbt rörelseriktningen hakar i nosen vid vanlig körning (högt = ingen sladd).
-const DRIFT_GRIP = 1.6;        // ...och under drift (lågt = bilen glider åt sidan).
+const DRIFT_GRIP = 2.0;       // ...och under drift (lågt = bilen glider åt sidan).
 const DRIFT_MIN_SPEED = 5;     // Under den här farten går det inte att drifta.
 const DRIFT_TURN_BOOST = 1.7;  // Bilen svänger snabbare i drift.
 const DRIFT_DRAG = 3;          // Farten som går förlorad per sekund i drift.
-const SLIDE_SPEED = 7;         // Över den här farten börjar bilen slira om man svänger hårt.
-const SLIDE_GRIP = 3;          // Greppet vid full slirning (full nitro-fart och full rattutslag).
-const SLIDE_DRAG = 1.5;        // Farten som går förlorad per sekund vid full slirning.
-const GRIP_RECOVERY = 2.5;     // Hur mjukt greppet kommer tillbaka när driften släpps (lågt = längre utglidning).
+const SLIDE_SPEED = 12.5;      // Över den här farten (strax över vanlig toppfart, alltså bara med nitro) börjar bilen slira på riktigt.
+const SLIDE_GRIP = 4;          // Greppet vid full slirning (full nitro-fart och full rattutslag).
+const SLIDE_DRAG = 1;          // Farten som går förlorad per sekund vid full slirning.
+const CRUISE_SLIP = 0.1;       // Den lilla slirningen vid vanlig toppfart i full sväng (ett lätt släpp, inte en sladd).
+const GRIP_RECOVERY = 3.5;    // Hur mjukt greppet kommer tillbaka när driften släpps (lågt = längre utglidning).
 const NITRO_MAX_SPEED = 15.5;  // Toppfart med nitro.
 const NITRO_ACCELERATION = 20; // Acceleration med nitro.
 const NITRO_DRAIN = 0.4;       // Nitrotanken töms så här mycket per sekund (1 = full tank).
@@ -234,9 +235,11 @@ export function updateCar(delta, travelling) {
   // Kör man för fort och svänger hårt tappar bilen greppet av sig själv: ju fortare och ju
   // hårdare sväng, desto mer slirar den. Man har fortfarande kontroll, men får jobba lite.
   const slip = THREE.MathUtils.clamp((speed - SLIDE_SPEED) / (NITRO_MAX_SPEED - SLIDE_SPEED), 0, 1) * Math.abs(steer);
-  sliding = !drifting && slip > 0.3;
+  sliding = !drifting && slip > 0.35;
   if (slip > 0) speed -= SLIDE_DRAG * slip * delta;
-  const gripGoal = drifting ? DRIFT_GRIP : GRIP - (GRIP - SLIDE_GRIP) * slip;
+  // Vid vanlig fart (från ca 8 upp till toppfart) bara ett lätt släpp, så bilen känns lite levande utan att sladda.
+  const cruise = THREE.MathUtils.clamp((speed - 8) / (MAX_SPEED - 8), 0, 1) * Math.abs(steer) * CRUISE_SLIP;
+  const gripGoal = drifting ? DRIFT_GRIP : GRIP - (GRIP - SLIDE_GRIP) * Math.max(slip, cruise);
   // Greppet släpper snabbt och kommer tillbaka långsamt.
   grip = THREE.MathUtils.damp(grip, gripGoal, gripGoal < grip ? 8 : GRIP_RECOVERY, delta);
   slide = turnTowards(slide, heading, grip, delta);

@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { PALETTE, worldGroup } from './core.js';
 import { ROAD_WIDTH, distanceToRoad, addStoneInstances } from './roads.js';
+import { stoneTint } from './moss.js';
 
 // --- Kontaktskuggan: en mjuk, mörk, rund fläck som tonar ut ---
 const SHADOW_PIXELS = 128;
@@ -75,8 +76,7 @@ export function scatterStones(world, roads, spots) {
       const x = spot.x + Math.cos(angle) * distance;
       const z = spot.z + Math.sin(angle) * distance;
       if (roads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + 0.55)) continue;
-      const color = lightColor.clone().lerp(darkColor, Math.random());
-      if (Math.random() < 0.3) color.lerp(mossColor, 0.5);
+      const color = stoneTint(lightColor, darkColor, mossColor); // Några mossiga, ett fåtal helt gröna (moss.js).
       stones.push({ x, z, size: (0.07 + Math.random() * 0.14) * (spot.sizeScale || 1), color });
     }
   }

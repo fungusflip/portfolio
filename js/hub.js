@@ -12,7 +12,7 @@ import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad, bayFrames } from './roads.js';
 import {
   HOME_X, HOME_Z, GARAGE_Z, GARAGE_DEPTH, CABIN_X, CABIN_Z, CABIN_SIZE,
-  homeGroup, homeRoadPoint, hubPoint, homePoint, teaCupSpots,
+  homeGroup, homeRoadPoint, hubPoint, homePoint, teaCupSpots, teaCups, mailbox,
 } from './home.js';
 import { PORTALS, techartCave, progCave, artCave, buildPortal } from './portals.js';
 import { buildSignposts } from './signposts.js';
@@ -25,7 +25,7 @@ import { makeTrees, randomTree, leafColors } from './trees.js';
 import { makeGrass, addSaturation } from './magic.js';
 import { addContactShadows, scatterStones } from './grounding.js';
 import { addObstacles } from './collision.js';
-import { knockableInstances, wobbler } from './knockables.js';
+import { knockableInstances, knockableObject, wobbler } from './knockables.js';
 
 const hub = WORLDS.hub;
 // Armen på en lykta pekar åt (right, down) på skärmen. (0, 1) = nedåt, (-1, 0) = åt vänster.
@@ -358,10 +358,27 @@ export function buildHubGrounding({ roads, lamps, signposts, trees = [] }) {
   scatterStones(hub, roads, stones);
 }
 
+// Slag av hubprops-föremål som alltid är mjuka (hubprops.js kan sätta entry.kind eller entry.soft).
+const SOFT_PROP_KINDS = new Set(['hedge', 'rock', 'lily', 'decor', 'flower', 'bush', 'cup']);
+// Låga saker som hubprops ännu inte märkt: häckarna (radie exakt 0.85) och stenklungorna (enstaka
+// cirkel 1.1-1.6 långt från dammen och utan grannar; kiosk, tehus, pelare och damm har grannar eller andra mått).
+function isLowProp(prop) {
+  if (prop.radius === 0.85) return true;
+  if (prop.radius < 1.1 || prop.radius > 1.6) return false;
+  if (distanceToWater(prop.x, prop.z) < 8) return false;
+  return !hubPropObstacles.some((other) => other !== prop && Math.hypot(other.x - prop.x, other.z - prop.z) < prop.radius + other.radius + 1.2);
+}
+function isSoftProp(prop) {
+  if (prop.soft === true) return true;
+  if (prop.soft === false) return false;
+  if (prop.kind) return SOFT_PROP_KINDS.has(prop.kind); // Annat uttryckligt slag (fountain, pond ...): fast.
+  return prop.radius <= 0.55 || isLowProp(prop);
+}
+
 // Fasta saker som bilen krockar med (se collision.js): träd, lyktor, vägskyltarnas stolpar,
 // skyltarnas stolpar, grottornas berg samt garaget och stugan. Cirklar { x, z, radius }.
 // Vägar, parkeringsfickor, grottdörrar, garagets port, gräs, löv och stenar blockerar inte.
-export function buildHubCollision({ lamps, signposts, trees = [] }) {
+export function buildHubCollision({ roads = [], lamps, signposts, trees = [] }) {
   const obstacles = [];
   // En plats inne i en grupp som står på (origin) och är vriden angle runt Y, räknad till världen.
   // Samma matte som towardCamera/toTheRight: lokal +x = (cos, -sin), lokal +z = (sin, cos).
@@ -381,7 +398,7 @@ export function buildHubCollision({ lamps, signposts, trees = [] }) {
   }
 
   trees.forEach((tree, i) => {
-    const radius = 0.35 * tree.scale; // Bara stammen; kronan är högt över bilen.
+    const radius = 0.3 * tree.scale; // Bara stammen (lite mindre än den syns, det förlåter); kronan är högt över bilen.
     if (!TREES_DRIVEABLE || !treeMeshes) return add(tree, radius);
     const [trunks, crowns] = treeMeshes;
     const parts = [{ mesh: trunks, index: i }];
@@ -409,10 +426,10 @@ export function buildHubCollision({ lamps, signposts, trees = [] }) {
   // skärmen, ut ur öppningen). Mitten framför öppningen (|x| < ca 1.7) lämnas fri ända fram till
   // dörren, annars går det inte att köra in. [x, z, radie] i grottans egna mått (ur CAVE_ROCKS).
   const CAVE_BLOCKS = [
-    [0, -5.2, 3.4], [-3, -4.6, 1.9], [3, -4.6, 1.9], [0, -8.2, 2.2],  // Det stora berget.
-    [-3.9, -1, 1.6], [3.9, -1, 1.6],                                  // Öppningens sidor.
-    [-3.1, 0.4, 0.8], [3.1, 0.5, 0.8],                                // Hörnstenarna.
-    [-5.4, 0.6, 0.6], [5.3, 0.9, 0.5],                                // Småstenarna framför.
+    [0, -5.2, 3.2], [-3, -4.6, 1.7], [3, -4.6, 1.7], [0, -8.2, 2.0],  // Det stora berget.
+    [-3.9, -1, 1.4], [3.9, -1, 1.4],                                  // Öppningens sidor.
+    [-3.1, 0.4, 0.65], [3.1, 0.5, 0.65],                              // Hörnstenarna.
+    [-5.4, 0.6, 0.45], [5.3, 0.9, 0.4],                               // Småstenarna framför.
   ];
   for (const portal of hubPortalsOf()) {
     for (const [x, z, radius] of CAVE_BLOCKS) add(placed(portal.at, BILLBOARD_FACING + Math.PI, x, z), radius);
@@ -420,21 +437,42 @@ export function buildHubCollision({ lamps, signposts, trees = [] }) {
 
   // Garaget (hemgruppens mått): bakväggen och sidorna, men inte fronten: porten och bilplatsen
   // framför är fria. Stugan är en helt fast ruta (cirklar i rutnät). Brevlådan: en stolpe.
-  for (let x = -2.4; x <= 2.41; x += 0.8) add(homePoint(x, -1.4), 0.5);
+  for (let x = -2.4; x <= 2.41; x += 0.8) add(homePoint(x, -1.4), 0.45);
   for (const side of [-2.55, 2.55]) {
-    for (let z = -1.4; z <= 1.51; z += 0.8) add(homePoint(side, z), 0.5);
+    for (let z = -1.4; z <= 1.51; z += 0.8) add(homePoint(side, z), 0.45);
   }
   const HALF = CABIN_SIZE / 2 - 0.65; // Cirklarnas mittpunkter ligger lite innanför väggen.
   for (let i = 0; i <= 4; i++) {
     for (let j = 0; j <= 4; j++) {
-      add(homePoint(CABIN_X - HALF + (i / 4) * HALF * 2, CABIN_Z - HALF + (j / 4) * HALF * 2), 0.75);
+      add(homePoint(CABIN_X - HALF + (i / 4) * HALF * 2, CABIN_Z - HALF + (j / 4) * HALF * 2), 0.6);
     }
   }
-  for (const z of [-1.8, -1.1, -0.4]) add(homePoint(CABIN_X + 3.0, CABIN_Z + z), 0.6); // Vedboden på stugans högra sida.
-  add(homePoint(3.9, ROAD_DISTANCE - 3.9), 0.3);
+  for (const z of [-1.8, -1.1, -0.4]) add(homePoint(CABIN_X + 3.0, CABIN_Z + z), 0.5); // Vedboden på stugans högra sida.
+  // Brevlådan är mjuk: den välter åt det håll bilen kör (knockableObject räknar i hemgruppens egna led).
+  const knockMailbox = knockableObject(mailbox);
+  soft(homePoint(3.9, ROAD_DISTANCE - 3.9), 0.45, 'mailbox', (dirX, dirZ, strength) => {
+    const cos = Math.cos(BILLBOARD_FACING);
+    const sin = Math.sin(BILLBOARD_FACING);
+    knockMailbox(cos * dirX - sin * dirZ, sin * dirX + cos * dirZ, strength); // Värld → hemgruppens led (omvänd placed).
+  }, true);
+  // Tekopparna är mjuka: koppen gungar till på sin tefat.
+  for (const entry of teaCups) soft(homePoint(entry.x, entry.z), entry.radius, 'teacup', wobbler(entry.cup), false);
 
   // Allt som level design lagt till (fontän, pelare, damm, bro, kiosk, tehus, häckar, stenar): hubprops.js.
-  for (const prop of hubPropObstacles) add(prop, prop.radius);
+  // Mjukt: entry.soft === true, entry.kind i SOFT_PROP_KINDS, en liten prydnad (radie <= 0.55) eller en
+  // låg sak som hubprops inte märkt (isLowProp). entry.soft === false tvingar fast.
+  for (const prop of hubPropObstacles) {
+    if (isSoftProp(prop)) add(prop, prop.radius, { soft: true, kind: prop.kind || 'decor' });
+    else add(prop, prop.radius);
+  }
+
+  // Varning i konsolen om en fast cirkel ligger på en väg (borde aldrig hända): då kan bilen fastna.
+  for (const obstacle of obstacles) {
+    if (obstacle.soft) continue;
+    if (roads.some((road) => distanceToRoad(obstacle.x, obstacle.z, road) < (road.width || ROAD_WIDTH) / 2 - 0.2)) {
+      console.warn('Fast hinder på en väg:', obstacle);
+    }
+  }
 
   addObstacles(obstacles);
   return obstacles;
