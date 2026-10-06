@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PALETTE, MAX_ANISOTROPY, worldGroup, towardCamera } from './core.js';
 import { billboards, PAD_DISTANCE, BAY_WIDTH, BAY_LENGTH } from './billboards.js';
+import { makeGravelImage } from './gravel.js';
 
 export const ROAD_WIDTH = 5;  // Vägarnas bredd i enheter.
 const ROAD_EDGE = 0.5;        // Marginal runt en väg (kantsten + lite luft) där inga stenar läggs.
@@ -14,59 +15,7 @@ export const ROAD_DISTANCE = PAD_DISTANCE + 6.5;
 // --- Gruset: en liten bild som upprepas som kakelplattor ---
 const GRAVEL_PIXELS = 256; // Bildens storlek i pixlar.
 const GRAVEL_UNITS = 4;    // Hur stor en kopia av bilden blir på vägen, i enheter.
-const gravelImage = document.createElement('canvas');
-gravelImage.width = GRAVEL_PIXELS;
-gravelImage.height = GRAVEL_PIXELS;
-const gravelPen = gravelImage.getContext('2d');
-gravelPen.fillStyle = PALETTE.gravel;
-gravelPen.fillRect(0, 0, GRAVEL_PIXELS, GRAVEL_PIXELS);
-// Allt ritas i nio kopior (±bildens storlek) så att det som går över kanten kommer in på
-// andra sidan. Då syns ingen skarv där kopiorna möts.
-function drawWrapped(draw) {
-  const x = Math.random() * GRAVEL_PIXELS;
-  const y = Math.random() * GRAVEL_PIXELS;
-  for (const ox of [-GRAVEL_PIXELS, 0, GRAVEL_PIXELS]) {
-    for (const oy of [-GRAVEL_PIXELS, 0, GRAVEL_PIXELS]) draw(x + ox, y + oy);
-  }
-}
-const lightColor = new THREE.Color(PALETTE.gravelLight);
-const darkColor = new THREE.Color(PALETTE.gravelDark);
-// 1) Stora, svaga fläckar: jorden är inte lika ljus överallt.
-for (let i = 0; i < 38; i++) {
-  const radius = 20 + Math.random() * 40;
-  const color = (i % 2 === 0 ? lightColor : darkColor).getStyle();
-  drawWrapped((x, y) => {
-    const blotch = gravelPen.createRadialGradient(x, y, 0, x, y, radius);
-    blotch.addColorStop(0, color.replace('rgb(', 'rgba(').replace(')', ', 0.16)'));
-    blotch.addColorStop(1, color.replace('rgb(', 'rgba(').replace(')', ', 0)'));
-    gravelPen.fillStyle = blotch;
-    gravelPen.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-  });
-}
-// 2) Småstenar: runda, olika stora och olika färg, med en mörk skugga under.
-for (let i = 0; i < 380; i++) {
-  const radiusX = 1.6 + Math.random() * 3.4;
-  const radiusY = radiusX * (0.6 + Math.random() * 0.4);
-  const angle = Math.random() * Math.PI;
-  const stone = lightColor.clone().lerp(darkColor, Math.random()).getStyle();
-  drawWrapped((x, y) => {
-    gravelPen.fillStyle = 'rgba(60, 45, 35, 0.35)';
-    gravelPen.beginPath();
-    gravelPen.ellipse(x + 0.8, y + 1, radiusX, radiusY, angle, 0, Math.PI * 2);
-    gravelPen.fill();
-    gravelPen.fillStyle = stone;
-    gravelPen.beginPath();
-    gravelPen.ellipse(x, y, radiusX, radiusY, angle, 0, Math.PI * 2);
-    gravelPen.fill();
-  });
-}
-// 3) Fint damm: tusentals små prickar som tar bort den släta känslan.
-for (let i = 0; i < 1400; i++) {
-  gravelPen.fillStyle = i % 2 === 0 ? 'rgba(255, 245, 230, 0.18)' : 'rgba(70, 50, 35, 0.2)';
-  const x = Math.random() * GRAVEL_PIXELS;
-  const y = Math.random() * GRAVEL_PIXELS;
-  gravelPen.fillRect(x, y, 1.2, 1.2);
-}
+const gravelImage = makeGravelImage(GRAVEL_PIXELS);
 const gravelTexture = new THREE.CanvasTexture(gravelImage);
 gravelTexture.colorSpace = THREE.SRGBColorSpace;
 gravelTexture.wrapS = THREE.RepeatWrapping;
@@ -301,13 +250,15 @@ function buildCurbs(world, group, roads) {
 
   fixCorners(runs);
   for (const run of runs) placeRun(run, blocks);
-  // Vid en ficka tonar kantstenen ut till marken: full höjd 5.8 enheter från fickans mitt, noll vid 3.6.
+  // Uppfartens kantsten slutar i en "sista backe": höjden sjunker mjukt ner till marken och är noll vid
+  // fickans mynning (3.3 enheter från fickans mitt), full höjd 6.3 enheter ut. Inga stenar runt själva fickan.
   for (const block of blocks) {
     for (const bay of bays) {
-      block.fade = Math.min(block.fade, THREE.MathUtils.clamp((Math.hypot(block.x - bay.x, block.z - bay.z) - 3.6) / 2.2, 0, 1));
+      const k = THREE.MathUtils.clamp((Math.hypot(block.x - bay.x, block.z - bay.z) - 3.3) / 3, 0, 1);
+      block.fade = Math.min(block.fade, k * k * (3 - 2 * k)); // Mjuk S-kurva.
     }
   }
-  for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].fade < 0.15) blocks.splice(i, 1);
+  for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].fade < 0.12) blocks.splice(i, 1);
 
   // Gallra: behåll bara block som ligger minst CURB_MIN_GAP från ett redan behållet. Annars går
   // stenar över varandra där två bitar möts (hörn, skarvar, fickans hopp mot uppfarten).

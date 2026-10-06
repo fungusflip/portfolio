@@ -813,18 +813,14 @@ export function makePadGlow(width, length, color) {
       uniform vec2 uSize;
       varying vec2 vSpot;
       void main() {
-        // Avstånd till närmaste kant (0 vid kanten).
-        // Rundad ruta (inte en skarp kvadrat): avståndet inåt från kanten, med runda hörn.
-        float cornerRadius = 1.0;
-        vec2 q = abs(vSpot) - (uSize * 0.5 - cornerRadius);
-        float edge = -(length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - cornerRadius);
-        // Änden mot vägen (vSpot.y < 0) ska inte ha någon lysande kant: glöden tonar bort
-        // mot vägen, så att fickan smälter in i grusvägen utan en linje.
-        float roadFade = smoothstep(-uSize.y * 0.5, uSize.y * 0.1, vSpot.y);
-        float line = smoothstep(0.9, 0.0, edge) * 0.55;    // Bred, mjuk kant (ingen skarp linje) ...
-        float inner = smoothstep(2.0, 0.0, edge) * 0.18;   // ... med ett långt, svagt sken innanför.
-        float pulse = 0.7 + 0.3 * sin(uTime * 2.2);        // Andas långsamt.
-        float strength = (line * 0.7 + inner) * pulse * (0.25 + 0.35 * uNear) * roadFade; // Kanten lite svagare: skylten ska vinna.
+        // En mjuk, rund sken runt ENTER-texten (ingen ram och inga kanter): ett varmt ljus som lägger sig
+        // på marken och tonar ut långt innan fickans kant. Tonas också bort mot vägen.
+        vec2 p = vec2(vSpot.x / 2.9, vSpot.y / 1.7);
+        float halo = exp(-dot(p, p) * 1.3);                 // Stor, jämn klocka.
+        float core = exp(-dot(p, p) * 4.5) * 0.35;          // Lite tätare precis kring texten.
+        float roadFade = smoothstep(-uSize.y * 0.5, -uSize.y * 0.15, vSpot.y);
+        float pulse = 0.75 + 0.25 * sin(uTime * 2.2);       // Andas långsamt.
+        float strength = (halo * 0.22 + core) * pulse * (0.45 + 0.55 * uNear) * roadFade;
         gl_FragColor = vec4(uColor * strength, 1.0);
         #include <colorspace_fragment>
       }`,
