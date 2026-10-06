@@ -524,6 +524,129 @@ function updateTrail(delta, carPosition, carAngle, extra) {
 }
 
 // ---------------------------------------------------------------------------
+// SKRÄP – jordklumpar och grusflingor som slungas upp av bakhjulen
+// ---------------------------------------------------------------------------
+// Samma ringbuffert-trick som puffarna: CPU:n skriver bara vid födseln (plats, födelsetid, startfart),
+// banan (kast + tyngdkraft, sedan liggande på marken) räknar shadern ut. Ogenomskinliga kantiga punkter;
+// de växer fram och krymper bort, så inget poppar.
+const DEBRIS_SIZE = 120;
+const DEBRIS_GRAVITY = 14;
+const debrisSpawns = new Float32Array(DEBRIS_SIZE * 4).fill(-100); // x, y, z, födelsetid.
+const debrisVels = new Float32Array(DEBRIS_SIZE * 4);              // startfart x, y, z + livslängd.
+const debrisInfos = new Float32Array(DEBRIS_SIZE * 2);             // underlag, storlek.
+const debrisGeometry = new THREE.BufferGeometry();
+debrisGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(DEBRIS_SIZE * 3), 3)); // Krävs, men används inte.
+const debrisAttributes = [['aSpawn', debrisSpawns, 4], ['aVel', debrisVels, 4], ['aInfo', debrisInfos, 2]].map(([name, array, count]) => {
+  const attribute = new THREE.BufferAttribute(array, count);
+  attribute.setUsage(THREE.DynamicDrawUsage);
+  debrisGeometry.setAttribute(name, attribute);
+  return attribute;
+});
+const debrisMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime: shared.uTime,
+    uGravity: { value: DEBRIS_GRAVITY },
+    uScreenScale: { value: 800 },
+    uColor0: { value: new THREE.Color('#6a5338') }, // Jord (gräs).
+    uColor1: { value: new THREE.Color('#a8927a') }, // Grus (väg).
+    uColor2: { value: new THREE.Color('#8d7e70') }, // Fickan: lite mörkare grus.
+  },
+  vertexShader: `
+    attribute vec4 aSpawn;
+    attribute vec4 aVel;
+    attribute vec2 aInfo;
+    uniform float uTime;
+    uniform float uGravity;
+    uniform float uScreenScale;
+    uniform vec3 uColor0;
+    uniform vec3 uColor1;
+    uniform vec3 uColor2;
+    varying vec3 vColor;
+    void main() {
+      float t = uTime - aSpawn.w;
+      float age = t / aVel.w; // 0 = ny, 1 = borta.
+      float seed = fract(sin(aSpawn.w * 91.7 + aSpawn.x * 12.9 + aSpawn.z * 4.1) * 4375.5);
+      // Flyger tills den når marken och blir sedan liggande där.
+      float landed = (aVel.y + sqrt(aVel.y * aVel.y + 2.0 * uGravity * max(aSpawn.y - 0.04, 0.0))) / uGravity;
+      float fly = clamp(t, 0.0, landed);
+      vec3 p = aSpawn.xyz + aVel.xyz * fly;
+      p.y = max(aSpawn.y + aVel.y * fly - 0.5 * uGravity * fly * fly, 0.04);
+      vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * viewPosition;
+      float alive = step(0.0, age) * step(age, 1.0);                                  // 0 för bitar som inte finns.
+      float scale = smoothstep(0.0, 0.1, age) * (1.0 - smoothstep(0.6, 1.0, age));    // In och ut mjukt.
+      gl_PointSize = aInfo.y * (0.7 + seed * 0.6) * scale * alive * uScreenScale / -viewPosition.z;
+      vec3 base = aInfo.x < 0.5 ? uColor0 : (aInfo.x < 1.5 ? uColor1 : uColor2);
+      vColor = base * (0.65 + seed * 0.7);                                            // Mörkare och ljusare klumpar.
+    }`,
+  fragmentShader: `
+    varying vec3 vColor;
+    void main() {
+      vec2 pc = gl_PointCoord - 0.5;
+      if (abs(pc.x) + abs(pc.y) > 0.62) discard; // Kantig klump: fyrkant med hörnen bortskurna.
+      gl_FragColor = vec4(vColor * (0.8 + 0.4 * (0.5 - pc.y)), 1.0); // Undersidan lite mörkare.
+      #include <colorspace_fragment>
+    }`,
+});
+const debris = new THREE.Points(debrisGeometry, debrisMaterial);
+debris.frustumCulled = false;
+scene.add(debris);
+let debrisNext = 0;
+let debrisBudget = 0;        // Bitar som "ska" ha kastats (bråkdelar sparas till nästa bild).
+let debrisFirst = true;
+let lastDebrisAngle = 0;
+let lastDebrisSpeed = 0;
+const lastDebrisSpot = new THREE.Vector3();
+
+function updateDebris(delta, carPosition, carAngle, extra) {
+  const dx = carPosition.x - lastDebrisSpot.x;
+  const dz = carPosition.z - lastDebrisSpot.z;
+  lastDebrisSpot.copy(carPosition);
+  const turned = carAngle - lastDebrisAngle;
+  lastDebrisAngle = carAngle;
+  const moved = Math.hypot(dx, dz);
+  if (debrisFirst || delta <= 0 || moved > 2) { debrisFirst = false; return; } // Första bilden eller ett hopp (en resa).
+  const speedNow = moved / delta;
+  const turnRate = Math.abs(Math.atan2(Math.sin(turned), Math.cos(turned))) / delta;
+  const accel = Math.max(speedNow - lastDebrisSpeed, 0) / delta; // Hård gas.
+  lastDebrisSpeed = speedNow;
+  if (speedNow < 1.5) return;
+  // Bitar per sekund: några vid vanlig fart, många i drift/slirning/nitro, fler ju fortare man kör.
+  let rate = speedNow * 0.9;
+  if (extra) rate = rate * 3.5 + 8;
+  else if (turnRate > 1.2 || accel > 8) rate *= 2;
+  debrisBudget += Math.min(rate, 70) * delta;
+  const count = Math.min(Math.floor(debrisBudget), 12);
+  debrisBudget -= Math.floor(debrisBudget);
+  if (count === 0) return;
+  const kind = surfaceSampler(carPosition.x, carPosition.z);
+  const sinA = Math.sin(carAngle);
+  const cosA = Math.cos(carAngle);
+  // Färdriktningen (i drift pekar den inte åt nosen): bitarna flyger bakåt längs den och åt sidan.
+  const dirX = dx / moved;
+  const dirZ = dz / moved;
+  for (let n = 0; n < count; n++) {
+    const i = debrisNext;
+    debrisNext = (debrisNext + 1) % DEBRIS_SIZE;
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const back = 0.8 + Math.random() * 0.2;
+    const along = (1 + Math.random() * 2.5 + speedNow * 0.12) * (extra ? 1.3 : 1); // Bakåt.
+    const out = side * (0.4 + Math.random() * 1.6) * (extra ? 1.8 : 1);           // Åt sidan.
+    debrisSpawns[i * 4] = carPosition.x - sinA * back + cosA * 0.55 * side;
+    debrisSpawns[i * 4 + 1] = 0.2;
+    debrisSpawns[i * 4 + 2] = carPosition.z - cosA * back - sinA * 0.55 * side;
+    debrisSpawns[i * 4 + 3] = shared.uTime.value;
+    debrisVels[i * 4] = -dirX * along + cosA * out;
+    debrisVels[i * 4 + 1] = 1.8 + Math.random() * 2.4 + (extra ? 1 : 0);
+    debrisVels[i * 4 + 2] = -dirZ * along - sinA * out;
+    debrisVels[i * 4 + 3] = 0.5 + Math.random() * 0.4; // Livslängd.
+    debrisInfos[i * 2] = kind;
+    debrisInfos[i * 2 + 1] = 0.1 + Math.random() * 0.1;
+  }
+  for (const attribute of debrisAttributes) attribute.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------------------
 // NATTFJÄRILAR – små ljusprickar som fladdrar runt lyktorna
 // ---------------------------------------------------------------------------
 // centers = lyktornas glödlampor i världen. color = ljusets färg.
@@ -896,6 +1019,8 @@ export function updateMagic(delta, carPosition, wind, carAngle = 0, extraDust = 
   mothScreenScale.value = smokeScreenScale.value;
   burst.uScreenScale.value = smokeScreenScale.value;
   updateTrail(delta, carPosition, carAngle, extraDust);
+  updateDebris(delta, carPosition, carAngle, extraDust);
+  debrisMaterial.uniforms.uScreenScale.value = smokeScreenScale.value;
   fireflies.visible = currentWorld === WORLDS.hub;
 }
 
