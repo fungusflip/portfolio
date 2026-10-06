@@ -551,7 +551,8 @@ for (const dz of [0.25, 0.6, 0.95]) addBox(postMaterial, 0.04, 0.78, 0.04, DOOR_
 // Mitt emellan första och sista skylten hemma, flyttat ner till huvudvägen.
 const hubProjects = PROJECTS.filter((project) => project.world === WORLDS.hub);
 const firstProject = hubProjects[0];
-const lastProject = hubProjects[hubProjects.length - 1];
+// Korsningen räknas på de fem första: fler skyltar åt höger ska inte flytta kiosken och torget.
+const lastProject = hubProjects[Math.min(4, hubProjects.length - 1)];
 const junction = towardCamera(
   { x: (firstProject.x + lastProject.x) / 2, z: (firstProject.z + lastProject.z) / 2 },
   ROAD_DISTANCE
