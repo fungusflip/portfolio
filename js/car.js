@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { scene, PALETTE, DRIVE_RADIUS, currentWorld, paintMaterial, glassMaterial } from './core.js';
 import { keys } from './ui.js';
+import { moveWithCollision } from './collision.js';
 
 // ---------------------------------------------------------------------------
 // MODELLEN – byggd av lådor och cylindrar. Fronten pekar längs +Z.
@@ -123,6 +124,7 @@ export let sliding = false;  // true när bilen slirar av sig själv (för fort 
 let heading = Math.PI / 4; // Åt vilket håll bilen pekar. PI / 4 = rakt uppåt på skärmen.
 let grip = GRIP;           // Nuvarande grepp (glider mellan DRIFT_GRIP och GRIP).
 let slide = heading;       // Åt vilket håll bilen RÖR sig. Samma som heading utom i drift.
+const crash = { speed: 0, slide: 0, heading: 0 }; // Lånas ut till kollisionen varje bild (collision.js).
 
 // Andra filer ändrar fart och riktning med de här (ett importerat värde går bara att läsa).
 export function stopCar() {
@@ -233,8 +235,14 @@ export function updateCar(delta, travelling) {
   grip = THREE.MathUtils.damp(grip, gripGoal, gripGoal < grip ? 8 : GRIP_RECOVERY, delta);
   slide = turnTowards(slide, heading, grip, delta);
   // sin/cos gör om vinkeln till en riktning.
-  car.position.x += Math.sin(slide) * speed * delta;
-  car.position.z += Math.cos(slide) * speed * delta;
+  // Kollision: träd, lyktor, berg m.m. putsar ut bilen och låter den glida längs hindret
+  // (ändrar speed och slide vid en träff, se collision.js). Bara vid manuell körning.
+  crash.speed = speed;
+  crash.slide = slide;
+  crash.heading = heading;
+  moveWithCollision(car.position, Math.sin(slide) * speed * delta, Math.cos(slide) * speed * delta, crash);
+  speed = crash.speed;
+  slide = crash.slide;
   // Håll kvar bilen innanför cirkeln runt världens mitt (den glider längs kanten).
   const fromCenterX = car.position.x - currentWorld.x;
   const fromCenterZ = car.position.z - currentWorld.z;
