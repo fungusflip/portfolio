@@ -5,35 +5,43 @@
 </figure>
 
 <h3>Village</h3>
-<p>The village is an isometric tile map. Buildings open a panel where you pick an item and a villager. The clips below are from the Unity 6.3 editor in a phone-sized Game view.</p>
+<p>The newer builds, from the Unity 6.3 editor in a phone-sized Game view. The village is an isometric tile map with a bell tower, houses and a four-button bar at the bottom.</p>
 <figure>
- <video src="assets/content-media/idle-village/village-walkthrough.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Opening the Smithy and picking an item and a villager, then the Tower panel (&ldquo;Floor 1: Forgotten Ruins&rdquo;), a villager sheet (Kinmir, Priest, level 1, tier 2) and a hold-the-bar minigame.</figcaption>
+ <video src="assets/content-media/idle-village/village.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>The village in the latest build, with villager cards popping up over the map (June 2026).</figcaption>
 </figure>
-<!-- TODO Filip: what do the four bottom-bar buttons do? -->
+<!-- TODO Filip: what are these popup cards, and what do the four bottom-bar buttons do? -->
 
-<h3>Battle</h3>
-<p>A battle scene where wolves run around a field and fight the villagers. The top of the screen says &ldquo;Enemies remaining: 4/4&rdquo;.</p>
+<h3>Crafting</h3>
+<p>Buildings open a panel. In the Smithy you pick an item and a villager, then press Auto or Forge. There is also a hold-the-bar minigame. When you clear it, a line says crafting gets a 1.5x bonus.</p>
 <figure>
- <video src="assets/content-media/idle-village/battle-wolves.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Wolves and villagers on the battle field. Red marks show up on the ground and on a wolf during the fight.</figcaption>
+ <video src="assets/content-media/idle-village/smithy-crafting.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Shop and Smithy panels, picking an item and a villager, and the minigame bonus (June 2026).</figcaption>
 </figure>
-<!-- TODO Filip: how does a villager hit or die in battle? What are the white circles? Is the battle automatic? -->
+
+<h3>Expedition</h3>
+<p>You can send a party out. The screen shows &ldquo;Enemies: 1/7 | Party: 3/3&rdquo;, drops like &ldquo;3x Grass&rdquo; and a message when a slime is defeated. A Leave button takes you back.</p>
+<figure>
+ <video src="assets/content-media/idle-village/expedition.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>A party fighting slimes, then back in the village (June 2026).</figcaption>
+</figure>
+<!-- TODO Filip: how does the fight work (automatic?) and how do drops feed into crafting? -->
 
 <h3>Summon</h3>
-<p>The summon scene is a Lobby with a white pedestal and a Summon button. Pressing it plays a blue particle effect over the ring, then a card shows the new villager with up to five stars.</p>
+<p>The summon scene is a Lobby with a white pedestal and a Summon button. Pressing it plays blue sparks over the ring, then a card shows the new villager with up to five stars and three ability slots.</p>
 <figure>
- <video src="assets/content-media/idle-village/summon-effect.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>The summon effect: blue sparks over the ring.</figcaption>
+ <video src="assets/content-media/idle-village/summon-cards.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Several summons in a row (June 2026). The green background is a placeholder.</figcaption>
 </figure>
+<!-- TODO Filip: what do the ability icons mean? Is the green background really a placeholder? -->
 
 <h3>Works now</h3>
 <ul>
  <li>Anonymous login that remembers you</li>
  <li>Summoning with random tiers, shown as a star card (1 to 5 stars)</li>
- <li>A battle scene where wolves fight the villagers</li>
- <li>Building panels (Smithy, Tower, Inn and others) where you pick an item and a villager</li>
- <li>A crafting minigame</li>
+ <li>Building panels (Smithy and others) where you pick an item and a villager</li>
+ <li>Crafting with a minigame bonus</li>
+ <li>Expeditions where a party fights enemies and collects drops</li>
  <li>Utility AI picks a need and a target tile</li>
  <li>2D NavMesh pathing over the Tilemap</li>
  <li>Save state, mirrored to Firebase</li>
@@ -45,9 +53,8 @@
  <li>Pity and banners for summoning</li>
  <li>Villagers that talk in their own style</li>
 </ul>
-<!-- TODO Filip: is the Next list still right now that crafting and battle exist? -->
+<!-- TODO Filip: is the Next list still right? -->
 
 <h3>Log</h3>
-<p>10 Aug 2025: utility AI hooked to the personalities, first summon tiers.<br>15 Aug 2025: summon revamp, tile targets, on-device video.<br>Later: summon scene with cards, battle scene, building panels, crafting minigame.</p>
-<!-- TODO Filip: dates for the later work -->
+<p>10 Aug 2025: utility AI hooked to the personalities, first summon tiers.<br>15 Aug 2025: summon revamp, tile targets, on-device video.<br>By June 2026: summon cards, building panels, crafting minigame, expeditions.</p>
 <p><a href="https://docs.google.com/document/d/1sg9sw09azX95HqQNMAE3EebvAbjB2xtNvtVX-KCMqjY/edit?usp=sharing" target="_blank" rel="noopener">Full tech spec →</a></p>
