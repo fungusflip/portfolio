@@ -1,6 +1,7 @@
 <p>The world for AnGame, my bow-combat roguelite in Unreal Engine 5.8. You play top-down-ish, grow an organic heart and defend it in waves. Houdini and Substance make the assets, and a few small systems in Unreal tie them together.</p>
 
-<!-- TODO Filip: media is missing. Downloads from Gyazo never landed on disk. Candidate AnGame captures (mp4): 4d1c673963f7d00a970a3273061183a7 (11.8 MB, player + tree + house), 8d24bd8054a04b5abf9dc0240323d9e9 (12.4 MB, yellow foliage), 85aac5fb430acdc2ca6054b4e7564093 (27 MB, house). Put shrunk files in assets/content-media/angame/ and add <video> tags under each section. -->
+<video src="assets/content-media/angame/player-tree-house.mp4" controls muted loop playsinline preload="metadata"></video>
+<p>Walking through the field with the painted look on.</p>
 
 <h2>Scattering</h2>
 <p>The foliage is scattered, so I don't place anything by hand.</p>
@@ -17,6 +18,8 @@
 <p>I rebuilt the wind as a Material Parameter Collection, <code>MPC_Wind</code>, and two material functions, <code>MF_Wind_Tree</code> and <code>MF_Wind_Grass</code>. One <strong>WindIntensity</strong> knob controls everything. <strong>LeafMovement</strong> adds noise to the canopy. Trees and grass read the same collection, so they never disagree.</p>
 
 <h2>Painterly look</h2>
+<video src="assets/content-media/angame/yellow-foliage.mp4" controls muted loop playsinline preload="metadata"></video>
+<p>Flying around in the editor viewport with the stats overlay on.</p>
 <p>A full-screen post-process makes it look painted: a 6x6 Kuwahara filter for the brush strokes and a Sobel pass for ink lines. A second Material Parameter Collection drives the day/night cycle and a "mood" grade per day. It controls saturation, brightness, line strength, brush scale, haze, line colour, shadow tint and highlight tint.</p>
 
 <h2>Problems I hit</h2>
