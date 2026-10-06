@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // magic.js — rörelse i världen: gräs som vajar, eldflugor och träd som gungar.
 // ============================================================================
 // Allt här rör sig på GRAFIKKORTET, inte i JavaScript. Varje strå och varje eldfluga
@@ -442,7 +442,7 @@ function makePuffSystem(size, options) {
         vAge = age;
         vSeed = seed;
         vPower = aInfo.y;
-        vDust = aInfo.x < 0.5 ? 1.5 : 1.0; // Jorddamm på gräs: tätare så den syns mot stråna.
+        vDust = aInfo.x < 0.5 ? 1.9 : 1.0; // Jorddamm på gräs: tätare så den syns mot stråna.
         vColor = aInfo.x < 0.5 ? uColor0 : (aInfo.x < 1.5 ? uColor1 : (aInfo.x < 2.5 ? uColor2 : uColor3));
       }`,
     fragmentShader: `
@@ -515,9 +515,9 @@ function updateTrail(delta, carPosition, carAngle, extra) {
 
   // --- Däckspuffar: bakhjulen, tätare i drift och med nitro. Mindre kraft vid låg fart. ---
   trailRolled += moved;
-  if (trailRolled >= (extra ? 0.18 : 0.5)) {
+  const kind = surfaceSampler(carPosition.x, carPosition.z);
+  if (trailRolled >= (extra ? 0.18 : (kind === 0 ? 0.3 : 0.5))) {
     trailRolled = 0;
-    const kind = surfaceSampler(carPosition.x, carPosition.z);
     const power = THREE.MathUtils.clamp(0.25 + speedNow / 12, 0.25, 1);
     for (const side of [-1, 1]) {
       tirePuffs.spawn(
@@ -551,7 +551,7 @@ function updateTrail(delta, carPosition, carAngle, extra) {
 // Samma ringbuffert-trick som puffarna: CPU:n skriver bara vid födseln (plats, födelsetid, startfart),
 // banan (kast + tyngdkraft, sedan liggande på marken) räknar shadern ut. Ogenomskinliga kantiga punkter;
 // de växer fram och krymper bort, så inget poppar.
-const DEBRIS_SIZE = 150;
+const DEBRIS_SIZE = 160;
 const DEBRIS_GRAVITY = 14;
 const debrisSpawns = new Float32Array(DEBRIS_SIZE * 4).fill(-100); // x, y, z, födelsetid.
 const debrisVels = new Float32Array(DEBRIS_SIZE * 4);              // startfart x, y, z + livslängd.
@@ -569,7 +569,7 @@ const debrisMaterial = new THREE.ShaderMaterial({
     uTime: shared.uTime,
     uGravity: { value: DEBRIS_GRAVITY },
     uScreenScale: { value: 800 },
-    uColor0: { value: new THREE.Color('#b08a5a') }, // Jord (gräs): ljus brun-orange som syns mot gräset.
+    uColor0: { value: new THREE.Color('#c99a60') }, // Jord (gräs): ljus brun-orange som syns mot gräset.
     uColor1: { value: new THREE.Color('#a8927a') }, // Grus (väg).
     uColor2: { value: new THREE.Color('#8d7e70') }, // Fickan: lite mörkare grus.
     uColor3: { value: new THREE.Color('#c3cc6e') }, // Gräsrester: blekt grön-gult strå.
@@ -640,18 +640,17 @@ function updateDebris(delta, carPosition, carAngle, extra) {
   lastDebrisSpeed = speedNow;
   if (speedNow < 1.5) return;
   // Bitar per sekund: några vid vanlig fart, många i drift/slirning/nitro, fler ju fortare man kör.
-  let rate = speedNow * 0.9;
-  if (extra) rate = rate * 3.5 + 8;
+  const kind = surfaceSampler(carPosition.x, carPosition.z);
+  const onGrass = kind === 0;
+  let rate = speedNow * (onGrass ? 2.4 : 0.9); // Mycket mer skräp på gräs: klumparna ska synas mot stråna.
+  if (extra) rate = rate * 3 + 10;
   else if (turnRate > 1.2 || accel > 8) rate *= 2;
-  if (surfaceSampler(carPosition.x, carPosition.z) === 0) rate *= 1.4; // Mer skräp på gräs.
-  debrisBudget += Math.min(rate, 90) * delta;
+  debrisBudget += Math.min(rate, 120) * delta;
   const count = Math.min(Math.floor(debrisBudget), 12);
   debrisBudget -= Math.floor(debrisBudget);
   if (count === 0) return;
-  const kind = surfaceSampler(carPosition.x, carPosition.z);
   const sinA = Math.sin(carAngle);
   const cosA = Math.cos(carAngle);
-  const onGrass = kind === 0;
   // Färdriktningen (i drift pekar den inte åt nosen): bitarna flyger bakåt längs den och åt sidan.
   const dirX = dx / moved;
   const dirZ = dz / moved;
@@ -669,11 +668,11 @@ function updateDebris(delta, carPosition, carAngle, extra) {
     debrisVels[i * 4] = -dirX * along + cosA * out;
     // Gräs: högre och längre bågar så att klumparna syns ovanför stråna.
     const shred = onGrass && Math.random() < 0.4;
-    debrisVels[i * 4 + 1] = (onGrass ? 3.4 + Math.random() * 3 : 1.8 + Math.random() * 2.4) + (extra ? 1 : 0);
+    debrisVels[i * 4 + 1] = (onGrass ? 4 + Math.random() * 3.5 : 1.8 + Math.random() * 2.4) + (extra ? 1.2 : 0);
     debrisVels[i * 4 + 2] = -dirZ * along - sinA * out;
-    debrisVels[i * 4 + 3] = (onGrass ? 0.75 : 0.5) + Math.random() * 0.4; // Livslängd.
+    debrisVels[i * 4 + 3] = (onGrass ? 0.95 : 0.5) + Math.random() * 0.4; // Livslängd.
     debrisInfos[i * 2] = shred ? 3 : kind;
-    debrisInfos[i * 2 + 1] = (0.1 + Math.random() * 0.1) * (onGrass ? (shred ? 2.2 : 1.9) : 1);
+    debrisInfos[i * 2 + 1] = (0.1 + Math.random() * 0.1) * (onGrass ? (shred ? 3 : 2.6) : 1);
   }
   for (const attribute of debrisAttributes) attribute.needsUpdate = true;
 }
