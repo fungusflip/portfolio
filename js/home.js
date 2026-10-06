@@ -80,13 +80,41 @@ const GARAGE_HEIGHT = 2.6;
 export const GARAGE_Z = 0; // Garagets mitt. Större z = längre ner på skärmen.
 const garageWallMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.garageWall, roughness: 1, emissive: PALETTE.garageWall, emissiveIntensity: 0.4 });
 const garageRoofMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.garageRoof, roughness: 1, flatShading: true });
-addSoftBox(garageWallMaterial, GARAGE_WIDTH, GARAGE_HEIGHT, GARAGE_DEPTH, 0.1, 0, GARAGE_HEIGHT / 2, GARAGE_Z);
+// Ett öppet garageskal i stället för en massiv låda: golv, bakvägg, två sidoväggar och två hörnpelare vid porten.
+// Taket och bjälken över porten ligger i garageTop: de göms när porten är öppen (se updateHome), så att
+// kameran, som tittar snett uppifrån, kan se bilen stå därinne. Stängs porten kommer taket tillbaka.
+const garageTop = new THREE.Group();
+homeGroup.add(garageTop);
+const GARAGE_FRONT = GARAGE_Z + GARAGE_DEPTH / 2; // Främre väggens yta (z).
+const GARAGE_WALL = 0.2;                           // Pelarnas och bjälkens tjocklek (väggarna: 0.12 ytterskal + 0.08 innerskal).
+const garageInnerMaterial = new THREE.MeshStandardMaterial({ color: '#6c665e', roughness: 1, emissive: '#6c665e', emissiveIntensity: 0.45 }); // Mörkare insida.
+const garageFloorMaterial = new THREE.MeshStandardMaterial({ color: '#77736c', roughness: 1, emissive: '#77736c', emissiveIntensity: 0.35 }); // Betonggolv.
+const garageWoodMaterial = new THREE.MeshStandardMaterial({ color: '#8a6a45', roughness: 1, emissive: '#8a6a45', emissiveIntensity: 0.3 });   // Hyllor och arbetsbänk.
+const garageMetalMaterial = new THREE.MeshStandardMaterial({ color: '#4d5158', roughness: 1, emissive: '#4d5158', emissiveIntensity: 0.3 });  // Verktyg, plåt.
+const garageRedMaterial = new THREE.MeshStandardMaterial({ color: '#b3342b', roughness: 1, emissive: '#b3342b', emissiveIntensity: 0.3 });    // Dunkar.
+const garageRubberMaterial = new THREE.MeshStandardMaterial({ color: '#25262a', roughness: 1 });                                               // Däck.
+// Golvet ligger i nivå med uppfarten (ingen tröskel) och sticker lite ut genom porten.
+addBox(garageFloorMaterial, GARAGE_WIDTH - 0.2, 0.06, GARAGE_DEPTH + 0.1, 0, 0.0, GARAGE_Z + 0.05);
+// Bakvägg och sidor: yttre skal i utsidans färg, inre skal i mörkare färg.
+addBox(garageWallMaterial, GARAGE_WIDTH, GARAGE_HEIGHT, 0.12, 0, GARAGE_HEIGHT / 2, GARAGE_Z - GARAGE_DEPTH / 2 + 0.06);
+addBox(garageInnerMaterial, GARAGE_WIDTH - 0.24, GARAGE_HEIGHT, 0.08, 0, GARAGE_HEIGHT / 2, GARAGE_Z - GARAGE_DEPTH / 2 + 0.16);
+for (const side of [-1, 1]) {
+  addBox(garageWallMaterial, 0.12, GARAGE_HEIGHT, GARAGE_DEPTH, side * (GARAGE_WIDTH / 2 - 0.06), GARAGE_HEIGHT / 2, GARAGE_Z);
+  addBox(garageInnerMaterial, 0.08, GARAGE_HEIGHT, GARAGE_DEPTH - 0.2, side * (GARAGE_WIDTH / 2 - 0.16), GARAGE_HEIGHT / 2, GARAGE_Z + 0.05);
+  // Pelaren vid porten (bredd 0.6 = fram till portlisten) i hela väggens höjd.
+  addBox(garageWallMaterial, 0.6, GARAGE_HEIGHT, GARAGE_WALL, side * (GARAGE_WIDTH / 2 - 0.3), GARAGE_HEIGHT / 2, GARAGE_FRONT - GARAGE_WALL / 2);
+  // Ben under namnskylten, så att den inte svävar när taket är bortplockat.
+  addBox(postMaterial, 0.14, 0.5, 0.14, side * 2.5, GARAGE_HEIGHT + 0.22, GARAGE_FRONT - 0.2);
+}
+// Bjälken över porten (bara en list ovanför öppningen).
+const garageLintel = addBox(garageWallMaterial, GARAGE_WIDTH - 1.2, GARAGE_HEIGHT - 2.1, GARAGE_WALL, 0, (GARAGE_HEIGHT + 2.1) / 2, GARAGE_FRONT - GARAGE_WALL / 2);
+garageTop.add(garageLintel);
 // Flackt sadeltak med takfot runt om (nocken lite bakåt, så att framsidan lutar mot kameran) och en nockbräda.
 const GARAGE_ROOF_RISE = 0.75;
 const garageRoof = new THREE.Mesh(gablePrism(GARAGE_DEPTH + 0.9, GARAGE_ROOF_RISE, -0.1, 0.16, GARAGE_WIDTH + 0.5), garageRoofMaterial);
 garageRoof.position.set(0, GARAGE_HEIGHT, GARAGE_Z);
-homeGroup.add(garageRoof);
-addBox(postMaterial, GARAGE_WIDTH + 0.6, 0.1, 0.16, 0, GARAGE_HEIGHT + GARAGE_ROOF_RISE + 0.02, GARAGE_Z - 0.1);
+garageTop.add(garageRoof);
+garageTop.add(addBox(postMaterial, GARAGE_WIDTH + 0.6, 0.1, 0.16, 0, GARAGE_HEIGHT + GARAGE_ROOF_RISE + 0.02, GARAGE_Z - 0.1));
 // Sockel av sten på sidorna och vid porthörnen. Inte framför porten: bilen kör rakt igenom där.
 for (const side of [-1, 1]) {
   addBox(stoneMaterial, 0.14, 0.3, GARAGE_DEPTH + 0.14, side * (GARAGE_WIDTH / 2 + 0.02), 0.15, GARAGE_Z);
@@ -113,18 +141,76 @@ doorTexture.colorSpace = THREE.SRGBColorSpace;
 export const garageDoor = new THREE.Mesh(new THREE.PlaneGeometry(GARAGE_DOOR_WIDTH, GARAGE_DOOR_HEIGHT), new THREE.MeshBasicMaterial({ map: doorTexture }));
 garageDoor.position.set(0, GARAGE_DOOR_HEIGHT / 2, GARAGE_Z + GARAGE_DEPTH / 2 + 0.01); // 0.01 utanpå väggen, annars flimrar den.
 homeGroup.add(garageDoor);
-// Det mörka hålet bakom porten. Syns bara medan porten är "öppen" (gömd).
-export const garageOpening = new THREE.Mesh(new THREE.PlaneGeometry(GARAGE_DOOR_WIDTH, GARAGE_DOOR_HEIGHT), new THREE.MeshBasicMaterial({ color: PALETTE.frame }));
-garageOpening.position.set(0, GARAGE_DOOR_HEIGHT / 2, GARAGE_Z + GARAGE_DEPTH / 2 + 0.005);
+// Förr en grå platta bakom porten; nu är det ett riktigt garage bakom (se skalet ovan). Namnet finns kvar
+// för andra filer, men gruppen är tom.
+export const garageOpening = new THREE.Group();
 homeGroup.add(garageOpening);
 // Ljus list runt porten: två stolpar och en överliggare. Står kvar när porten göms.
 for (const side of [-1, 1]) addBox(trimMaterial, 0.2, GARAGE_DOOR_HEIGHT + 0.06, 0.1, side * (GARAGE_DOOR_WIDTH / 2 + 0.1), (GARAGE_DOOR_HEIGHT + 0.06) / 2, GARAGE_Z + GARAGE_DEPTH / 2 + 0.03);
-addBox(trimMaterial, GARAGE_DOOR_WIDTH + 0.4, 0.16, 0.1, 0, GARAGE_DOOR_HEIGHT + 0.1, GARAGE_Z + GARAGE_DEPTH / 2 + 0.03);
+garageTop.add(addBox(trimMaterial, GARAGE_DOOR_WIDTH + 0.4, 0.16, 0.1, 0, GARAGE_DOOR_HEIGHT + 0.1, GARAGE_Z + GARAGE_DEPTH / 2 + 0.03));
 
 // Lampan över porten: en lysande låda plus fejkat ljus (se addFakeLight).
 const garageLampBox = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.25), new THREE.MeshBasicMaterial({ color: PALETTE.windowGlow }));
 garageLampBox.position.set(0, GARAGE_DOOR_HEIGHT + 0.22, GARAGE_Z + GARAGE_DEPTH / 2 + 0.12);
-homeGroup.add(garageLampBox);
+garageTop.add(garageLampBox);
+
+// --- Insidan: lampa, hylla, verktygstavla, arbetsbänk, däck och en upprullad port. Allt står längs väggarna ---
+// så att bilen (1.2 bred, 2.4 lång, mitt i garaget) har fri väg rakt ut genom porten.
+const GARAGE_BACK = GARAGE_Z - GARAGE_DEPTH / 2 + 0.2; // Bakväggens insida (z).
+// Lampan: en glödlampa på en arm från bakväggen, ett sken och en ljuspöl på golvet.
+addBox(garageMetalMaterial, 0.06, 0.06, 0.4, 0, 2.2, GARAGE_BACK + 0.2);
+const garageBulb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshBasicMaterial({ color: PALETTE.windowGlow }));
+garageBulb.position.set(0, 2.12, GARAGE_BACK + 0.4);
+homeGroup.add(garageBulb);
+const garageGlow = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), makeGlowMaterial(0.8));
+garageGlow.material.color.set(PALETTE.warmLamp).multiplyScalar(0.8);
+garageGlow.position.set(0, 1.9, GARAGE_BACK + 0.6);
+garageGlow.rotation.x = -CAMERA_PITCH;
+garageGlow.userData.noShadow = true;
+homeGroup.add(garageGlow);
+// Hylla på bakväggen (vänster): tre plank med lådor och dunkar. Djup 0.3; bilens nos slutar ca 0.4 från väggen.
+const SHELF_X = -1.5;
+for (const y of [0.55, 1.1, 1.65]) addBox(garageWoodMaterial, 1.5, 0.05, 0.3, SHELF_X, y, GARAGE_BACK + 0.15);
+for (const side of [-1, 1]) addBox(garageWoodMaterial, 0.05, 1.7, 0.3, SHELF_X + side * 0.72, 0.85, GARAGE_BACK + 0.15);
+addBox(garageWoodMaterial, 0.28, 0.26, 0.24, SHELF_X - 0.45, 0.7, GARAGE_BACK + 0.15);  // Lådor.
+addBox(garageWoodMaterial, 0.34, 0.2, 0.24, SHELF_X + 0.1, 0.68, GARAGE_BACK + 0.15);
+addBox(garageMetalMaterial, 0.3, 0.3, 0.22, SHELF_X + 0.5, 1.28, GARAGE_BACK + 0.15);
+addBox(garageWoodMaterial, 0.4, 0.3, 0.24, SHELF_X - 0.4, 1.28, GARAGE_BACK + 0.15);
+addBox(garageRedMaterial, 0.26, 0.34, 0.16, SHELF_X - 0.1, 1.84, GARAGE_BACK + 0.15);   // Dunkar.
+addBox(garageRedMaterial, 0.26, 0.34, 0.16, SHELF_X + 0.25, 1.84, GARAGE_BACK + 0.15);
+addBox(garageRedMaterial, 0.26, 0.34, 0.16, SHELF_X + 0.55, 0.74, GARAGE_BACK + 0.15);
+// Verktygstavla på bakväggen (höger): en träplatta med hammare, skruvnyckel och såg.
+const BOARD_X = 1.5;
+addBox(garageWoodMaterial, 1.3, 0.9, 0.04, BOARD_X, 1.35, GARAGE_BACK + 0.02);
+addBox(garageMetalMaterial, 0.07, 0.45, 0.04, BOARD_X - 0.4, 1.4, GARAGE_BACK + 0.06);              // Hammarens skaft…
+addBox(garageMetalMaterial, 0.26, 0.1, 0.05, BOARD_X - 0.4, 1.65, GARAGE_BACK + 0.06);              // …och huvud.
+addBox(garageMetalMaterial, 0.06, 0.55, 0.04, BOARD_X - 0.1, 1.35, GARAGE_BACK + 0.06, [0, 0, 0.3]); // Skruvnyckel.
+addBox(garageRedMaterial, 0.4, 0.14, 0.04, BOARD_X + 0.3, 1.45, GARAGE_BACK + 0.06, [0, 0, -0.15]);  // Såg (rött handtag)…
+addBox(garageMetalMaterial, 0.45, 0.08, 0.03, BOARD_X + 0.35, 1.22, GARAGE_BACK + 0.06);            // …och blad.
+// Arbetsbänk vid högra väggen: skiva på fyra ben, med ett skruvstycke och en verktygslåda.
+const BENCH_X = 1.9;
+addBox(garageWoodMaterial, 0.6, 0.07, 1.4, BENCH_X, 0.85, -0.45);
+for (const dx of [-0.25, 0.25]) for (const dz of [-1.1, 0.2]) addBox(garageWoodMaterial, 0.06, 0.82, 0.06, BENCH_X + dx, 0.41, dz);
+addBox(garageMetalMaterial, 0.16, 0.14, 0.2, BENCH_X, 0.95, -1.0);
+addBox(garageRedMaterial, 0.3, 0.16, 0.5, BENCH_X + 0.02, 0.96, -0.3);
+// Däck: en stapel i vänstra främre hörnet och ett lutat mot sidoväggen.
+const tyreGeometry = new THREE.TorusGeometry(0.24, 0.11, 8, 14);
+tyreGeometry.rotateX(Math.PI / 2);
+for (let i = 0; i < 3; i++) {
+  const tyre = new THREE.Mesh(tyreGeometry, garageRubberMaterial);
+  tyre.position.set(-1.9, 0.11 + i * 0.22, 0.9);
+  homeGroup.add(tyre);
+}
+const leaningTyre = new THREE.Mesh(tyreGeometry, garageRubberMaterial);
+leaningTyre.position.set(-1.9, 0.33, 0.2);
+leaningTyre.rotation.z = 0.3;
+homeGroup.add(leaningTyre);
+// Den upprullade garageporten: en rulle högt upp på bakväggen, på två fästen.
+const doorRoll = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3.6, 12), garageMetalMaterial);
+doorRoll.rotation.z = Math.PI / 2;
+doorRoll.position.set(0, 2.38, GARAGE_BACK + 0.2);
+homeGroup.add(doorRoll);
+for (const side of [-1, 1]) addBox(garageMetalMaterial, 0.06, 0.3, 0.1, side * 1.85, 2.26, GARAGE_BACK + 0.08);
 
 // Fejkat ljus: en ljuspöl på marken (x, z, bredd, djup) och, om haloY anges, ett sken
 // runt lampan. Inga riktiga lampor – de kostar för varje pixel på skärmen. strength = 0..1.
@@ -376,7 +462,7 @@ const FLAG_DOWN = Math.PI / 2; // Vriden 90° = ligger ner längs lådan.
 mailFlag.rotation.x = FLAG_DOWN;
 const MAILBOX_RADIUS = 6; // Hur nära bilen måste vara för att flaggan ska fällas upp.
 // Flaggan fälls, och porten och hålet bakom den göms och visas: de får inte slås ihop (se optimize.js).
-markMoving(mailFlag, mailbox, garageDoor, garageOpening); // mailbox välter när bilen kör över den.
+markMoving(mailFlag, mailbox, garageDoor, garageOpening, garageTop); // mailbox välter när bilen kör över den; garageTop göms när porten öppnas.
 
 // Fickans och brevlådans platser i världen.
 worldGroup(WORLDS.hub).updateMatrixWorld(true);
@@ -407,6 +493,8 @@ export function updateHome(carPosition) {
   const time = performance.now() / 1000;
   const flicker = 0.85 + 0.15 * Math.sin(time * 7.3) * Math.sin(time * 3.1 + 1);
   cabinWindow.material.color.set(PALETTE.windowGlow).multiplyScalar(flicker);
+  // Porten öppen (gömd) = taket och bjälken över porten göms, så att man ser ner i garaget och bilen därinne.
+  garageTop.visible = garageDoor.visible;
   const mailNear = Math.hypot(carPosition.x - mailboxWorld.x, carPosition.z - mailboxWorld.z) < MAILBOX_RADIUS;
   if (mailNear !== home.mailNear) {
     home.mailNear = mailNear;
