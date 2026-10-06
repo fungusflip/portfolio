@@ -4,7 +4,7 @@
 // ============================================================================
 import * as THREE from 'three';
 import {
-  PALETTE, WORLDS, GROUND_SIZE, TILE_PIXELS, TILE_UNITS, DRIVE_RADIUS, HUB_X, HUB_Z,
+  PALETTE, WORLDS, GROUND_SIZE, TILE_PIXELS, TILE_UNITS, DRIVE_RADIUS, HUB_X, HUB_Z, BILLBOARD_FACING,
   towardCamera, worldGroup, makeEdgeFade, makeTileTexture,
 } from './core.js';
 import { buildBillboards } from './billboards.js';
@@ -20,6 +20,7 @@ import { buildLamps, rowLamps, LAMP_SIDE, ARM_UP, ARM_LEFT } from './lamps.js';
 import { makeTrees, randomTree, leafColors } from './trees.js';
 import { makeGrass, addSaturation } from './magic.js';
 import { addContactShadows, scatterStones } from './grounding.js';
+import { addObstacles } from './collision.js';
 
 const hub = WORLDS.hub;
 let groundMap = null; // Markens kakelbild. Gräset läser av den för att ta markens färg (se buildHubGrass).
@@ -232,4 +233,71 @@ export function buildHubGrounding({ roads, lamps, signposts, trees = [] }) {
     ...hubPortals.map((portal) => ({ x: portal.center.x, z: portal.center.z, radius: 10.5, inner: 0.5, count: 70, sizeScale: 1.4 })),
   ];
   scatterStones(hub, roads, stones);
+}
+
+// Fasta saker som bilen krockar med (se collision.js): träd, lyktor, vägskyltarnas stolpar,
+// skyltarnas stolpar, grottornas berg samt garaget och stugan. Cirklar { x, z, radius }.
+// Vägar, parkeringsfickor, grottdörrar, garagets port, gräs, löv och stenar blockerar inte.
+export function buildHubCollision({ lamps, signposts, trees = [] }) {
+  const obstacles = [];
+  // En plats inne i en grupp som står på (origin) och är vriden angle runt Y, räknad till världen.
+  // Samma matte som towardCamera/toTheRight: lokal +x = (cos, -sin), lokal +z = (sin, cos).
+  function placed(origin, angle, x, z) {
+    return {
+      x: origin.x + Math.cos(angle) * x + Math.sin(angle) * z,
+      z: origin.z - Math.sin(angle) * x + Math.cos(angle) * z,
+    };
+  }
+  function add(spot, radius) {
+    obstacles.push({ x: spot.x, z: spot.z, radius });
+  }
+
+  for (const tree of trees) add(tree, 0.35 * tree.scale); // Bara stammen; kronan är högt över bilen.
+  for (const lamp of lamps) add(lamp.at, 0.3);
+  // Vägskyltarna: bara stolpen. Brädan sitter över bilens tak.
+  for (const sign of signposts) add(placed(sign.at, BILLBOARD_FACING, 0, -0.14), 0.25);
+
+  // Biodukarna: två stolpar (x = +-3, se DISPLAYS.cinema), mobilskyltarna står direkt på marken.
+  for (const project of PROJECTS) {
+    if (project.world !== hub) continue;
+    if (project.phone) {
+      for (const x of [-1.4, 0, 1.4]) add(placed(project, BILLBOARD_FACING, x, -0.2), 0.45);
+    } else {
+      for (const x of [-3, 3]) add(placed(project, BILLBOARD_FACING, x, -0.16), 0.3);
+    }
+  }
+
+  // Grottorna: berget bakom öppningen och stenarna på var sida (grottans lokala +z = uppåt på
+  // skärmen, ut ur öppningen). Mitten framför öppningen (|x| < ca 1.7) lämnas fri ända fram till
+  // dörren, annars går det inte att köra in. [x, z, radie] i grottans egna mått (ur CAVE_ROCKS).
+  const CAVE_BLOCKS = [
+    [0, -5.2, 3.4], [-3, -4.6, 1.9], [3, -4.6, 1.9], [0, -8.2, 2.2],  // Det stora berget.
+    [-3.9, -1, 1.6], [3.9, -1, 1.6],                                  // Öppningens sidor.
+    [-3.1, 0.4, 0.8], [3.1, 0.5, 0.8],                                // Hörnstenarna.
+    [-5.4, 0.6, 0.6], [5.3, 0.9, 0.5],                                // Småstenarna framför.
+  ];
+  for (const portal of hubPortalsOf()) {
+    for (const [x, z, radius] of CAVE_BLOCKS) add(placed(portal.at, BILLBOARD_FACING + Math.PI, x, z), radius);
+  }
+
+  // Garaget (hemgruppens mått): bakväggen och sidorna, men inte fronten: porten och bilplatsen
+  // framför är fria. Stugan är en helt fast ruta (cirklar i rutnät). Brevlådan: en stolpe.
+  for (let x = -2.4; x <= 2.41; x += 0.8) add(homePoint(x, -1.4), 0.5);
+  for (const side of [-2.55, 2.55]) {
+    for (let z = -1.4; z <= 1.51; z += 0.8) add(homePoint(side, z), 0.5);
+  }
+  const HALF = CABIN_SIZE / 2 - 0.65; // Cirklarnas mittpunkter ligger lite innanför väggen.
+  for (let i = 0; i <= 4; i++) {
+    for (let j = 0; j <= 4; j++) {
+      add(homePoint(CABIN_X - HALF + (i / 4) * HALF * 2, CABIN_Z - HALF + (j / 4) * HALF * 2), 0.75);
+    }
+  }
+  add(homePoint(3.9, ROAD_DISTANCE - 3.9), 0.3);
+
+  addObstacles(obstacles);
+  return obstacles;
+}
+
+function hubPortalsOf() {
+  return PORTALS.filter((portal) => portal.world === hub && portal.style === 'cave');
 }

@@ -69,6 +69,7 @@ roadsAndLamps.trees = hub.buildHubTrees(roadsAndLamps);
 await step(0.65, 'Growing grass');
 hub.buildHubGrass(roadsAndLamps);
 hub.buildHubGrounding(roadsAndLamps);
+hub.buildHubCollision(roadsAndLamps); // Fasta saker bilen krockar med (collision.js).
 // OBS: portals.travel läses som portals.travel varje gång (inte "const { travel } = ..."),
 // för då skulle vi bara få värdet det hade just nu – och det ändras när en resa startar.
 const portals = await import('./portals.js');
