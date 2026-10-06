@@ -66,7 +66,31 @@ function makeTuftGeometry() {
 // area = { x, z, size }: den fyrkant på marken som masken täcker.
 const fallbackGround = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 fallbackGround.needsUpdate = true;
+// Markens bild i liten, suddig version (32 x 32): bara de stora mjuka fläckarna finns kvar, inte
+// löven och strecken. Vertexshadern kan inte mip-mappa (läser alltid skarpaste nivån), så ett strå
+// som hamnade på ett löv fick lövets färg, medan ögat ser marken som ett medelvärde.
+function makeBlurredGround(groundMap) {
+  const source = groundMap && groundMap.image;
+  if (!source || !source.getContext) return null;
+  let size = source.width;
+  let from = source;
+  while (size > 32) { // Halvera i steg: varje steg medelvärdesbildar fyra pixlar till en.
+    size /= 2;
+    const step = document.createElement('canvas');
+    step.width = step.height = size;
+    const pen = step.getContext('2d');
+    pen.imageSmoothingQuality = 'high';
+    pen.drawImage(from, 0, 0, size, size);
+    from = step;
+  }
+  const texture = new THREE.CanvasTexture(from);
+  texture.colorSpace = THREE.SRGBColorSpace; // Samma som markens: läses om till linjärt i shadern.
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
 export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
+  const blurredGround = makeBlurredGround(area.groundMap);
   // --- Masken: 256 x 256 pixlar över hela marken. Varje pixel = hur mycket gräs. ---
   const MASK_SIZE = 256;
   const maskData = new Uint8Array(MASK_SIZE * MASK_SIZE * 4);
@@ -112,9 +136,9 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
       uMaskSize: { value: area.size },
       uArea: { value: GRASS_AREA },
       // Markens bild: gräset tar färg från marken under sig, så att det läses som en del av terrängen.
-      uGround: { value: area.groundMap || fallbackGround },
+      uGround: { value: blurredGround || fallbackGround },
       uGroundParams: { value: new THREE.Vector3(area.x - area.size / 2, area.z + area.size / 2, area.groundUnits || 16) },
-      uGroundMix: { value: area.groundMap ? 1 : 0 },
+      uGroundMix: { value: blurredGround ? 1 : 0 },
       // THREE.Color gör om färgen till den "linjära" form som shadern räknar med.
       uRoot: { value: new THREE.Color(PALETTE.grassRoot) },
       uTip: { value: new THREE.Color(PALETTE.grassTip) },
@@ -184,14 +208,16 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
         // Mörkt vid roten, ljust i toppen. Var sjunde tuva har höstgula toppar.
         // Bara enstaka (var tjugonde) tuva har höstgula toppar, och då bara lite: gräset ska vara jämnt.
-        vec3 tip = mix(uTip, uTipAutumn, 0.45 * step(0.95, fract(vSeed * 7.3)));
+        // Med markfärg (uGroundMix 1) finns inga orelaterade höstfärgade tuvor: toppen följer marken.
+        vec3 tip = mix(uTip, uTipAutumn, 0.45 * step(0.95, fract(vSeed * 7.3)) * (1.0 - uGroundMix));
         // Bränt gräs vid vägarna: mörkbrunt vid roten, torrt halmgult i topparna.
         // Först mot markens färg (roten mest, toppen lite), sedan mot brunt där det är bränt.
         float groundMix = uGroundMix * (1.0 - 0.5 * vBurn);
         // Roten har EXAKT markens färg (så att gräset växer ut ur marken utan någon skarv); toppen
         // är bara lite färgad av marken. Det brända gräset vid vägarna är brunt mest i topparna.
         vec3 baseRoot = mix(uRoot, vGround, groundMix);
-        tip = mix(tip, vGround * 1.25 + vec3(0.02), groundMix * 0.7);
+        // Toppen = markens färg, lite ljusare, med en liten jämn variation per tuva (±4 %).
+        tip = mix(tip, vGround * (1.12 + 0.08 * (fract(vSeed * 7.3) - 0.5)), groundMix * 0.9);
         vec3 root = mix(baseRoot, vec3(0.30, 0.20, 0.10), vBurn * 0.35);
         tip = mix(tip, vec3(0.62, 0.47, 0.22), vBurn);
         vec4 diffuseColor = vec4(mix(root, tip, vHeight), 1.0);
