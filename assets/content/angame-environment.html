@@ -1,30 +1,30 @@
-<p>The world for AnGame, my bow-combat roguelite in Unreal Engine 5.8. You play top-down-ish, grow an organic heart and defend it in waves. Meshes come from Houdini, textures from Substance, and a few small systems in Unreal tie them together.</p>
+<p>AnGame is my bow-combat roguelite in Unreal Engine 5.8. You play from a top-down-ish view, grow an organic heart and defend it in waves. This page is about the world. I made the meshes in Houdini and the textures in Substance.</p>
 
 <video src="assets/content-media/angame/player-tree-house.mp4" controls muted loop playsinline preload="metadata"></video>
 <p>Walking through the field with the painted look on.</p>
 
 <h2>Scattering</h2>
-<p>The foliage is scattered, so I don't place anything by hand. I made the meshes in Houdini, the cart included. The textures are made in Substance.</p>
+<p>I scatter the foliage, so nothing is placed by hand. The meshes are from Houdini (the cart too) and the textures are from Substance.</p>
 <!-- TODO Filip: name the .hiplc / HDA if you want it mentioned. -->
 
 <h2>Grass that matches the ground</h2>
-<p>Scattered grass looked like a separate layer on top of the ground. I set up a Runtime Virtual Texture so the grass reads the ground colour under it. Two parameters tune it:</p>
+<p>The scattered grass looked like a separate layer sitting on the ground. I set up a Runtime Virtual Texture so the grass picks up the ground colour underneath. Two settings tune it:</p>
 <ul>
- <li><strong>GroundBlendHeight:</strong> how far up the blade the ground colour reaches</li>
+ <li><strong>GroundBlendHeight:</strong> how far up the blade the ground colour goes</li>
  <li><strong>GroundBlendStrength:</strong> how much of it is mixed in</li>
 </ul>
 
 <h2>Wind</h2>
-<p>I rebuilt the wind as a Material Parameter Collection, <code>MPC_Wind</code>, and two material functions, <code>MF_Wind_Tree</code> and <code>MF_Wind_Grass</code>. One <strong>WindIntensity</strong> knob controls everything. <strong>LeafMovement</strong> adds noise to the canopy. Trees and grass read the same collection, so they never disagree.</p>
+<p>I rebuilt the wind as a Material Parameter Collection (<code>MPC_Wind</code>) and two material functions, <code>MF_Wind_Tree</code> and <code>MF_Wind_Grass</code>. One <strong>WindIntensity</strong> knob controls all of it, and <strong>LeafMovement</strong> adds noise to the canopy. Trees and grass read the same collection, so they never disagree.</p>
 
 <h2>Painterly look</h2>
 <video src="assets/content-media/angame/yellow-foliage.mp4" controls muted loop playsinline preload="metadata"></video>
 <p>Flying around in the editor viewport with the stats overlay on.</p>
-<p>A full-screen post-process makes it look painted: a 6x6 Kuwahara filter for the brush strokes and a Sobel pass for ink lines. A second Material Parameter Collection drives the day/night cycle and a "mood" grade per day. It controls saturation, brightness, line strength, brush scale, haze, line colour, shadow tint and highlight tint.</p>
+<p>The whole screen goes through a post-process that makes it look painted: a 6x6 Kuwahara filter for the brush strokes and a Sobel pass for the ink lines. A second Material Parameter Collection drives the day/night cycle and a mood grade for each day. It controls saturation, brightness, line strength, brush scale, haze, line colour and the shadow and highlight tints.</p>
 
 <h2>Problems I hit</h2>
 <ul>
- <li>After the upgrade to 5.8 the distant trees crawled. The default anti-aliasing had become TSR, and its jitter went straight into the Sobel lines. I switched the project to SMAA.</li>
- <li>The grass used a dithered opacity mask. Without temporal AA it flickers, so I turned it off on the foliage materials.</li>
+ <li>After the 5.8 upgrade the distant trees crawled. Anti-aliasing had switched to TSR, and its jitter went straight into the Sobel lines. I changed the project to SMAA.</li>
+ <li>The grass used a dithered opacity mask, which flickers without temporal AA. I turned it off on the foliage materials.</li>
 </ul>
 <!-- TODO Filip: add a before/after clip of the tree crawl if you have one. -->
