@@ -39,3 +39,16 @@
  <figcaption>Muzzle flash: random textures swap every frame so it never repeats. The handgun uses the same setup.</figcaption>
 </figure>
 <figure><img src="assets/content-media/mutation-protocol/cupcake-hat.gif" alt="Cupcake hat" loading="lazy"><figcaption>Cupcake hat.</figcaption></figure>
+
+<h2>Improved workflow</h2>
+<p>I improved the Houdini workflow for the rat. In the scene it is one node called "rat". Its parameters have a Geo tab and a Rat Texture tab, with Tail, Ears and Fingers sections (force count, amplitude, radius) and an output path for the FBX export.</p>
+<figure>
+ <video src="assets/content-media/mutation-protocol-new/houdini-rat-network.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>The rat node and its parameters next to the viewport. First loose armor pieces, then the grey rat.</figcaption>
+</figure>
+<p>In the second clip I move points and rotate fingers directly on the green rat in the viewport, in Cloths.hiplc.</p>
+<figure>
+ <video src="assets/content-media/mutation-protocol-new/cloths-hiplc.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Adjusting jaw and finger points on the rat.</figcaption>
+</figure>
+<!-- TODO Filip: what exactly got better in the workflow (e.g. faster fitting? fewer parameters? automatic UVs/rig?). Check what the viewport points in the second clip are (rig joints? cloth pins?). Textured rats section is waiting for the 5 PNGs, see mutation-protocol.new-sections.draft -->

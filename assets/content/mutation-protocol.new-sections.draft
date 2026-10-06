@@ -1,0 +1,16 @@
+<!-- DRAFT, not live. Media not downloaded yet (see report). Replace GYAZO-ID with local paths in assets/content-media/mutation-protocol-new/ once saved. -->
+
+<h2>Textured rats</h2>
+<p>I textured a few more of the rat variants. They all come from the same base, so they share the rig and the animations.</p>
+<figure><img src="GYAZO-7066e3f5.png" alt="Purple textured rat" loading="lazy"><figcaption>Purple rat with yellow eyes and red scars.</figcaption></figure>
+<figure><img src="GYAZO-4b28dced.png" alt="Textured rat head close-up" loading="lazy"><figcaption>Close-up of the purple rat's head.</figcaption></figure>
+<figure><img src="GYAZO-d3900e01.png" alt="Green rat in a suit" loading="lazy"><figcaption>Green rat wearing the clothing from the cloth tool.</figcaption></figure>
+<figure><img src="GYAZO-16a4faff.png" alt="Green rat, second pose" loading="lazy"><figcaption>Green rat, other pose.</figcaption></figure>
+<figure><img src="GYAZO-86cffb00.png" alt="Green rat, third view" loading="lazy"><figcaption>Green rat, other angle.</figcaption></figure>
+<!-- TODO Filip: check the captions (colour names, which rats have clothes), and say how you textured them (hand painted? Substance? procedural in Houdini?) -->
+
+<h2>Improved workflow</h2>
+<p>I reworked how the tool is set up in Houdini (Cloths.hiplc). Here is the network with a rat loaded.</p>
+<figure><video src="GYAZO-a6d28735.mp4" controls muted loop playsinline preload="metadata"></video><figcaption>Houdini with the rat in the viewport and the network on the right.</figcaption></figure>
+<figure><video src="GYAZO-958ba5e2.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+<!-- TODO Filip: what exactly got better in the workflow (e.g. faster fitting? fewer parameters? automatic UVs/rig?). Captions for the two clips: I only saw thumbnails, not the full clips. -->
