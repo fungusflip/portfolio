@@ -16,13 +16,19 @@ import {
 } from './home.js';
 import { PORTALS, techartCave, progCave, artCave, buildPortal } from './portals.js';
 import { buildSignposts } from './signposts.js';
-import { buildLamps, rowLamps, LAMP_SIDE, ARM_UP, ARM_LEFT } from './lamps.js';
+import { buildLamps, rowLamps, LAMP_SIDE, ARM_UP, ARM_DOWN, ARM_LEFT } from './lamps.js';
+import {
+  PLAZA, POND, TEAHOUSE, buildHubProps, plazaRoads, plazaVertex, distanceToWater, hubPropObstacles, hubPropShadows,
+} from './hubprops.js';
 import { makeTrees, randomTree, leafColors } from './trees.js';
 import { makeGrass, addSaturation } from './magic.js';
 import { addContactShadows, scatterStones } from './grounding.js';
 import { addObstacles } from './collision.js';
 
 const hub = WORLDS.hub;
+// Armen på en lykta pekar åt (right, down) på skärmen. (0, 1) = nedåt, (-1, 0) = åt vänster.
+const armToward = (right, down) => BILLBOARD_FACING + Math.atan2(right, down);
+const ARM_RIGHT = armToward(1, 0);
 let groundMap = null; // Markens kakelbild. Gräset läser av den för att ta markens färg (se buildHubGrass).
 
 // Delas upp i steg, så att laddningsmätaren kan röra sig mellan dem (se main.js).
@@ -106,20 +112,38 @@ export function buildHubBillboards() {
 // Vägar, grottor, vägskyltar och lyktor. Returnerar vägarna, så att träden kan hålla sig borta.
 export function buildHubRoads() {
   for (const portal of PORTALS) if (portal.world === hub) buildPortal(portal);
+  buildHubProps(); // Fontän, damm och bro, kiosk, tehus, pelare, häckar och stenar (hubprops.js).
 
   // Gångvägen från parkeringen till stugans dörr: två smala bitar i vinkel.
   const PATH_WIDTH = 1.3;
+  const TECH_ROAD_RIGHT = 35.5;   // Där Tech Art-vägen lämnar huvudvägen.
+  const TEAHOUSE_PATH_RIGHT = TEAHOUSE.right; // Tehusets gångstig.
   const DOOR_X = CABIN_X + 1.1;
   const DOOR_Z = CABIN_Z + CABIN_SIZE / 2;
   const PATH_TURN_Z = DOOR_Z + 2.6;
   // Varje rad är en rak väg från en punkt till en annan. ÄNDRA HÄR för fler eller färre vägar.
   const roads = [
-    // Huvudvägen: från uppfarten förbi alla skyltar, till under Tech Art-grottan.
-    { from: homeRoadPoint, to: hubPoint(techartCave.right, ROAD_DISTANCE) },
-    // Från huvudvägen går en väg rakt ner till varje grotta. Öppningarna vetter uppåt mot vägen.
-    { from: hubPoint(techartCave.right, ROAD_DISTANCE), to: techartCave.at },
-    { from: hubPoint(progCave.right, ROAD_DISTANCE), to: progCave.at },
-    { from: hubPoint(artCave.right, ROAD_DISTANCE), to: artCave.at },
+    // Huvudvägen: från uppfarten förbi alla skyltar, till avfarten mot Tech Art-grottan.
+    { from: homeRoadPoint, to: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE) },
+    // Tech Art: en mjuk S-kurva ner från huvudvägen, och de sista 6.5 enheterna rakt in i öppningen.
+    { from: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE), to: hubPoint(38.5, 17) },
+    { from: hubPoint(38.5, 17), to: hubPoint(35.5, 22.5) },
+    { from: hubPoint(35.5, 22.5), to: techartCave.at },
+    // Torget: en stickväg rakt ner från huvudvägen (siktlinje mot fontänen) och en åttkantig ring.
+    { from: hubPoint(PLAZA.right, ROAD_DISTANCE), to: plazaVertex(0) },
+    ...plazaRoads(),
+    // Programming: från torgets ring, en lätt böj åt höger och sedan rakt ner i öppningen.
+    { from: plazaVertex(1), to: hubPoint(14, 31.2) },
+    { from: hubPoint(14, 31.2), to: hubPoint(21, 33.5) },
+    { from: hubPoint(21, 33.5), to: progCave.at },
+    // Art: rakt ner över bron över dammen, sedan en kurva åt vänster och rakt in i öppningen.
+    { from: hubPoint(POND.right, ROAD_DISTANCE), to: hubPoint(POND.right, 33.3) },
+    { from: hubPoint(POND.right, 33.3), to: hubPoint(-18.6, 36) },
+    { from: hubPoint(-18.6, 36), to: hubPoint(-22.5, 38.5) },
+    { from: hubPoint(-22.5, 38.5), to: artCave.at },
+    { from: plazaVertex(6), to: hubPoint(-18.6, 36) }, // Från torgets vänstra sida in på Art-vägen.
+    // Gångstig från huvudvägen till tehuset.
+    { from: hubPoint(TEAHOUSE_PATH_RIGHT, 13), to: hubPoint(TEAHOUSE_PATH_RIGHT, 23.3), width: PATH_WIDTH },
     // Uppfarten: från garageporten ner till huvudvägen.
     { from: towardCamera({ x: HOME_X, z: HOME_Z }, GARAGE_Z + GARAGE_DEPTH / 2), to: homeRoadPoint },
     ...billboardDriveways(hub), // En kort infart till varje skylts ficka. ... = packa upp listan.
@@ -131,41 +155,96 @@ export function buildHubRoads() {
   const signposts = [
     // Mitt emot uppfarten: åt höger ligger projekten och Tech Art-grottan.
     { text: 'Tech Art', arrow: 'right', at: towardCamera(homeRoadPoint, 4.2) },
-    // Vid avfarterna ner till de två andra grottorna.
-    { text: 'Programming', arrow: 'down', at: hubPoint(progCave.right + 5.5, ROAD_DISTANCE + 5) },
-    { text: 'Art', arrow: 'down', at: hubPoint(artCave.right + 5.5, ROAD_DISTANCE + 5) },
+    // Vid avfarterna ner till grottorna: Programming via torget, Art via bron, Tech Art till höger.
+    { text: 'Programming', arrow: 'down', at: hubPoint(PLAZA.right + 5.5, ROAD_DISTANCE + 4.7) },
+    { text: 'Art', arrow: 'down', at: hubPoint(POND.right + 5.5, ROAD_DISTANCE + 4.7) },
+    { text: 'Tech Art', arrow: 'down', at: hubPoint(TECH_ROAD_RIGHT - 4.5, ROAD_DISTANCE + 5) },
   ];
   buildSignposts(hub, signposts);
 
   const lamps = [
     ...rowLamps(hub),
-    // Bredvid vägen ner till varje grotta.
-    { at: hubPoint(techartCave.right + LAMP_SIDE, 20), arm: ARM_LEFT },
-    { at: hubPoint(progCave.right + LAMP_SIDE, 20), arm: ARM_LEFT },
-    { at: hubPoint(artCave.right + LAMP_SIDE, 20), arm: ARM_LEFT },
+    // Stickvägen till torget, och fem runt torgets ring (pekar in mot fontänen).
+    { at: hubPoint(PLAZA.right + LAMP_SIDE, 21), arm: ARM_LEFT },
+    { at: hubPoint(PLAZA.right - LAMP_SIDE, 17.5), arm: ARM_RIGHT },
+    ...[112.5, 157.5, 202.5, 247.5, 292.5].map((degrees) => {
+      const angle = degrees * Math.PI / 180;
+      const reach = PLAZA.radius + 3.6;
+      return {
+        at: hubPoint(PLAZA.right + Math.sin(angle) * reach, PLAZA.down - Math.cos(angle) * reach),
+        arm: armToward(-Math.sin(angle), Math.cos(angle)),
+      };
+    }),
+    // Bredvid vägarna till grottorna och vid bron.
+    { at: hubPoint(techartCave.right + LAMP_SIDE, 25.5), arm: ARM_LEFT },
+    { at: hubPoint(progCave.right - 4.5, 28.7), arm: ARM_DOWN },
+    { at: hubPoint(progCave.right + LAMP_SIDE, 36), arm: ARM_LEFT },
+    { at: hubPoint(POND.right + LAMP_SIDE, 19.8), arm: ARM_LEFT },
+    { at: hubPoint(artCave.right - LAMP_SIDE, 42), arm: ARM_RIGHT },
   ];
   buildLamps(hub, lamps);
   return { roads, lamps, signposts };
 }
 
-// Lönnar utspridda över marken, men inte där de är i vägen.
+// Lönnar på genomtänkta platser: grupper som ramar in vägarna, torget och dammen, en tät vägg bakom
+// skyltraden (så att bakgrunden får djup och världens kant göms), och slumpade träd längst ut.
 export function buildHubTrees({ roads, lamps, signposts }) {
-  const TREE_TRIES = 270; // Många försök, eftersom de som hamnar på fel ställe hoppas över.
   const trees = [];
   const hubPortals = PORTALS.filter((portal) => portal.world === hub);
-  for (let i = 0; i < TREE_TRIES; i++) {
+  // Får ett träd stå här? projectReach = hur långt från skyltarna det ska vara (12 för slumpade träd).
+  // "return false" = hoppa över det här trädet. .some(...) = "stämmer det för minst en?".
+  function fits(x, z, projectReach = 12) {
+    if (Math.hypot(x - HOME_X, z - HOME_Z) < 12) return false;                          // Tomten.
+    if (Math.hypot(x - HUB_X, z - HUB_Z) > DRIVE_RADIUS + 5) return false;             // Ute i toningen.
+    if (roads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + 2)) return false; // Vägarna.
+    if (PROJECTS.some((project) => Math.hypot(x - project.x, z - project.z) < projectReach)) return false; // Skyltarna.
+    if (hubPortals.some((portal) => Math.hypot(x - portal.center.x, z - portal.center.z) < 13)) return false; // Grottorna (bergets mitt).
+    if (lamps.some((lamp) => Math.hypot(x - lamp.at.x, z - lamp.at.z) < 3)) return false; // Lyktorna.
+    // Vägskyltarna: brädan är 4.2 bred, och en trädkrona är upp till ca 2 i radie.
+    if (signposts.some((sign) => Math.hypot(x - sign.at.x, z - sign.at.z) < 5)) return false;
+    // Fontänen, kiosken, tehuset, pelarna, häckarna och stenarna (hubprops.js), och dammen.
+    if (hubPropObstacles.some((prop) => Math.hypot(x - prop.x, z - prop.z) < prop.radius + 1.9)) return false;
+    if (distanceToWater(x, z) < 2.4) return false;
+    if (trees.some((tree) => Math.hypot(x - tree.x, z - tree.z) < 1.6)) return false; // Inte krona i krona.
+    return true;
+  }
+  // a) Små grupper om tre till fem träd. [right, down, antal] räknat från skyltradens mitt.
+  const CLUSTERS = [
+    [-28, 19, 4], [-6.5, 20, 4], [10, 19.5, 4], [21, 19, 4], [46, 19, 3],     // Nedanför huvudvägen.
+    [-9, 21.5, 3], [-27, 27, 4], [-9, 32, 4], [-25, 33.5, 3],                  // Runt dammen.
+    [13.5, 25.5, 4], [-13, 45, 4], [3, 53, 4], [13, 48, 3], [-4, 52, 3],       // Runt torget.
+    [30, 24, 3], [-44, 29, 4], [-41, 36, 4], [-32, 38, 3], [41, 40, 3],        // Vid tehuset och Tech Art.
+  ];
+  for (const [right, down, count] of CLUSTERS) {
+    const centre = hubPoint(right, down);
+    let placed = 0;
+    for (let i = 0; i < count * 4 && placed < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const reach = Math.sqrt(Math.random()) * 2.6;
+      const x = centre.x + Math.cos(angle) * reach;
+      const z = centre.z + Math.sin(angle) * reach;
+      if (!fits(x, z)) continue;
+      trees.push(randomTree(x, z));
+      placed++;
+    }
+  }
+  // b) Väggen bakom skyltraden: tre rader som tätnar bakgrunden uppåt på skärmen.
+  [[-7.5, 1.3], [-13, 1.5], [-19, 1.6]].forEach(([down, scale], row) => {
+    for (let right = -58 + (row % 2) * 1.9; right < 58; right += 3.7) {
+      const spot = hubPoint(right + (Math.random() - 0.5) * 1.6, down + (Math.random() - 0.5) * 2.2);
+      if (!fits(spot.x, spot.z, 5.5)) continue;
+      const tree = randomTree(spot.x, spot.z);
+      tree.scale = scale * (0.85 + Math.random() * 0.3);
+      trees.push(tree);
+    }
+  });
+  // c) Slumpade träd bara långt ute (mer än 40 från mitten), annars blir det kaos mellan föremålen.
+  const middle = hubPoint(-2, 15);
+  for (let i = 0; i < 420; i++) {
     const x = HUB_X + (Math.random() - 0.5) * GROUND_SIZE;
     const z = HUB_Z + (Math.random() - 0.5) * GROUND_SIZE;
-    // "continue" = hoppa över det här trädet. .some(...) = "stämmer det för minst en?".
-    if (Math.hypot(x - HOME_X, z - HOME_Z) < 12) continue;                          // Tomten.
-    if (Math.hypot(x - HUB_X, z - HUB_Z) > DRIVE_RADIUS + 5) continue;             // Ute i toningen.
-    if (roads.some((road) => distanceToRoad(x, z, road) < ROAD_WIDTH / 2 + 2)) continue; // Vägarna.
-    if (PROJECTS.some((project) => Math.hypot(x - project.x, z - project.z) < 12)) continue; // Skyltarna.
-    if (hubPortals.some((portal) => Math.hypot(x - portal.center.x, z - portal.center.z) < 13)) continue; // Grottorna (bergets mitt).
-    if (lamps.some((lamp) => Math.hypot(x - lamp.at.x, z - lamp.at.z) < 3)) continue; // Lyktorna.
-    // Vägskyltarna: brädan är 4.2 bred, och en trädkrona är upp till ca 2 i radie.
-    if (signposts.some((sign) => Math.hypot(x - sign.at.x, z - sign.at.z) < 5)) continue;
-    trees.push(randomTree(x, z));
+    if (Math.hypot(x - middle.x, z - middle.z) < 40) continue;
+    if (fits(x, z)) trees.push(randomTree(x, z));
   }
   // Träd runt stugan på bestämda platser, så att tomten ser likadan ut varje gång.
   // [x, z, storlek, färgnummer], räknat inne i hem-gruppen.
@@ -211,6 +290,9 @@ export function buildHubGrass({ roads, lamps, signposts, trees = [] }) {
     // Träden: bart precis runt stammen, sedan allt högre gräs.
     for (const tree of trees) room = Math.min(room, (Math.hypot(x - tree.x, z - tree.z) - 0.4 * tree.scale) * 0.75);
     for (const lamp of lamps) room = Math.min(room, Math.hypot(x - lamp.at.x, z - lamp.at.z) - 0.6);
+    // Fontänen, kiosken, tehuset, pelarna, häckarna, stenarna och dammen (hubprops.js).
+    for (const prop of hubPropObstacles) room = Math.min(room, Math.hypot(x - prop.x, z - prop.z) - prop.radius * 0.9);
+    room = Math.min(room, distanceToWater(x, z) - 0.9);
     for (const sign of signposts) room = Math.min(room, Math.hypot(x - sign.at.x, z - sign.at.z) - 2.4);
     return THREE.MathUtils.clamp(room / 1.5, 0, 1); // 1.5 enheter från hindret är gräset fullt.
   }
@@ -218,6 +300,7 @@ export function buildHubGrass({ roads, lamps, signposts, trees = [] }) {
   function grassBurn(x, z) {
     let near = Infinity;
     for (const road of roads) near = Math.min(near, distanceToRoad(x, z, road) - (road.width || ROAD_WIDTH) / 2);
+    near = Math.min(near, distanceToWater(x, z) + 0.6); // Torrt gräs även närmast dammen.
     const patchy = 0.7 + 0.3 * Math.sin(x * 0.9) * Math.sin(z * 1.3);
     return THREE.MathUtils.clamp(1 - (near - 0.2) / 2.6, 0, 1) * patchy;
   }
@@ -235,6 +318,7 @@ export function buildHubGrounding({ roads, lamps, signposts, trees = [] }) {
     ...signposts.map((sign) => ({ x: sign.at.x, z: sign.at.z, radius: 1.5 })),
     ...lamps.map((lamp) => ({ x: lamp.at.x, z: lamp.at.z, radius: 1 })),
     ...hubPortals.map((portal) => ({ x: portal.center.x, z: portal.center.z, radius: 8 })),
+    ...hubPropShadows, // Fontän, kiosk, tehus, pelare och stenhögar.
   ];
   addContactShadows(hub, shadows);
   const stones = [
@@ -242,6 +326,7 @@ export function buildHubGrounding({ roads, lamps, signposts, trees = [] }) {
     ...hubProjects.map((project) => ({ x: project.x, z: project.z, radius: 3, inner: 0.3, count: 18 })),
     ...signposts.map((sign) => ({ x: sign.at.x, z: sign.at.z, radius: 1.3, inner: 0.3, count: 7 })),
     ...hubPortals.map((portal) => ({ x: portal.center.x, z: portal.center.z, radius: 10.5, inner: 0.5, count: 70, sizeScale: 1.4 })),
+    ...hubPropShadows.map((prop) => ({ x: prop.x, z: prop.z, radius: prop.radius * 0.9, inner: 0.5, count: 10 })),
   ];
   scatterStones(hub, roads, stones);
 }
@@ -304,6 +389,9 @@ export function buildHubCollision({ lamps, signposts, trees = [] }) {
     }
   }
   add(homePoint(3.9, ROAD_DISTANCE - 3.9), 0.3);
+
+  // Allt som level design lagt till (fontän, pelare, damm, bro, kiosk, tehus, häckar, stenar): hubprops.js.
+  for (const prop of hubPropObstacles) add(prop, prop.radius);
 
   addObstacles(obstacles);
   return obstacles;
