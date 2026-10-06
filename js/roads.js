@@ -139,48 +139,90 @@ const CURB_WIDTH = 0.34;   // Blockets bredd (tvärs över kanten).
 const CURB_HEIGHT = 0.17;  // Hur högt blocket står.
 const CURB_LENGTH = 0.72;  // Blockets längd längs kanten.
 const CURB_STEP = 0.74;    // Avstånd mellan blockens mitt (lite större än längden = en tunn fog).
-const BAY_CORNER_RADIUS = 1; // Fickans rundade hörn (samma som BAY_CORNER i billboards.js: 50 px = 1 enhet).
 const curbGeometry = new RoundedBoxGeometry(CURB_WIDTH, CURB_HEIGHT, CURB_LENGTH, 2, 0.045);
 const curbMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 
-// Lägger block med jämna mellanrum längs en linje av punkter [{ x, z }, ...], med ett block
-// i varje ände (så att hörn och skarvar fylls). Blockets längd pekar längs linjen.
-function curbRun(points, blocks, fade, thin) {
-  if (points.length < 2) return;
+// En bit kantsten är en linje av punkter [{ x, z }, ...] där blocken ska stå. curbRun lägger bara
+// upp biten; fixCorners räknar ut hörnen mellan bitarna och placeRun sätter sedan ut blocken.
+function curbRun(points, runs, fade, thin) {
+  if (points.length >= 2) runs.push({ points, fade, thin, startExtend: 0, endExtend: 0 });
+}
+
+// Där två bitar möts i ett hörn (nästan 90 grader) går blocken över varandra. Ett av dem får fylla
+// hörnet (biten förlängs CURB_WIDTH / 2 förbi hörnpunkten) och det andra förkortas lika mycket, så
+// att det stannar mot det första blockets sida. Vilket som fyller avgörs av riktningen, så det blir
+// alltid samma val. Blocken fördelas sedan jämnt över den justerade biten (inga glipor).
+function fixCorners(runs) {
+  const half = CURB_WIDTH / 2;
+  const direction = (from, to) => {
+    const length = Math.hypot(to.x - from.x, to.z - from.z) || 1;
+    return { x: (to.x - from.x) / length, z: (to.z - from.z) / length };
+  };
+  const ends = [];
+  for (const run of runs) {
+    const p = run.points;
+    ends.push({ run, key: 'startExtend', point: p[0], out: direction(p[1], p[0]) });
+    ends.push({ run, key: 'endExtend', point: p[p.length - 1], out: direction(p[p.length - 2], p[p.length - 1]) });
+  }
+  const used = new Set();
+  for (let i = 0; i < ends.length; i++) {
+    if (used.has(i)) continue;
+    for (let j = i + 1; j < ends.length; j++) {
+      if (used.has(j) || ends[j].run === ends[i].run) continue;
+      const a = ends[i];
+      const b = ends[j];
+      if (Math.hypot(a.point.x - b.point.x, a.point.z - b.point.z) > 0.2) continue;
+      if (Math.abs(a.out.x * b.out.z - a.out.z * b.out.x) < 0.5) continue; // Inte ett hörn (nästan parallella).
+      const aFills = Math.atan2(a.out.z, a.out.x) > Math.atan2(b.out.z, b.out.x);
+      (aFills ? a : b).run[(aFills ? a : b).key] = half;
+      (aFills ? b : a).run[(aFills ? b : a).key] = -half;
+      used.add(i);
+      used.add(j);
+      break;
+    }
+  }
+}
+
+// Sätter ut blocken längs en bit: lika långt mellan dem, första och sista blocket i bitens (justerade)
+// ändar. Ett hörn förlänger (+) eller förkortar (-) biten i en ände (se fixCorners).
+function placeRun(run, blocks) {
+  const points = run.points;
   const lengths = [0];
   for (let i = 1; i < points.length; i++) {
     lengths.push(lengths[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z));
   }
   const total = lengths[lengths.length - 1];
-  // Första och sista blocket står INNANFÖR bitens ändar (med änden precis i blockets kant), så att
-  // blocken som möts i ett hörn inte går över varandra. Däremellan lika långt mellan blocken.
+  const begin = -run.startExtend;       // Var på biten blocken börjar (minus = före första punkten).
+  const finish = total + run.endExtend; // ...och var de slutar (över total = förbi sista punkten).
+  const span = finish - begin;
   const distances = [];
-  const usable = total - CURB_LENGTH;
+  const usable = span - CURB_LENGTH;
   if (usable <= 0.05) {
-    distances.push(total / 2); // En kort bit: ett enda block mitt på.
+    distances.push(begin + span / 2); // En kort bit: ett enda block mitt på.
   } else {
     const count = Math.max(1, Math.ceil(usable / (CURB_LENGTH * 0.95))); // Aldrig glesare än blockets längd.
-    for (let k = 0; k <= count; k++) distances.push(CURB_LENGTH / 2 + (usable * k) / count);
+    for (let k = 0; k <= count; k++) distances.push(begin + CURB_LENGTH / 2 + (usable * k) / count);
   }
   let segment = 0;
   for (const at of distances) {
     while (segment < points.length - 2 && lengths[segment + 1] < at) segment++;
     const from = points[segment];
     const to = points[segment + 1];
-    const span = lengths[segment + 1] - lengths[segment] || 1;
-    const k = THREE.MathUtils.clamp((at - lengths[segment]) / span, 0, 1);
+    const length = lengths[segment + 1] - lengths[segment] || 1;
+    const k = (at - lengths[segment]) / length; // Utan begränsning: förbi ändarna räknas linjen vidare.
     blocks.push({
       x: from.x + (to.x - from.x) * k,
       z: from.z + (to.z - from.z) * k,
       yaw: Math.atan2(to.x - from.x, to.z - from.z) + (Math.random() - 0.5) * 0.05,
-      fade,
-      thin,
+      fade: run.fade,
+      thin: run.thin,
     });
   }
 }
 
-function buildCurbs(world, group, roads) {
-  // Parkeringsfickorna och riktningen från fickan ut mot vägen (u). v = rakt åt sidan.
+// Parkeringsfickorna i en värld: var de ligger och åt vilket håll vägen är (u, enhetsvektor från fickan
+// ut mot uppfarten). Används av kantstenen här och av gräset (hub.js).
+export function bayFrames(world, roads) {
   const bays = [];
   for (const billboard of billboards.filter((entry) => entry.project.world === world)) {
     const driveway = roads.find((road) => Math.hypot(road.to.x - billboard.padX, road.to.z - billboard.padZ) < 0.05);
@@ -190,6 +232,11 @@ function buildCurbs(world, group, roads) {
     const length = Math.hypot(ux, uz);
     bays.push({ x: billboard.padX, z: billboard.padZ, ux: ux / length, uz: uz / length });
   }
+  return bays;
+}
+
+function buildCurbs(world, group, roads) {
+  const bays = bayFrames(world, roads);
   const inBay = (x, z) => bays.some((bay) => Math.hypot(x - bay.x, z - bay.z) < BAY_LENGTH / 2 + 0.2);
   // Hela vägnätets yttre kontur. Varje väg är en "kapsel" (rak bit med runda ändar). Kantstenens
   // mittlinje är kapselns omkrets en bit utanför gruset. En punkt på omkretsen räknas bara om den
@@ -199,6 +246,7 @@ function buildCurbs(world, group, roads) {
   const CURB_OFFSET = CURB_WIDTH / 2 - 0.02;
   const SAMPLE = 0.06;
   const blocks = [];
+  const runs = []; // Alla bitar av kantsten. Hörnen lagas (fixCorners) innan blocken sätts ut (placeRun).
   roads.forEach((road, i) => {
     const width = road.width || ROAD_WIDTH;
     const thin = width < ROAD_WIDTH; // Gångvägen får lägre, smalare kantsten.
@@ -244,36 +292,21 @@ function buildCurbs(world, group, roads) {
       if (step < outline.length && kept[index]) {
         run.push(outline[index]);
       } else {
-        curbRun(run, blocks, 1, thin);
+        curbRun(run, runs, 1, thin);
         run = [];
       }
     }
   });
 
-  // Runt varje parkeringsficka: långsidor, rundade bakhörn och kortsida. Öppen mot vägen.
-  for (const bay of bays) {
-    const vx = -bay.uz;
-    const vz = bay.ux;
-    const halfWidth = ROAD_WIDTH / 2 + CURB_OFFSET; // Samma linje som uppfartens kantsten: de möts utan hopp.
-    const halfLength = BAY_LENGTH / 2 + CURB_WIDTH / 2 - 0.05;
-    const radius = BAY_CORNER_RADIUS + CURB_WIDTH / 2 - 0.05;
-    const roadEnd = BAY_LENGTH / 2 + 0.2; // Förbi där uppfartens kantsten tar vid (se inBay), så att de överlappar.
-    // Punkter i fickans egna mått (a = mot vägen, b = åt sidan) -> världen.
-    const toWorld = (a, b) => ({ x: bay.x + bay.ux * a + vx * b, z: bay.z + bay.uz * a + vz * b });
-    const line = (a0, b0, a1, b1, count) => Array.from({ length: count + 1 }, (_, k) => toWorld(a0 + (a1 - a0) * k / count, b0 + (b1 - b0) * k / count));
-    const corner = (centerA, centerB, from, to) => Array.from({ length: 13 }, (_, k) => {
-      const angle = from + (to - from) * k / 12;
-      return toWorld(centerA + Math.cos(angle) * radius, centerB + Math.sin(angle) * radius);
-    });
-    const outline = [
-      ...line(roadEnd, -halfWidth, -(halfLength - radius), -halfWidth, 30),
-      ...corner(-(halfLength - radius), -(halfWidth - radius), -Math.PI / 2, -Math.PI),
-      ...line(-halfLength, -(halfWidth - radius), -halfLength, halfWidth - radius, 20),
-      ...corner(-(halfLength - radius), halfWidth - radius, Math.PI, Math.PI / 2),
-      ...line(-(halfLength - radius), halfWidth, roadEnd, halfWidth, 30),
-    ];
-    curbRun(outline, blocks, 1, false);
+  fixCorners(runs);
+  for (const run of runs) placeRun(run, blocks);
+  // Vid en ficka tonar kantstenen ut till marken: full höjd 5.8 enheter från fickans mitt, noll vid 3.6.
+  for (const block of blocks) {
+    for (const bay of bays) {
+      block.fade = Math.min(block.fade, THREE.MathUtils.clamp((Math.hypot(block.x - bay.x, block.z - bay.z) - 3.6) / 2.2, 0, 1));
+    }
   }
+  for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].fade < 0.15) blocks.splice(i, 1);
 
   // Gallra: behåll bara block som ligger minst CURB_MIN_GAP från ett redan behållet. Annars går
   // stenar över varandra där två bitar möts (hörn, skarvar, fickans hopp mot uppfarten).

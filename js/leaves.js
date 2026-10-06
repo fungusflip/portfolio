@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import { scene, PALETTE, WORLDS, BILLBOARD_FACING } from './core.js';
 import { car } from './car.js';
+import { distanceToRoad, ROAD_WIDTH } from './roads.js';
 
 const LEAF_COUNT = 260;   // Antal löv. ÄNDRA för tätare/glesare (allt är ett enda ritanrop, så det är billigt).
 const LEAF_AREA = 24;     // Lådans halva bredd runt bilen, i enheter.
@@ -137,8 +138,10 @@ for (let i = 0; i < GROUND_LEAF_COUNT; i++) {
 // (tätast vid stammen), och löven som faller börjar uppe i trädkronorna. Eftersom löven bara
 // finns i lådan runt bilen flyttas ett löv som hoppar över lådans kant till ett träd inne i lådan.
 let leafTrees = [];
-export function setLeafTrees(trees) {
+let leafRoads = []; // Vägarna: löv-högarna läggs inte på dem.
+export function setLeafTrees(trees, roads = []) {
   leafTrees = trees;
+  leafRoads = roads;
   for (const leaf of groundLeafParticles) leaf.reanchor = true; // Placera om alla under träd.
 }
 
@@ -154,19 +157,47 @@ function pickTreeNear(center) {
   return picked;
 }
 
-// Lägger ett marklöv i en hög under ett träd: tätast nära stammen, tunnare ut mot kronans kant.
-function relocateUnderTree(leaf, center) {
-  const tree = pickTreeNear(center);
-  if (!tree) return false;
-  const angle = Math.random() * Math.PI * 2;
-  const distance = tree.scale * (0.45 + Math.pow(Math.random(), 1.6) * 2.0);
-  leaf.x = tree.x + Math.cos(angle) * distance;
-  leaf.z = tree.z + Math.sin(angle) * distance;
+function onRoad(x, z) {
+  return leafRoads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + 0.4);
+}
+
+// Sätter ett marklöv på en ny plats (det växer fram i stället för att poppa upp).
+function placeLeafAt(leaf, x, z) {
+  leaf.x = x;
+  leaf.z = z;
   leaf.yaw = Math.random() * Math.PI * 2;
   leaf.onGround = true;
   leaf.settle = 0;
-  leaf.appear = 0; // Växer fram i stället för att poppa upp.
-  return true;
+  leaf.appear = 0;
+}
+
+// Lägger ett marklöv i en hög under ett träd: tätast nära stammen, tunnare ut mot kronans kant.
+// Platser på en väg hoppas över (nytt försök med ett annat träd eller en annan plats).
+function relocateUnderTree(leaf, center) {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const tree = pickTreeNear(center);
+    if (!tree) return false;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = tree.scale * (0.45 + Math.pow(Math.random(), 1.6) * 2.0);
+    const x = tree.x + Math.cos(angle) * distance;
+    const z = tree.z + Math.sin(angle) * distance;
+    if (onRoad(x, z)) continue;
+    placeLeafAt(leaf, x, z);
+    return true;
+  }
+  return false;
+}
+
+// Ett löv som inte hör till något träd: en slumpad plats i lådan, men inte på en väg.
+function relocateFree(leaf, center) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const x = center.x + (Math.random() - 0.5) * 2 * (LEAF_AREA - 3);
+    const z = center.z + (Math.random() - 0.5) * 2 * (LEAF_AREA - 3);
+    if (onRoad(x, z)) continue;
+    placeLeafAt(leaf, x, z);
+    return true;
+  }
+  return false;
 }
 
 let weatherDirection = -1; // -1 = faller (löv), +1 = stiger (gnistor).
@@ -428,6 +459,7 @@ export function updateLeaves(delta, center) {
     let relocated = false;
     if (leaf.reanchor && leaf.onGround) {
       if (leaf.underTree && leafTrees.length > 0) relocated = relocateUnderTree(leaf, center);
+      if (!relocated) relocated = relocateFree(leaf, center); // Inget träd (eller på en väg): fri plats.
       leaf.reanchor = false;
     }
     const growing = leaf.appear < 1;

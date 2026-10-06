@@ -7,9 +7,9 @@ import {
   PALETTE, WORLDS, GROUND_SIZE, TILE_PIXELS, TILE_UNITS, DRIVE_RADIUS, HUB_X, HUB_Z,
   towardCamera, worldGroup, makeEdgeFade, makeTileTexture,
 } from './core.js';
-import { buildBillboards } from './billboards.js';
+import { buildBillboards, BAY_WIDTH, BAY_LENGTH, BAY_SKIRT } from './billboards.js';
 import { PROJECTS } from './projects.js';
-import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad } from './roads.js';
+import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad, bayFrames } from './roads.js';
 import {
   HOME_X, HOME_Z, GARAGE_Z, GARAGE_DEPTH, CABIN_X, CABIN_Z, CABIN_SIZE,
   homeGroup, homeRoadPoint, hubPoint, homePoint, teaCupSpots,
@@ -185,11 +185,22 @@ export function buildHubTrees({ roads, lamps, signposts }) {
 // kortare, och på hindret finns inget (0). Så får gräset mjuka kanter mot vägarna.
 export function buildHubGrass({ roads, lamps, signposts, trees = [] }) {
   const hubPortals = PORTALS.filter((portal) => portal.world === hub);
+  const bays = bayFrames(hub, roads);
   function grassAmount(x, z) {
     let room = DRIVE_RADIUS + 6 - Math.hypot(x - HUB_X, z - HUB_Z); // Ute i kanttoningen.
     room = Math.min(room, Math.hypot(x - HOME_X, z - HOME_Z) - 8.5); // Garaget och stugan.
     for (const cup of teaCupSpots) room = Math.min(room, Math.hypot(x - cup.x, z - cup.z) - 2.2); // Tekopparna.
     for (const road of roads) room = Math.min(room, distanceToRoad(x, z, road) - (road.width || ROAD_WIDTH) / 2 - 0.3);
+    // Parkeringsfickorna: gräset växer ända fram till fickans skört (rektangeln är öppen mot vägen).
+    for (const bay of bays) {
+      const dx = x - bay.x;
+      const dz = z - bay.z;
+      const along = dx * bay.ux + dz * bay.uz;        // Mot vägen (+) eller bakåt (-).
+      const across = dx * -bay.uz + dz * bay.ux;      // Åt sidan.
+      const outside = Math.hypot(Math.max(-along - BAY_LENGTH / 2, 0), Math.max(Math.abs(across) - BAY_WIDTH / 2, 0));
+      // Inom fickan och skörtet: inget gräs. Sedan växer det fram över en enhet.
+      room = Math.min(room, (outside - BAY_SKIRT * 0.6) * 1.5);
+    }
     for (const project of PROJECTS) {
       // Längre, mjukare nedtoning runt skyltarna (2.5 enheter i stället för 1.5): gräset trappas ner.
       if (project.world === hub) room = Math.min(room, (Math.hypot(x - project.x, z - project.z) - 3.5) * 0.6);

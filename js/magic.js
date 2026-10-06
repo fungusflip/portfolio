@@ -114,7 +114,7 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
       // Markens bild: gräset tar färg från marken under sig, så att det läses som en del av terrängen.
       uGround: { value: area.groundMap || fallbackGround },
       uGroundParams: { value: new THREE.Vector3(area.x - area.size / 2, area.z + area.size / 2, area.groundUnits || 16) },
-      uGroundMix: { value: area.groundMap ? 0.7 : 0 },
+      uGroundMix: { value: area.groundMap ? 1 : 0 },
       // THREE.Color gör om färgen till den "linjära" form som shadern räknar med.
       uRoot: { value: new THREE.Color(PALETTE.grassRoot) },
       uTip: { value: new THREE.Color(PALETTE.grassTip) },
@@ -183,17 +183,20 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
         uniform float uGroundMix;`)
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
         // Mörkt vid roten, ljust i toppen. Var sjunde tuva har höstgula toppar.
-        vec3 tip = mix(uTip, uTipAutumn, step(0.86, fract(vSeed * 7.3)));
+        // Bara enstaka (var tjugonde) tuva har höstgula toppar, och då bara lite: gräset ska vara jämnt.
+        vec3 tip = mix(uTip, uTipAutumn, 0.45 * step(0.95, fract(vSeed * 7.3)));
         // Bränt gräs vid vägarna: mörkbrunt vid roten, torrt halmgult i topparna.
         // Först mot markens färg (roten mest, toppen lite), sedan mot brunt där det är bränt.
         float groundMix = uGroundMix * (1.0 - 0.5 * vBurn);
-        vec3 baseRoot = mix(uRoot, vGround * 0.8, groundMix);
-        tip = mix(tip, vGround * 1.25 + vec3(0.02), groundMix * 0.5);
-        vec3 root = mix(baseRoot, vec3(0.30, 0.20, 0.10), vBurn);
+        // Roten har EXAKT markens färg (så att gräset växer ut ur marken utan någon skarv); toppen
+        // är bara lite färgad av marken. Det brända gräset vid vägarna är brunt mest i topparna.
+        vec3 baseRoot = mix(uRoot, vGround, groundMix);
+        tip = mix(tip, vGround * 1.25 + vec3(0.02), groundMix * 0.7);
+        vec3 root = mix(baseRoot, vec3(0.30, 0.20, 0.10), vBurn * 0.35);
         tip = mix(tip, vec3(0.62, 0.47, 0.22), vBurn);
         vec4 diffuseColor = vec4(mix(root, tip, vHeight), 1.0);
         // Ett svagt skimmer i topparna när vågen passerar: lite magi.
-        diffuseColor.rgb += uShimmer * vHeight * smoothstep(0.75, 1.0, vWave) * 0.35;`);
+        diffuseColor.rgb += uShimmer * vHeight * smoothstep(0.75, 1.0, vWave) * 0.15;`);
   };
 
   addSaturation(material, 1.2);
@@ -347,88 +350,177 @@ export function addSway(material) {
 }
 
 // ---------------------------------------------------------------------------
-// DAMMSPÅR – bakhjulen rör upp mjuka dammpuffar när bilen kör
+// PUFFAR – däckens damm/jord/grus, och avgaserna
 // ---------------------------------------------------------------------------
-// En "ringbuffert": TRAIL_SIZE platser som återanvänds i tur och ordning. När bilen
-// rullat en bit skrivs två nya gnistor (en per bakhjul) över de äldsta. Varje gnista
-// får sin plats och sin födelsetid; resten (stiga, blinka, blekna) gör shadern.
-const TRAIL_SIZE = 140;
-const TRAIL_LIFE = 1.6;       // Sekunder en puff lever.
-const TRAIL_STEP = 0.5;       // Hur långt bilen rullar mellan två puffpar.
-const trailSpawns = new Float32Array(TRAIL_SIZE * 4).fill(-100); // x, y, z, födelsetid (-100 = aldrig född).
-const trailGeometry = new THREE.BufferGeometry();
-trailGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_SIZE * 3), 3)); // Krävs, men används inte.
-const trailAttribute = new THREE.BufferAttribute(trailSpawns, 4);
-trailAttribute.setUsage(THREE.DynamicDrawUsage); // Säger till grafikkortet att den ändras ofta.
-trailGeometry.setAttribute('aSpawn', trailAttribute);
-const trailMaterial = new THREE.ShaderMaterial({
-  uniforms: {
-    uTime: shared.uTime,
-    uLife: { value: TRAIL_LIFE },
-    uScreenScale: { value: 800 },
-    uColor: { value: new THREE.Color(PALETTE.tireDust) },
-  },
-  vertexShader: `
-    attribute vec4 aSpawn;
-    uniform float uTime;
-    uniform float uLife;
-    uniform float uScreenScale;
-    varying float vAge;
-    void main() {
-      float age = (uTime - aSpawn.w) / uLife; // 0 = ny, 1 = borta.
-      vec3 p = aSpawn.xyz;
-      float seed = fract(sin(aSpawn.w * 91.7 + aSpawn.x) * 4375.5); // Ett slumptal per puff.
-      p.y += age * (0.5 + seed * 0.5);                          // Stiger sakta, som röken.
-      p.x += sin(seed * 30.0 + age * 4.0) * 0.3 * age;          // Och sprider sig lite.
-      p.z += cos(seed * 20.0 + age * 3.0) * 0.3 * age;
-      vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
-      gl_Position = projectionMatrix * viewPosition;
-      float alive = step(0.0, age) * step(age, 1.0);            // 0 för puffar som inte finns.
-      gl_PointSize = (0.4 + age * 1.4) * alive * uScreenScale / -viewPosition.z; // Växer när den stiger.
-      vAge = age;
-    }`,
-  fragmentShader: `
-    uniform vec3 uColor;
-    varying float vAge;
-    void main() {
-      float r = length(gl_PointCoord - 0.5) * 2.0;
-      // Mjuk rund puff som tonar in snabbt och bleknar långsamt, som skorstensröken.
-      float alpha = smoothstep(1.0, 0.1, r) * smoothstep(0.0, 0.08, vAge) * (1.0 - vAge) * 0.45;
-      gl_FragColor = vec4(uColor, alpha);
-      #include <colorspace_fragment>
-    }`,
-  transparent: true,
-  depthWrite: false,
-});
-const trail = new THREE.Points(trailGeometry, trailMaterial);
-trail.frustumCulled = false;
-scene.add(trail);
-let trailNext = 0;        // Nästa plats i ringbufferten.
-let trailRolled = 0;      // Hur långt bilen rullat sedan förra gnistparet.
+// En "ringbuffert" för varje sort puffar: ett antal platser som återanvänds i tur och ordning. Varje
+// puff får en plats och en födelsetid (plus underlag och styrka); resten (stiga, växa, tona) gör shadern.
+// Underlaget (0 jord, 1 grus, 2 hårdare grus, 3 avgaser) styr färgen. Puffarna börjar små och tonar in
+// långsamt, med en ojämn kant (brus), så att de inte ser ut som runda skivor när de föds.
+let surfaceSampler = () => 0;
+// main.js lämnar en funktion (x, z) => 0 gräs, 1 väg, 2 ficka, som säger vad bilen kör på.
+export function setSurfaceSampler(sampler) {
+  surfaceSampler = sampler;
+}
+
+function makePuffSystem(size, options) {
+  const spawns = new Float32Array(size * 4).fill(-100); // x, y, z, födelsetid (-100 = aldrig född).
+  const infos = new Float32Array(size * 2);             // underlag, styrka.
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 3), 3)); // Krävs, men används inte.
+  const spawnAttribute = new THREE.BufferAttribute(spawns, 4);
+  const infoAttribute = new THREE.BufferAttribute(infos, 2);
+  spawnAttribute.setUsage(THREE.DynamicDrawUsage);
+  infoAttribute.setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute('aSpawn', spawnAttribute);
+  geometry.setAttribute('aInfo', infoAttribute);
+  const color = (hex) => ({ value: new THREE.Color(hex) });
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: shared.uTime,
+      uLife: { value: options.life },
+      uRise: { value: options.rise },
+      uSpread: { value: options.spread },
+      uSize0: { value: options.size0 },
+      uSize1: { value: options.size1 },
+      uAlpha: { value: options.alpha },
+      uScreenScale: { value: 800 },
+      uColor0: color('#6a5338'), // Jord (gräs): mörkbrun.
+      uColor1: color('#a8927a'), // Grus (väg): grusets färg, lite mörkare än förut.
+      uColor2: color('#8d7e70'), // Fickan: lite mörkare grus.
+      uColor3: color(options.smoke), // Avgaser.
+    },
+    vertexShader: `
+      attribute vec4 aSpawn;
+      attribute vec2 aInfo;
+      uniform float uTime;
+      uniform float uLife;
+      uniform float uRise;
+      uniform float uSpread;
+      uniform float uSize0;
+      uniform float uSize1;
+      uniform float uScreenScale;
+      uniform vec3 uColor0;
+      uniform vec3 uColor1;
+      uniform vec3 uColor2;
+      uniform vec3 uColor3;
+      varying float vAge;
+      varying float vSeed;
+      varying float vPower;
+      varying vec3 vColor;
+      void main() {
+        float age = (uTime - aSpawn.w) / uLife; // 0 = ny, 1 = borta.
+        vec3 p = aSpawn.xyz;
+        float seed = fract(sin(aSpawn.w * 91.7 + aSpawn.x * 12.9 + aSpawn.z * 4.1) * 4375.5); // Ett slumptal per puff.
+        p.y += age * uRise * (0.6 + seed * 0.6);                    // Stiger.
+        p.x += sin(seed * 30.0 + age * 3.0) * uSpread * age;        // Och sprider sig lite.
+        p.z += cos(seed * 20.0 + age * 2.5) * uSpread * age;
+        vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * viewPosition;
+        float alive = step(0.0, age) * step(age, 1.0);              // 0 för puffar som inte finns.
+        float grow = smoothstep(0.0, 1.0, age);
+        gl_PointSize = mix(uSize0, uSize1, grow) * (0.75 + seed * 0.5) * (0.6 + 0.4 * aInfo.y) * alive * uScreenScale / -viewPosition.z;
+        vAge = age;
+        vSeed = seed;
+        vPower = aInfo.y;
+        vColor = aInfo.x < 0.5 ? uColor0 : (aInfo.x < 1.5 ? uColor1 : (aInfo.x < 2.5 ? uColor2 : uColor3));
+      }`,
+    fragmentShader: `
+      uniform float uAlpha;
+      varying float vAge;
+      varying float vSeed;
+      varying float vPower;
+      varying vec3 vColor;
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float valueNoise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      void main() {
+        vec2 pc = gl_PointCoord - 0.5;
+        float r = length(pc) * 2.0;
+        // Brus i kanten: ingen perfekt cirkel, utan en ojämn, mjuk molnform.
+        float n = valueNoise(pc * 4.5 + vSeed * 17.0);
+        float shape = smoothstep(1.0, 0.1, r + (n - 0.5) * 0.8);
+        // Tonar in långsamt (inte en skiva som dyker upp) och bleknar mjukt.
+        float fadeIn = smoothstep(0.0, 0.3, vAge);
+        float fadeOut = (1.0 - vAge) * (1.0 - vAge);
+        gl_FragColor = vec4(vColor, shape * fadeIn * fadeOut * uAlpha * vPower);
+        #include <colorspace_fragment>
+      }`,
+    transparent: true,
+    depthWrite: false,
+  });
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+  scene.add(points);
+  let next = 0;
+  return {
+    material,
+    // Lägger en ny puff: x, y, z, underlag, styrka (0..1).
+    spawn(x, y, z, kind, power) {
+      spawns[next * 4] = x;
+      spawns[next * 4 + 1] = y;
+      spawns[next * 4 + 2] = z;
+      spawns[next * 4 + 3] = shared.uTime.value;
+      infos[next * 2] = kind;
+      infos[next * 2 + 1] = power;
+      next = (next + 1) % size;
+      spawnAttribute.needsUpdate = true;
+      infoAttribute.needsUpdate = true;
+    },
+  };
+}
+
+// Däcken: jord på gräs, grus på väg. Mörkare, lägre och mer ojämna än den gamla ljusa dammen.
+const tirePuffs = makePuffSystem(160, { life: 1.1, rise: 0.45, spread: 0.35, size0: 0.22, size1: 1.25, alpha: 0.5, smoke: '#c8c8cc' });
+// Avgaserna: den ljusa, mjuka röken, från avgasröret bak på bilen. Stiger och sprider sig.
+const exhaustPuffs = makePuffSystem(70, { life: 1.5, rise: 0.9, spread: 0.22, size0: 0.12, size1: 0.7, alpha: 0.3, smoke: '#cfd0d6' });
+const puffSystems = [tirePuffs, exhaustPuffs];
+
+let trailRolled = 0;       // Hur långt bilen rullat sedan förra däckspuffen.
+let exhaustWait = 0;       // Sekunder tills nästa avgaspuff.
 const lastCarSpot = new THREE.Vector3();
 
-function updateTrail(carPosition, carAngle, extra) {
+function updateTrail(delta, carPosition, carAngle, extra) {
   const moved = carPosition.distanceTo(lastCarSpot);
   lastCarSpot.copy(carPosition);
   if (moved > 2) return; // Ett hopp (en resa), inte körning.
+  const speedNow = delta > 0 ? moved / delta : 0;
+  const sinA = Math.sin(carAngle);
+  const cosA = Math.cos(carAngle);
+
+  // --- Däckspuffar: bakhjulen, tätare i drift och med nitro. Mindre kraft vid låg fart. ---
   trailRolled += moved;
-  // extra = drift eller nitro: puffarna kommer tätare (och 140 platser räcker fortfarande).
-  if (trailRolled < (extra ? TRAIL_STEP * 0.3 : TRAIL_STEP)) return;
-  trailRolled = 0;
-  // Bakhjulens plats: en bit bakom bilens mitt, en bit åt varje sida.
-  const backX = -Math.sin(carAngle) * 0.9;
-  const backZ = -Math.cos(carAngle) * 0.9;
-  const sideX = Math.cos(carAngle) * 0.55;
-  const sideZ = -Math.sin(carAngle) * 0.55;
-  for (const side of [-1, 1]) {
-    const i = trailNext * 4;
-    trailSpawns[i] = carPosition.x + backX + sideX * side;
-    trailSpawns[i + 1] = 0.2;
-    trailSpawns[i + 2] = carPosition.z + backZ + sideZ * side;
-    trailSpawns[i + 3] = shared.uTime.value;
-    trailNext = (trailNext + 1) % TRAIL_SIZE;
+  if (trailRolled >= (extra ? 0.18 : 0.5)) {
+    trailRolled = 0;
+    const kind = surfaceSampler(carPosition.x, carPosition.z);
+    const power = THREE.MathUtils.clamp(0.25 + speedNow / 12, 0.25, 1);
+    for (const side of [-1, 1]) {
+      tirePuffs.spawn(
+        carPosition.x - sinA * 0.9 + cosA * 0.55 * side,
+        0.2,
+        carPosition.z - cosA * 0.9 - sinA * 0.55 * side,
+        kind,
+        power
+      );
+    }
   }
-  trailAttribute.needsUpdate = true; // 140 x 4 tal: billigt att skicka.
+
+  // --- Avgaser: ett rör bak till höger på bilen. Glesa när den står stilla, tätare ju fortare den kör. ---
+  exhaustWait -= delta;
+  if (exhaustWait <= 0) {
+    const speedShare = THREE.MathUtils.clamp(speedNow / 12, 0, 1);
+    exhaustWait = extra ? 0.06 : THREE.MathUtils.lerp(0.5, 0.08, speedShare);
+    exhaustPuffs.spawn(
+      carPosition.x - sinA * 1.3 + cosA * 0.38,
+      0.38,
+      carPosition.z - cosA * 1.3 - sinA * 0.38,
+      3,
+      0.55 + 0.45 * speedShare
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -578,8 +670,8 @@ export function makePadGlow(width, length, color) {
         // Änden mot vägen (vSpot.y < 0) ska inte ha någon lysande kant: glöden tonar bort
         // mot vägen, så att fickan smälter in i grusvägen utan en linje.
         float roadFade = smoothstep(-uSize.y * 0.5, uSize.y * 0.1, vSpot.y);
-        float line = smoothstep(0.35, 0.0, edge);          // Smal lysande kant ...
-        float inner = smoothstep(0.9, 0.0, edge) * 0.2;    // ... med ett mjukt sken innanför.
+        float line = smoothstep(0.9, 0.0, edge) * 0.55;    // Bred, mjuk kant (ingen skarp linje) ...
+        float inner = smoothstep(2.0, 0.0, edge) * 0.18;   // ... med ett långt, svagt sken innanför.
         float pulse = 0.7 + 0.3 * sin(uTime * 2.2);        // Andas långsamt.
         float strength = (line * 0.7 + inner) * pulse * (0.25 + 0.35 * uNear) * roadFade; // Kanten lite svagare: skylten ska vinna.
         gl_FragColor = vec4(uColor * strength, 1.0);
@@ -800,10 +892,10 @@ export function updateMagic(delta, carPosition, wind, carAngle = 0, extraDust = 
   fireflyMaterial.uniforms.uPixelRatio.value = renderer.getPixelRatio();
   // Kamerans synfält är 30 grader: tan(15°) ≈ 0.268.
   smokeScreenScale.value = renderer.domElement.height / (2 * 0.268);
-  trailMaterial.uniforms.uScreenScale.value = smokeScreenScale.value;
+  for (const system of puffSystems) system.material.uniforms.uScreenScale.value = smokeScreenScale.value;
   mothScreenScale.value = smokeScreenScale.value;
   burst.uScreenScale.value = smokeScreenScale.value;
-  updateTrail(carPosition, carAngle, extraDust);
+  updateTrail(delta, carPosition, carAngle, extraDust);
   fireflies.visible = currentWorld === WORLDS.hub;
 }
 

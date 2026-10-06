@@ -54,7 +54,7 @@ await step(0.1, 'Starting the engine');
 const nitroFill = document.getElementById('nitroFill');
 const carModule = await import('./car.js'); // Hela modulen sparas: nitro/drifting/boosting måste läsas live (ett uppackat värde fryser).
 const { car, beam, HEADLIGHT_STRENGTH, startAutoDrive, updateCar } = carModule;
-const { billboards, padTextureActive, updateBillboards, getFocus } = await import('./billboards.js');
+const { billboards, padTextureActive, updateBillboards, getFocus, BAY_WIDTH, BAY_LENGTH } = await import('./billboards.js');
 await step(0.2, 'Building the garage');
 const { HOME_X, HOME_Z, GARAGE_Z, home, garageDoor, updateHome } = await import('./home.js');
 await step(0.3, 'Painting the ground');
@@ -73,8 +73,23 @@ hub.buildHubGrounding(roadsAndLamps);
 // för då skulle vi bara få värdet det hade just nu – och det ändras när en resa startar.
 const portals = await import('./portals.js');
 const { fallingLeaves, fallingLeafMaterial, moteMaterial, updateLeaves, wind, setLeafTrees } = await import('./leaves.js');
-setLeafTrees(roadsAndLamps.trees); // Löven samlas under träden och faller från kronorna.
-const { updateMagic } = await import('./magic.js');
+setLeafTrees(roadsAndLamps.trees, roadsAndLamps.roads); // Löven samlas under träden och faller från kronorna.
+const { updateMagic, setSurfaceSampler } = await import('./magic.js');
+// Vad bilen kör på (för färgen på däckspuffarna): 0 = gräs (jord), 1 = väg (grus), 2 = parkeringsficka.
+const { distanceToRoad, ROAD_WIDTH, bayFrames } = await import('./roads.js');
+const hubBays = bayFrames(WORLDS.hub, roadsAndLamps.roads);
+setSurfaceSampler((x, z) => {
+  if (currentWorld !== WORLDS.hub) return 1;
+  for (const bay of hubBays) {
+    const dx = x - bay.x;
+    const dz = z - bay.z;
+    const along = dx * bay.ux + dz * bay.uz;
+    const across = -dx * bay.uz + dz * bay.ux;
+    if (Math.abs(across) < BAY_WIDTH / 2 && Math.abs(along) < BAY_LENGTH / 2) return 2;
+  }
+  for (const road of roadsAndLamps.roads) if (distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2) return 1;
+  return 0;
+});
 const { optimizeWorld, prepareWorld, setShadows } = await import('./optimize.js');
 const { updateLamps } = await import('./lamps.js');
 const perf = await import('./perf.js');

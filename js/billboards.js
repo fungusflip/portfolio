@@ -337,19 +337,28 @@ export const padTextureActive = makePadTexture(true);
 // Asfalten tonas över i grus i änden mot vägen, så att fickan smälter ihop med infarten.
 export const BAY_WIDTH = 5.4; // Samma som en väg inklusive kantlinjer.
 export const BAY_LENGTH = 6.5;
+// Fickans kant blandas in i marken i stället för att ha en tydlig linje: innanför kanten tonas asfalten
+// över i grus, och utanför ligger ett SKÖRT av grus och lite mossa som glesnar utåt som ett
+// prickmönster (varje bildpunkt är antingen med eller inte, och chansen sjunker ju längre ut man kommer).
+// Det läses som en mjuk övergång, men är ändå ogenomskinligt (alphaTest), så att det inte ritas över bilen.
+export const BAY_SKIRT = 0.6;          // Hur långt skörtet når utanför fickan (inte mot vägen), i enheter.
+const BAY_PIXELS_PER_UNIT = 50;
+const SKIRT_PX = Math.round(BAY_SKIRT * BAY_PIXELS_PER_UNIT);
+const bayW = Math.round(BAY_WIDTH * BAY_PIXELS_PER_UNIT);   // 270
+const bayH = Math.round(BAY_LENGTH * BAY_PIXELS_PER_UNIT);  // 325
 const bayImage = document.createElement('canvas');
-bayImage.width = 270;  // 50 pixlar per enhet: 5.4 x 6.5 enheter.
-bayImage.height = 325;
+bayImage.width = bayW + SKIRT_PX * 2;
+bayImage.height = bayH + SKIRT_PX; // Skört på sidorna och bakom, inte mot vägen.
 const bayPen = bayImage.getContext('2d');
-const bayW = bayImage.width;
-const bayH = bayImage.height;
+bayPen.translate(SKIRT_PX, SKIRT_PX); // Fickan ritas innanför skörtet.
 // I bilden är y = 0 änden mot skylten och y = bayH änden mot vägen.
 const BLEND_START = bayH * 0.6; // Härifrån och ner till infarten tonas asfalten över i grus.
-// 1. Asfalt med små ljusa korn.
-bayPen.fillStyle = PALETTE.asphalt;
+// 1. Underlaget: vägens grus i en mörkare ton (så att den ljusa ENTER-texten syns), nästan utan korn.
+// (Förut mörk asfalt med många ljusa korn: det blev för bruskigt.)
+bayPen.fillStyle = '#6e6053'; // Vägens grus (#b7a08a) ungefär 60 % ljust.
 bayPen.fillRect(0, 0, bayW, bayH);
-bayPen.fillStyle = PALETTE.asphaltLight;
-for (let i = 0; i < 350; i++) bayPen.fillRect(Math.random() * bayW, Math.random() * bayH, 3, 3);
+bayPen.fillStyle = 'rgba(130, 114, 98, 0.35)';
+for (let i = 0; i < 90; i++) bayPen.fillRect(Math.random() * bayW, Math.random() * bayH, 3, 3);
 // 2. Toning mot grusets färg (#b7a08a = 183, 160, 138).
 const bayBlend = bayPen.createLinearGradient(0, BLEND_START, 0, bayH);
 bayBlend.addColorStop(0, 'rgba(183, 160, 138, 0)');
@@ -357,9 +366,9 @@ bayBlend.addColorStop(1, 'rgba(183, 160, 138, 1)');
 bayPen.fillStyle = bayBlend;
 bayPen.fillRect(0, BLEND_START, bayW, bayH - BLEND_START);
 // 3. Småsten som "spiller in" från vägen, tätast vid infarten.
-for (let i = 0; i < 320; i++) {
-  bayPen.fillStyle = i % 2 === 0 ? PALETTE.gravelLight : PALETTE.gravelDark;
-  const size = 2.5 + Math.random() * 4.5;
+for (let i = 0; i < 110; i++) {
+  bayPen.fillStyle = i % 2 === 0 ? 'rgba(214, 196, 176, 0.55)' : 'rgba(143, 122, 102, 0.55)';
+  const size = 2.5 + Math.random() * 3.5;
   const y = bayH - Math.random() * Math.random() * (bayH - BLEND_START) * 1.3;
   bayPen.fillRect(Math.random() * bayW, y, size, size);
 }
@@ -373,31 +382,56 @@ bayPen.lineTo(24, 24);
 bayPen.lineTo(bayW - 24, 24);
 bayPen.lineTo(bayW - 24, BLEND_START);
 bayPen.stroke();
-// 5. Mörk kantlinje, samma som vägarnas, och runda hörn längst bort från vägen.
-// Vägänden förblir öppen (där tonas asfalten ändå över i grus). Hörnen utanför
-// rundningen görs genomskinliga och klipps bort med alphaTest (se bayMaterial).
-const BAY_CORNER = 50; // Hörnradie i pixlar (1 enhet).
-function bayShape() {
-  bayPen.beginPath();
-  bayPen.moveTo(0, bayH);
-  bayPen.lineTo(0, BAY_CORNER);
-  bayPen.arcTo(0, 0, BAY_CORNER, 0, BAY_CORNER);
-  bayPen.lineTo(bayW - BAY_CORNER, 0);
-  bayPen.arcTo(bayW, 0, bayW, BAY_CORNER, BAY_CORNER);
-  bayPen.lineTo(bayW, bayH);
+bayPen.setTransform(1, 0, 0, 1, 0, 0);
+// 5. Kanten: bildpunkt för bildpunkt. d = avstånd (i bildpunkter) utanför fickans rundade rektangel
+// (minus = innanför). Rektangeln är öppen mot vägen (sträcker sig långt nedåt), så där blir ingen kant.
+{
+  const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const gravelLight = hexToRgb(PALETTE.gravelLight);
+  const gravelDark = hexToRgb(PALETTE.gravelDark);
+  const gravelMid = hexToRgb(PALETTE.gravel);
+  const moss = hexToRgb(PALETTE.grassRoot);
+  const corner = 50;                  // Rundade hörn bort från vägen (1 enhet).
+  const edgeBlend = 34;               // Hur långt innanför kanten underlaget tonas över i vägens grus (mjuk, inte brusig).
+  const reach = bayH + 2000;          // "Öppen mot vägen".
+  const image = bayPen.getImageData(0, 0, bayImage.width, bayImage.height);
+  const data = image.data;
+  for (let y = 0; y < bayImage.height; y++) {
+    for (let x = 0; x < bayImage.width; x++) {
+      const ix = x - SKIRT_PX + 0.5;
+      const iy = y - SKIRT_PX + 0.5;
+      const qx = Math.abs(ix - bayW / 2) - (bayW / 2 - corner);
+      const qy = Math.abs(iy - reach / 2) - (reach / 2 - corner);
+      const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - corner;
+      const i = (y * bayImage.width + x) * 4;
+      if (d <= 0) {
+        // Innanför: asfalten tonas över i grus närmast kanten.
+        const fall = Math.max(0, 1 - -d / edgeBlend);
+        const mix = fall * fall * 0.95; // Mjuk kurva mot vägens färg.
+        if (mix > 0) {
+          for (let c = 0; c < 3; c++) data[i + c] = data[i + c] * (1 - mix) + gravelMid[c] * mix;
+        }
+        data[i + 3] = 255;
+      } else if (d < SKIRT_PX) {
+        // Skörtet: chansen att en bildpunkt finns sjunker mjukt ju längre ut den ligger.
+        if (Math.random() < Math.pow(1 - d / SKIRT_PX, 2.2)) {
+          // Mest samma grus som vägen (lite brus), bara några enstaka ljusa, mörka och mossiga korn.
+          const roll = Math.random();
+          const color = roll < 0.06 ? moss : roll < 0.2 ? gravelLight : roll < 0.34 ? gravelDark : gravelMid;
+          data[i] = color[0];
+          data[i + 1] = color[1];
+          data[i + 2] = color[2];
+          data[i + 3] = 255;
+        } else {
+          data[i + 3] = 0;
+        }
+      } else {
+        data[i + 3] = 0;
+      }
+    }
+  }
+  bayPen.putImageData(image, 0, 0);
 }
-bayPen.save();
-bayShape();
-bayPen.strokeStyle = PALETTE.gravelDark;
-bayPen.lineWidth = 20; // Halva (10 px) syns innanför kanten.
-bayPen.stroke();
-bayPen.restore();
-bayPen.globalCompositeOperation = 'destination-in';
-bayShape();
-bayPen.closePath();
-bayPen.fillStyle = '#000';
-bayPen.fill();
-bayPen.globalCompositeOperation = 'source-over';
 const bayTexture = new THREE.CanvasTexture(bayImage);
 bayTexture.colorSpace = THREE.SRGBColorSpace;
 bayTexture.anisotropy = MAX_ANISOTROPY;
@@ -412,9 +446,10 @@ const bollardGeometry = new THREE.BoxGeometry(0.28, 0.8, 0.28);
 const bollardTopGeometry = new THREE.BoxGeometry(0.34, 0.22, 0.34);
 
 export function addParkingBay(group, z, color = PALETTE.bulbs) {
-  const bay = new THREE.Mesh(new THREE.PlaneGeometry(BAY_WIDTH, BAY_LENGTH), bayMaterial);
+  // Planet är större än fickan: skörtet ligger på sidorna och bakom (inte mot vägen), så mitten flyttas bakåt.
+  const bay = new THREE.Mesh(new THREE.PlaneGeometry(BAY_WIDTH + BAY_SKIRT * 2, BAY_LENGTH + BAY_SKIRT), bayMaterial);
   bay.rotation.x = -Math.PI / 2; // Lägg planet ner på marken.
-  bay.position.set(0, 0.035, z); // Över grusvägarna, under ENTER-texten.
+  bay.position.set(0, 0.035, z - BAY_SKIRT / 2); // Över grusvägarna, under ENTER-texten.
   bay.renderOrder = -5;          // Ritas efter mark och grus, före allt som står på marken.
   group.add(bay);
   // opacity: 0.85 = nästan full styrka redan innan bilen är där, så att ENTER syns.
@@ -423,7 +458,7 @@ export function addParkingBay(group, z, color = PALETTE.bulbs) {
   pad.rotation.x = -Math.PI / 2;
   pad.position.set(0, 0.05, z); // 0.05 upp, annars flimrar den mot asfalten.
   group.add(pad);
-  // Den lysande kanten runt fickan (se magic.js). Starkare ju närmare bilen kommer.
+  // En mjuk, lugn glöd innanför fickans kant (se magic.js). Starkare ju närmare bilen kommer.
   const padGlow = makePadGlow(BAY_WIDTH, BAY_LENGTH, color);
   padGlow.mesh.position.set(0, 0.06, z);
   group.add(padGlow.mesh);
@@ -481,6 +516,8 @@ export const billboards = []; // Allt som behövs om varje byggd skylt medan pro
 //     group = hela skylten (står på marken, +z mot kameran).
 //     panel = det som lutar bakåt med skärmen (y = uppåt längs skärmen, z = ut ur skärmen).
 // Material som bara skyltarna använder:
+// Vitt lackerat stål: stolpar och ram på skyltarna hemma (drive-in-bio).
+const whiteMetal = new THREE.MeshStandardMaterial({ color: '#f4f1ea', roughness: 0.4, metalness: 0.1 });
 const goldMaterial = new THREE.MeshStandardMaterial({ color: '#c9a227', roughness: 0.45, metalness: 0.5, emissive: '#3a2a05' });
 const viewportMaterial = new THREE.MeshStandardMaterial({ color: '#33414f', roughness: 0.6 });   // 3D-programmets gråblå.
 const arcadeMaterial = new THREE.MeshStandardMaterial({ color: '#16241c', roughness: 0.8 });     // Arkadmaskinens mörkgröna lack.
@@ -501,13 +538,17 @@ const DISPLAYS = {
   // --- Hemma: drive-in-bio. En duk på två stolpar (mobilen står direkt på marken). ---
   cinema: {
     baseY: (isPhone) => (isPhone ? 0.1 : POST_HEIGHT),
-    border: 0.2,
+    border: 0.14,
     signGap: 0,
     build({ group, panel, width, height, border, isPhone }) {
       if (!isPhone) {
-        for (const x of [-3, 3]) box(group, postMaterial, 0.3, POST_HEIGHT, 0.3, x, POST_HEIGHT / 2, -0.16);
+        // Två slanka vita stålstolpar, närmare mitten (förut svarta/bruna och längst ut), med en fotplatta.
+        for (const x of [-2.3, 2.3]) {
+          box(group, whiteMetal, 0.2, POST_HEIGHT, 0.2, x, POST_HEIGHT / 2, -0.16);
+          box(group, whiteMetal, 0.7, 0.08, 0.7, x, 0.04, -0.16);
+        }
       }
-      box(panel, frameMaterial, width + border * 2, height + border * 2, 0.3, 0, height / 2 + border, -0.16);
+      box(panel, whiteMetal, width + border * 2, height + border * 2, 0.22, 0, height / 2 + border, -0.12);
     },
   },
 
@@ -634,6 +675,43 @@ const screenColor = new THREE.Color();
 const WHITE = new THREE.Color('#ffffff');
 const tintHSL = {}; // Återanvänds varje bild.
 
+// En slank LED-list runt skärmen (hemma, som en modern drive-in-duk) i stället för glödlampor. Samma
+// gränssnitt som makeBulbs (active, tint), plus update(time) som färgar listen: kallvit när ingen tittar,
+// i skärmens färg medan bilen står i fickan.
+function makeLedFrame(width, height, border, color) {
+  const group = new THREE.Group();
+  const material = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+  const outerWidth = width + border * 2;
+  const outerHeight = height + border * 2;
+  const inset = border / 2; // Listen ligger mitt i ramen.
+  const thickness = 0.05;
+  const add = (w, h, x, y) => {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.03), material);
+    bar.position.set(x, y, 0.02);
+    bar.userData.noShadow = true;
+    group.add(bar);
+  };
+  add(outerWidth - inset, thickness, 0, inset);                                // Nederkant.
+  add(outerWidth - inset, thickness, 0, outerHeight - inset);                  // Överkant.
+  add(thickness, outerHeight - inset, -(outerWidth / 2 - inset), outerHeight / 2); // Vänster.
+  add(thickness, outerHeight - inset, outerWidth / 2 - inset, outerHeight / 2);    // Höger.
+  const active = { value: 0 };
+  const tint = { value: new THREE.Color(color) };
+  const idle = new THREE.Color('#e6f0ff');
+  const lit = new THREE.Color();
+  markMoving(group); // Färgen ändras hela tiden: får inte slås ihop eller frysas.
+  return {
+    mesh: group,
+    active,
+    tint,
+    update(time) {
+      lit.copy(idle).lerp(tint.value, 0.85 * active.value);
+      lit.multiplyScalar(0.8 + 0.1 * Math.sin(time * 1.1) + 0.35 * active.value);
+      material.color.copy(lit);
+    },
+  };
+}
+
 export function buildBillboards(world) {
   const display = DISPLAYS[world.display || 'cinema'];
   for (const project of PROJECTS) {
@@ -682,10 +760,12 @@ export function buildBillboards(world) {
     markMoving(sign); // Skylten gungar lite (se updateBillboards).
 
     // Ljusslingan runt ramen: varma glödlampor hemma, världens färg i de andra världarna.
-    const bulbs = makeBulbs(
-      rectanglePoints(width / 2 + border + 0.18, -0.12, height + border * 2 + display.signGap + 0.12, 0.06, 0.5),
-      world === WORLDS.hub ? PALETTE.bulbs : world.accent
-    );
+    const bulbs = world === WORLDS.hub
+      ? makeLedFrame(width, height, border, PALETTE.bulbs) // Hemma: en modern LED-list.
+      : makeBulbs(
+        rectanglePoints(width / 2 + border + 0.18, -0.12, height + border * 2 + display.signGap + 0.12, 0.06, 0.5),
+        world.accent
+      );
     panel.add(bulbs.mesh);
 
     // Skenet runt skärmen: ett mjukt ljus bakom ramen, i affischens medelfärg (sätts när
@@ -716,7 +796,7 @@ export function buildBillboards(world) {
     const padSpot = towardCamera(project, PAD_DISTANCE); // Fickans mitt i världen.
     billboards.push({
       project, brush, texture, screenMaterial, padMaterial, signMaterial, titleTexture, titleTextureActive,
-      bulbs: bulbs.active, bulbTint: bulbs.tint, sign, signY: sign.position.y, swing: Math.random() * 10, // Rörelserna.
+      bulbs: bulbs.active, bulbTint: bulbs.tint, ledUpdate: bulbs.update || null, sign, signY: sign.position.y, swing: Math.random() * 10, // Rörelserna.
       halo, haloColor: halo.material.color.clone(),
       posterColor: new THREE.Color(world === WORLDS.hub ? PALETTE.bulbs : world.accent), // Byts mot affischens färg.
       panel, popScale: 1, popSpeed: 0, // Hur stor panelen är just nu, och hur fort den växer.
@@ -871,6 +951,7 @@ export function updateBillboards(delta, carPosition) {
     }
     // Titelskylten gungar lätt, men står still medan man tittar (bulbs.value går mot 1).
     const time = performance.now() / 1000 + billboard.swing;
+    if (billboard.ledUpdate) billboard.ledUpdate(time); // LED-listen (hemma).
     const sway = 1 - billboard.bulbs.value;
     billboard.sign.position.y = billboard.signY + Math.sin(time * 1.4) * 0.07 * sway;
     billboard.sign.rotation.z = Math.sin(time * 0.9) * 0.02 * sway;
