@@ -164,6 +164,25 @@ export const PROJECTS = [
     "phone": false
   },
   {
+    "id": "angame-environment",
+    "title": "AnGame: Procedural Environment",
+    "category": "Technical Art",
+    "featured": false,
+    "freelance": false,
+    "tags": [
+      "Houdini",
+      "Unreal",
+      "Shaders",
+      "Post-process"
+    ],
+    "poster": null,
+    "video": null,
+    "still": null,
+    "url": "",
+    "content": "../assets/content/angame-environment.html",
+    "phone": false
+  },
+  {
     "id": "idle-village",
     "title": "Idle Village",
     "category": "Programming",

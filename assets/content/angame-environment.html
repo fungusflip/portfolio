@@ -1,0 +1,34 @@
+<p>The environment for AnGame, a top-down-ish bow-combat roguelite in Unreal Engine 5.8 where you cultivate an organic heart while defending it in waves. Built with Houdini and Substance, then tied together in Unreal with a few small, controllable systems.</p>
+
+<!-- TODO Filip: media is missing. The download from Gyazo did not land on disk. Candidate AnGame captures (search "angame" on Gyazo, all mp4): 4d1c673963f7d00a970a3273061183a7 (11.8 MB, player + tree + house), 8d24bd8054a04b5abf9dc0240323d9e9 (12.4 MB, yellow foliage), 85aac5fb430acdc2ca6054b4e7564093 (27 MB, house). Put the shrunk files in assets/content-media/angame/ and add <video> tags under each section. -->
+
+<h2>Procedural environment</h2>
+<p>The terrain pieces and scattered foliage are authored in Houdini, with textures from Substance. Scattering gives a dense, varied field without hand-placing anything.</p>
+<!-- TODO Filip: which parts are Houdini-made (trees, grass, rocks, terrain?) and which Substance materials? Name the .hiplc / HDA if you want it mentioned. -->
+
+<h2>Grass that blends into the ground</h2>
+<p>Scattered grass used to sit on the ground like a separate layer. I set up a Runtime Virtual Texture so the grass samples the ground colour underneath it. Two parameters tune the result:</p>
+<ul>
+ <li><strong>GroundBlendHeight:</strong> how far up the blade the ground colour reaches</li>
+ <li><strong>GroundBlendStrength:</strong> how strongly it is mixed in</li>
+</ul>
+
+<h2>Wind</h2>
+<p>I rebuilt the wind as one Material Parameter Collection, <code>MPC_Wind</code>, and two material functions, <code>MF_Wind_Tree</code> and <code>MF_Wind_Grass</code>. A single <strong>WindIntensity</strong> knob drives all of it, and <strong>LeafMovement</strong> adds noise to the canopy. Trees and grass share the same collection, so they always agree.</p>
+
+<h2>Painterly look</h2>
+<p>A full-screen post-process gives the whole world a painted feel: a 6x6 Kuwahara filter for the brush strokes and a Sobel pass for ink lines. A second Material Parameter Collection drives the day/night cycle and a per-day "mood" grade through these levers:</p>
+<ul>
+ <li>saturation and brightness</li>
+ <li>line strength and brush scale</li>
+ <li>haze amount</li>
+ <li>line colour, shadow tint and highlight tint</li>
+</ul>
+
+<h2>Problems I hit</h2>
+<p>After the upgrade to UE 5.8 the distant trees crawled. Two causes:</p>
+<ul>
+ <li>The default anti-aliasing had changed to TSR, and its jitter fed straight into the Sobel ink lines. I switched the project to SMAA.</li>
+ <li>The grass used a dithered opacity mask, which flickers when there is no temporal AA to smooth it. I turned it off on the foliage materials.</li>
+</ul>
+<!-- TODO Filip: add a before/after clip of the tree crawl if you have one. -->
