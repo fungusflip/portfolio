@@ -399,7 +399,7 @@ function makePuffSystem(size, options) {
       uSize1: { value: options.size1 },
       uAlpha: { value: options.alpha },
       uScreenScale: { value: 800 },
-      uColor0: color('#6a5338'), // Jord (gräs): mörkbrun.
+      uColor0: color('#a98458'), // Jord (gräs): ljus, dammig brun-orange, så den syns mot gräset.
       uColor1: color('#a8927a'), // Grus (väg): grusets färg, lite mörkare än förut.
       uColor2: color('#8d7e70'), // Fickan: lite mörkare grus.
       uColor3: color(options.smoke), // Avgaser.
@@ -422,6 +422,7 @@ function makePuffSystem(size, options) {
       varying float vSeed;
       varying float vPower;
       varying vec3 vColor;
+      varying float vDust;
       void main() {
         float age = (uTime - aSpawn.w) / uLife; // 0 = ny, 1 = borta.
         vec3 p = aSpawn.xyz;
@@ -433,10 +434,11 @@ function makePuffSystem(size, options) {
         gl_Position = projectionMatrix * viewPosition;
         float alive = step(0.0, age) * step(age, 1.0);              // 0 för puffar som inte finns.
         float grow = smoothstep(0.0, 1.0, age);
-        gl_PointSize = mix(uSize0, uSize1, grow) * (0.75 + seed * 0.5) * (0.6 + 0.4 * aInfo.y) * alive * uScreenScale / -viewPosition.z;
+        gl_PointSize = mix(uSize0, uSize1, grow) * (aInfo.x < 0.5 ? 1.4 : 1.0) * (0.75 + seed * 0.5) * (0.6 + 0.4 * aInfo.y) * alive * uScreenScale / -viewPosition.z;
         vAge = age;
         vSeed = seed;
         vPower = aInfo.y;
+        vDust = aInfo.x < 0.5 ? 1.5 : 1.0; // Jorddamm på gräs: tätare så den syns mot stråna.
         vColor = aInfo.x < 0.5 ? uColor0 : (aInfo.x < 1.5 ? uColor1 : (aInfo.x < 2.5 ? uColor2 : uColor3));
       }`,
     fragmentShader: `
@@ -445,6 +447,7 @@ function makePuffSystem(size, options) {
       varying float vSeed;
       varying float vPower;
       varying vec3 vColor;
+      varying float vDust;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float valueNoise(vec2 p) {
         vec2 i = floor(p);
@@ -461,7 +464,7 @@ function makePuffSystem(size, options) {
         // Tonar in långsamt (inte en skiva som dyker upp) och bleknar mjukt.
         float fadeIn = smoothstep(0.0, 0.3, vAge);
         float fadeOut = (1.0 - vAge) * (1.0 - vAge);
-        gl_FragColor = vec4(vColor, shape * fadeIn * fadeOut * uAlpha * vPower);
+        gl_FragColor = vec4(vColor, shape * fadeIn * fadeOut * uAlpha * vPower * vDust);
         #include <colorspace_fragment>
       }`,
     transparent: true,
@@ -544,7 +547,7 @@ function updateTrail(delta, carPosition, carAngle, extra) {
 // Samma ringbuffert-trick som puffarna: CPU:n skriver bara vid födseln (plats, födelsetid, startfart),
 // banan (kast + tyngdkraft, sedan liggande på marken) räknar shadern ut. Ogenomskinliga kantiga punkter;
 // de växer fram och krymper bort, så inget poppar.
-const DEBRIS_SIZE = 120;
+const DEBRIS_SIZE = 150;
 const DEBRIS_GRAVITY = 14;
 const debrisSpawns = new Float32Array(DEBRIS_SIZE * 4).fill(-100); // x, y, z, födelsetid.
 const debrisVels = new Float32Array(DEBRIS_SIZE * 4);              // startfart x, y, z + livslängd.
@@ -562,9 +565,10 @@ const debrisMaterial = new THREE.ShaderMaterial({
     uTime: shared.uTime,
     uGravity: { value: DEBRIS_GRAVITY },
     uScreenScale: { value: 800 },
-    uColor0: { value: new THREE.Color('#6a5338') }, // Jord (gräs).
+    uColor0: { value: new THREE.Color('#b08a5a') }, // Jord (gräs): ljus brun-orange som syns mot gräset.
     uColor1: { value: new THREE.Color('#a8927a') }, // Grus (väg).
     uColor2: { value: new THREE.Color('#8d7e70') }, // Fickan: lite mörkare grus.
+    uColor3: { value: new THREE.Color('#c3cc6e') }, // Gräsrester: blekt grön-gult strå.
   },
   vertexShader: `
     attribute vec4 aSpawn;
@@ -576,7 +580,9 @@ const debrisMaterial = new THREE.ShaderMaterial({
     uniform vec3 uColor0;
     uniform vec3 uColor1;
     uniform vec3 uColor2;
+    uniform vec3 uColor3;
     varying vec3 vColor;
+    varying float vShred;
     void main() {
       float t = uTime - aSpawn.w;
       float age = t / aVel.w; // 0 = ny, 1 = borta.
@@ -591,14 +597,17 @@ const debrisMaterial = new THREE.ShaderMaterial({
       float alive = step(0.0, age) * step(age, 1.0);                                  // 0 för bitar som inte finns.
       float scale = smoothstep(0.0, 0.1, age) * (1.0 - smoothstep(0.6, 1.0, age));    // In och ut mjukt.
       gl_PointSize = aInfo.y * (0.7 + seed * 0.6) * scale * alive * uScreenScale / -viewPosition.z;
-      vec3 base = aInfo.x < 0.5 ? uColor0 : (aInfo.x < 1.5 ? uColor1 : uColor2);
+      vShred = aInfo.x > 2.5 ? 1.0 : 0.0;
+      vec3 base = aInfo.x < 0.5 ? uColor0 : (aInfo.x < 1.5 ? uColor1 : (aInfo.x < 2.5 ? uColor2 : uColor3));
       vColor = base * (0.65 + seed * 0.7);                                            // Mörkare och ljusare klumpar.
     }`,
   fragmentShader: `
     varying vec3 vColor;
+    varying float vShred;
     void main() {
       vec2 pc = gl_PointCoord - 0.5;
-      if (abs(pc.x) + abs(pc.y) > 0.62) discard; // Kantig klump: fyrkant med hörnen bortskurna.
+      if (vShred > 0.5) { if (abs(pc.x) * 3.2 + abs(pc.y) > 0.5) discard; } // Gräsrest: smalt, avlångt strå.
+      else if (abs(pc.x) + abs(pc.y) > 0.62) discard; // Kantig klump: fyrkant med hörnen bortskurna.
       gl_FragColor = vec4(vColor * (0.8 + 0.4 * (0.5 - pc.y)), 1.0); // Undersidan lite mörkare.
       #include <colorspace_fragment>
     }`,
@@ -630,13 +639,15 @@ function updateDebris(delta, carPosition, carAngle, extra) {
   let rate = speedNow * 0.9;
   if (extra) rate = rate * 3.5 + 8;
   else if (turnRate > 1.2 || accel > 8) rate *= 2;
-  debrisBudget += Math.min(rate, 70) * delta;
+  if (surfaceSampler(carPosition.x, carPosition.z) === 0) rate *= 1.4; // Mer skräp på gräs.
+  debrisBudget += Math.min(rate, 90) * delta;
   const count = Math.min(Math.floor(debrisBudget), 12);
   debrisBudget -= Math.floor(debrisBudget);
   if (count === 0) return;
   const kind = surfaceSampler(carPosition.x, carPosition.z);
   const sinA = Math.sin(carAngle);
   const cosA = Math.cos(carAngle);
+  const onGrass = kind === 0;
   // Färdriktningen (i drift pekar den inte åt nosen): bitarna flyger bakåt längs den och åt sidan.
   const dirX = dx / moved;
   const dirZ = dz / moved;
@@ -652,11 +663,13 @@ function updateDebris(delta, carPosition, carAngle, extra) {
     debrisSpawns[i * 4 + 2] = carPosition.z - cosA * back - sinA * 0.55 * side;
     debrisSpawns[i * 4 + 3] = shared.uTime.value;
     debrisVels[i * 4] = -dirX * along + cosA * out;
-    debrisVels[i * 4 + 1] = 1.8 + Math.random() * 2.4 + (extra ? 1 : 0);
+    // Gräs: högre och längre bågar så att klumparna syns ovanför stråna.
+    const shred = onGrass && Math.random() < 0.4;
+    debrisVels[i * 4 + 1] = (onGrass ? 3.4 + Math.random() * 3 : 1.8 + Math.random() * 2.4) + (extra ? 1 : 0);
     debrisVels[i * 4 + 2] = -dirZ * along - sinA * out;
-    debrisVels[i * 4 + 3] = 0.5 + Math.random() * 0.4; // Livslängd.
-    debrisInfos[i * 2] = kind;
-    debrisInfos[i * 2 + 1] = 0.1 + Math.random() * 0.1;
+    debrisVels[i * 4 + 3] = (onGrass ? 0.75 : 0.5) + Math.random() * 0.4; // Livslängd.
+    debrisInfos[i * 2] = shred ? 3 : kind;
+    debrisInfos[i * 2 + 1] = (0.1 + Math.random() * 0.1) * (onGrass ? (shred ? 2.2 : 1.9) : 1);
   }
   for (const attribute of debrisAttributes) attribute.needsUpdate = true;
 }
