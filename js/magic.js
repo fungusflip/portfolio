@@ -194,6 +194,10 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
         varying float vBurn;
         uniform vec3 uGroundBase;
         uniform float uGroundMix;`)
+      // Strån är DoubleSide: three.js vänder normalen på baksidan, så att hälften av stråna fick
+      // ljuset från "under" (mörkare än marken). Håll normalen uppåt på båda sidor, som marken.
+      .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
+        normal = normalize(vNormal);`)
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
         // Mörkt vid roten, ljust i toppen. Var sjunde tuva har höstgula toppar.
         // Bara enstaka (var tjugonde) tuva har höstgula toppar, och då bara lite: gräset ska vara jämnt.
