@@ -183,6 +183,12 @@ window.addEventListener('keydown', (e) => {
     closePanel();
     return;
   }
+  // Esc när inget annat är öppet: tillbaka till webbplatsen. (Projektlistan har redan tagit
+  // sitt Esc och satt defaultPrevented, se project-list.js.)
+  if (e.code === 'Escape' && !e.repeat && !e.defaultPrevented && !introOpen && !listOpen && hasStarted) {
+    backToSite();
+    return;
+  }
   if (e.code !== 'Enter' && e.code !== 'Tab') return;
   if (introOpen || listOpen) return; // Startskärmen och projektlistan sköter sina egna tangenter.
   // Tab flyttar annars fokus mellan knappar och länkar. Vi vill använda den själva.
@@ -203,6 +209,8 @@ const introProgress = document.getElementById('introProgress');
 export let introOpen = true; // Medan den är true kan bilen inte köras och Enter öppnar ingen panel.
 let ready = false;           // Är världen färdigladdad?
 let onStart = null;          // Funktionen som main.js vill ha körd när spelet startar.
+let hasStarted = false;      // Har spelet startats minst en gång? ("Back to site" och sedan "Resume driving".)
+let introHideTimer = 0;
 
 // Under laddningen: fraction = 0–1, text = vad som görs just nu.
 export function setLoadingProgress(fraction, text) {
@@ -222,31 +230,97 @@ export function setReady(callback, label = 'Start driving') {
 
 // Startar spelet från koden (t.ex. när man väljer "Visit in 3D" i projektlistan).
 // Returnerar false om världen inte är färdigladdad än.
+// Returnerar true bara om det här var den FÖRSTA starten (då kör onStart i main.js, som
+// också tar hand om en värld man valt). Var spelet redan igång, eller återupptas det efter
+// "Back to site", returnerar den false: anroparen får då resa dit direkt.
 export function startFromCode() {
   if (!ready) return false;
+  const first = introOpen && !hasStarted;
   startGame();
-  return true;
+  return first;
 }
 
 function startGame() {
   if (!introOpen || !ready) return; // Inte klar än, eller redan startad.
   introOpen = false;
   keys.clear();
+  clearTimeout(introHideTimer);
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); // Spelet ligger högst upp på sidan.
+  document.body.classList.add('playing'); // CSS: sidan går inte att scrolla, webbplatsen göms.
   introElement.classList.add('leaving'); // CSS tonar bort skärmen.
   document.body.classList.remove('intro-open'); // Guiden och touchknapparna kommer fram.
-  setTimeout(() => { introElement.hidden = true; }, 700); // Efter toningen (0.6 s): bort helt.
-  if (onStart) onStart();
+  introHideTimer = setTimeout(() => { introElement.hidden = true; measureHero(); }, 700); // Efter toningen (0.6 s): bort helt.
+  measureHero();
+  if (onStart && !hasStarted) onStart(); // Första gången: bilen backar ut. Vid "Resume driving" står den kvar.
+  hasStarted = true;
 }
 introStart.addEventListener('click', startGame);
+
+// Tillbaka till webbplatsen: spelet pausas (se canvasVisible) och startskärmen visas igen.
+export function backToSite() {
+  if (introOpen || !hasStarted) return;
+  closePanel();
+  introOpen = true;
+  keys.clear();
+  clearTimeout(introHideTimer);
+  document.body.classList.remove('playing');
+  document.body.classList.add('intro-open');
+  introElement.hidden = false;
+  introElement.classList.remove('leaving');
+  introStart.textContent = 'Resume driving';
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  measureHero();
+}
+document.getElementById('backButton').addEventListener('click', (e) => {
+  backToSite();
+  e.currentTarget.blur(); // Annars kan Space "klicka" den igen.
+});
+
+// "Drive my portfolio" på webbplatsen (alla länkar/knappar med data-drive). Är världen inte
+// klar än scrollar vi bara upp till startskärmen, där laddningen syns.
+export function driveFromSite() {
+  if (!ready) window.scrollTo({ top: 0, behavior: 'smooth' });
+  else startGame();
+}
+for (const element of document.querySelectorAll('[data-drive]')) {
+  element.addEventListener('click', (e) => {
+    e.preventDefault();
+    driveFromSite();
+  });
+}
+
+// Tangenter som scrollar sidan eller flyttar fokus: de startar aldrig spelet, så att man kan
+// rulla ner på webbplatsen medan startskärmen är öppen.
+const SCROLL_CODES = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', 'Tab'];
 window.addEventListener('keydown', (e) => {
   if (!introOpen || !ready || listOpen) return;
   // Kortkommandon (t.ex. Cmd+R för att ladda om) och ensamma Shift/Alt/... ska inte starta.
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(e.key)) return;
+  if (SCROLL_CODES.includes(e.code)) return;
   if (e.code === 'KeyP') return; // P öppnar projektlistan i stället (se project-list.js).
+  if (window.scrollY > window.innerHeight * 0.25) return; // Har man scrollat ner läser man webbplatsen.
+  // Fokus på en länk/knapp/ruta (t.ex. Enter i menyn eller i projektdialogen): låt den sköta tangenten.
+  if (e.target !== document.body && e.target !== document.documentElement) return;
+  if (document.querySelector('dialog[open]')) return;
   e.preventDefault();
   startGame();
 });
+
+// Är spelet synligt just nu? När startskärmen är uppe och man scrollat förbi den ritas
+// ingenting (se main.js), så att grafikkortet vilar.
+export let canvasVisible = true;
+let heroHeight = window.innerHeight;
+function measureHero() {
+  heroHeight = introElement.offsetHeight || window.innerHeight;
+  updateCanvasVisible();
+}
+function updateCanvasVisible() {
+  canvasVisible = !introOpen || window.scrollY < heroHeight;
+}
+window.addEventListener('scroll', updateCanvasVisible, { passive: true });
+window.addEventListener('resize', measureHero);
+measureHero();
 
 // ---------------------------------------------------------------------------
 // TONINGEN – hela fönstret tonas till en färg (vid resor och när laddningen är klar).

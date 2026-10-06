@@ -18,7 +18,12 @@
 
 body {
   background: var(--bg);
-  overflow: hidden; /* Inga rullningslister – sidan ska inte gå att scrolla. */
+}
+/* Sidan scrollar: startskärmen (spelet) ligger överst och webbplatsen under (se #site).
+   Medan man KÖR (body.playing) och när projektlistan är uppe går sidan inte att scrolla. */
+body.playing,
+body.list-open {
+  overflow: hidden;
 }
 
 /* #scene = elementet med id="scene", alltså canvasen som three.js ritar i. */
@@ -302,6 +307,10 @@ body.list-open .park-prompt { display: none; }
 /* Ingen scroll, inget nypzoomande och ingen "dra för att uppdatera" ovanpå spelet. */
 html, body {
   overscroll-behavior: none;
+}
+/* Bara medan man kör: inget nypzoomande eller scrollande med fingret. Annars (startskärmen
+   och webbplatsen) ska man kunna dra sidan som vanligt. */
+body.playing {
   touch-action: none;
 }
 
@@ -404,11 +413,12 @@ html, body {
 /* Ligger ovanpå allt, men täcker inte scenen: bara en mörk toning från vänster
    (där texten står) som blir genomskinlig mot mitten, så att bilen och huset syns. */
 .intro {
-  position: fixed;
-  inset: 0;
+  position: relative;   /* Ligger i sidans flöde överst och scrollar bort med den (canvasen står still bakom). */
+  min-height: 100vh;
+  min-height: 100svh;   /* Alltid minst ett fönster högt, utan hopp när mobilens adressfält går undan. */
   display: flex;
   align-items: center;  /* Kortet i mitten på höjden. */
-  padding: 40px clamp(20px, 6vw, 90px); /* clamp(min, helst, max): 6 % av fönstrets bredd, men aldrig under 20 eller över 90 px. */
+  padding: 96px clamp(20px, 6vw, 90px) 72px; /* Överst plats för rubriken, nederst för scrollpilen. */ /* clamp(min, helst, max): 6 % av fönstrets bredd, men aldrig under 20 eller över 90 px. */
   background: linear-gradient(90deg, rgba(25, 18, 40, 0.82) 0%, rgba(25, 18, 40, 0.5) 30%, rgba(25, 18, 40, 0) 55%);
   color: #fff3d6;
   font-family: system-ui, sans-serif;
@@ -569,7 +579,7 @@ body.intro-open .touch {
   .intro {
     align-items: flex-start;
     background: linear-gradient(180deg, rgba(25, 18, 40, 0.88) 0%, rgba(25, 18, 40, 0.6) 55%, rgba(25, 18, 40, 0) 85%);
-    padding-top: calc(28px + env(safe-area-inset-top));
+    padding-top: calc(84px + env(safe-area-inset-top));
   }
   .intro-text { margin: 0 0 16px; font-size: 15px; }
   .intro-tea { font-size: 15px; }
@@ -771,7 +781,6 @@ body.list-open .touch { display: none; }
 /* Låga fönster (t.ex. en liten laptop, eller förhandsbilden 1200 x 630): startskärmens
    text får annars inte plats och klipps av upptill. Gör allt lite tätare, och låt
    rutan rulla om det ändå inte räcker. */
-.intro { overflow-y: auto; }
 @media (max-height: 760px) {
   .intro-name { font-size: 34px; }
   .intro-marquee { margin-bottom: 18px; padding: 14px 22px 11px; }
@@ -782,3 +791,157 @@ body.list-open .touch { display: none; }
 }
 /* Krysset i projektlistan: mörkt kryss på den vita knappen (annars ärvs listans ljusa text). */
 .projects-head .panel-close { color: #25323d; }
+
+/* ------------------------------------------------------------------ */
+/* WEBBPLATSEN OVAN OCH UNDER SPELET (site/, se #site i index.html)    */
+/* ------------------------------------------------------------------ */
+/* Rubriken: alltid mörk (som spelet), ligger fast över startskärmen och sektionerna.
+   Dubbla klasser = högre styrka än .site-header i site.css, oavsett ordning. */
+.site-header.hero-header {
+  --bg-deep: #2f2745;
+  --text: #fff3d6;
+  --text-dim: #d9cfe6;
+  --accent: #ffb45e;
+  --line: rgba(255, 243, 214, 0.18);
+  --line-strong: rgba(255, 243, 214, 0.5);
+  --btn: #bd3d0b;
+  --btn-text: #fff3d6;
+  --focus: #ffd27a;
+  color-scheme: dark;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 12; /* Över startskärmen (10), under projektlistan (15). */
+  background: color-mix(in srgb, #2f2745 82%, transparent);
+  padding-top: env(safe-area-inset-top);
+}
+/* Webbplatsen täcker canvasen, vinjetten och toningen när man scrollar ner. */
+#site {
+  position: relative;
+  z-index: 4;
+}
+/* Medan man kör: webbplatsen och rubriken är helt borta (inte bara dolda), så att inget går
+   att tabba eller klicka till. */
+body.playing #site,
+body.playing .site-header {
+  display: none;
+}
+
+/* "Back to site": uppe till vänster, bara medan man kör. */
+.back-button {
+  display: none;
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top));
+  left: calc(16px + env(safe-area-inset-left));
+  z-index: 12;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 243, 214, 0.92);
+  color: #25323d;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  font: 700 14px system-ui, sans-serif;
+  cursor: pointer;
+}
+.back-button:hover { background: #fff3d6; }
+body.playing .back-button { display: block; }
+body.list-open .back-button { display: none; }
+
+/* "Selected work": liten stapel projekt uppe till höger på startskärmen. */
+.peek {
+  position: absolute;
+  top: 84px;
+  right: clamp(20px, 4vw, 48px);
+  width: 300px;
+  padding: 14px 14px 10px;
+  border: 1px solid rgba(255, 243, 214, 0.18);
+  border-radius: 16px;
+  background: rgba(25, 18, 40, 0.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(15, 8, 30, 0.35);
+}
+.peek[hidden] { display: none; }
+.peek-title {
+  margin: 0 0 10px 4px;
+  font: 700 12px/1 system-ui, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffb45e;
+}
+.peek-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.peek-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #fff3d6;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.peek-item:hover,
+.peek-item:focus-visible {
+  transform: translateX(-4px);
+  background: rgba(255, 243, 214, 0.1);
+  border-color: #ffb45e;
+}
+.peek-item:focus-visible { outline: 2px solid #ffd27a; outline-offset: 2px; }
+.peek-thumb {
+  flex: none;
+  width: 84px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #2b2d33;
+}
+.peek-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.peek-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.peek-cat { font: 700 10px/1 system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #ffb45e; }
+.peek-name { font: 700 14px/1.25 system-ui, sans-serif; }
+.peek-all {
+  display: inline-block;
+  margin: 8px 0 2px 4px;
+  color: #fff3d6;
+  font: 700 13px system-ui, sans-serif;
+  text-underline-offset: 3px;
+}
+.peek-all:hover { color: #ffd98a; }
+/* Smal eller låg skärm: göms helt, så att den aldrig täcker startskärmens text. */
+@media (max-width: 1019px), (max-height: 640px) {
+  .peek { display: none; }
+}
+
+/* Pilen längst ner på startskärmen som visar att det finns mer. */
+.scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(25, 18, 40, 0.55);
+  color: #fff3d6;
+  font: 700 13px system-ui, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  animation: cue-bob 2.4s ease-in-out infinite;
+}
+.scroll-cue:hover { background: rgba(25, 18, 40, 0.8); }
+@keyframes cue-bob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 4px); }
+}
+body.loading .scroll-cue { opacity: 0.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue { animation: none; }
+  .peek-item { transition: none; }
+  .peek-item:hover, .peek-item:focus-visible { transform: none; }
+}

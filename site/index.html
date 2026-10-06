@@ -17,11 +17,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&display=swap">
-  <link rel="stylesheet" href="css/site.css?v=2">
+  <link rel="stylesheet" href="css/site.css?v=3">
   <!-- Markerar att JS finns, så att reveal-animationerna bara döljer saker när de kan visas igen. -->
   <script>document.documentElement.classList.add('js');</script>
 </head>
-<body>
+<body class="site-root">
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header" id="top">
@@ -82,6 +82,7 @@
       </div>
     </section>
 
+    <!-- @sections (genereras av site/gen-pages.mjs från site/parts/sections.html) -->
     <!-- WORK -->
     <section class="section" id="work" aria-labelledby="workTitle">
       <div class="wrap">
@@ -194,7 +195,7 @@
             <a class="btn btn-ghost" href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a>
           </div>
         </div>
-        <a class="drive-mini reveal" href="../index.html">
+        <a class="drive-mini reveal" href="../index.html" data-drive>
           <span class="drive-kicker">One more thing</span>
           <span class="drive-title">Drive my portfolio</span>
           <span class="drive-sub">A small 3D autumn world where every project is a screen.</span>
@@ -202,12 +203,14 @@
         </a>
       </div>
     </section>
+<!-- @/sections -->
   </main>
 
+  <!-- @footer (genereras från site/parts/footer.html) -->
   <footer class="site-footer">
     <div class="wrap footer-row">
       <p>&copy; 2026 Filip Renemark</p>
-      <nav aria-label="Footer"><a href="../index.html">Drive my portfolio</a><a href="https://filip.renemark.se/">filip.renemark.se</a><a href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a><a href="mailto:filip@renemark.me">Email</a></nav>
+      <nav aria-label="Footer"><a href="../index.html" data-drive>Drive my portfolio</a><a href="https://filip.renemark.se/">filip.renemark.se</a><a href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a><a href="mailto:filip@renemark.me">Email</a></nav>
     </div>
   </footer>
 
@@ -229,7 +232,8 @@
       </footer>
     </article>
   </dialog>
+<!-- @/footer -->
 
-  <script type="module" src="js/site.js?v=1"></script>
+  <script type="module" src="js/site.js?v=2"></script>
 </body>
 </html>
