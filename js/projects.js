@@ -32,6 +32,9 @@ export const PROJECTS = [
   { world: WORLDS.techart, title: 'Humanoid Rig', media: 'assets/videos/humanoid-rig.mp4', url: 'https://filip.renemark.se/misc/humanoid-rigg', category: 'Rigging · Animation · Pipeline', content: 'assets/content/humanoid-rig.html' },
   { world: WORLDS.techart, title: 'Spite: Catharsis', media: 'assets/images/spite-rubble.png', url: 'https://filip.renemark.se/misc/spite-catharsis', category: 'VFX · HLSL · Pipeline · Tools', content: 'assets/content/spite-catharsis.html' },
   { world: WORLDS.techart, title: 'Modular Farming Toolkit', media: 'assets/videos/farming-toolkit.mp4', url: 'https://filip.renemark.se/misc/farming-pack', category: 'Environment · Shaders · VFX', content: 'assets/content/farming-toolkit.html' },
+  { world: WORLDS.techart, title: 'AnGame: Procedural Environment', media: null, url: '', category: 'Houdini · Unreal · Shaders · Post-process', content: 'assets/content/angame-environment.html' },
+
+  { world: WORLDS.techart, title: 'Lemon Lagoon', media: null, url: 'https://fungusflip.itch.io/lemon-lagoon', category: 'Unreal · Game Jam · Animation · Rigging · Tech Art · Cascadeur · C++', content: 'assets/content/lemon-lagoon.html' },
 
   // --- Programming-världen ---
   { world: WORLDS.prog, title: 'Idle Village', media: 'assets/videos/idle-village.mp4', url: 'https://filip.renemark.se/misc/idle-village', category: 'C# · Unity · AI · Tools', content: 'assets/content/idle-village.html', phone: true },

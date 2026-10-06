@@ -164,6 +164,47 @@ export const PROJECTS = [
     "phone": false
   },
   {
+    "id": "angame-environment",
+    "title": "AnGame: Procedural Environment",
+    "category": "Technical Art",
+    "featured": false,
+    "freelance": false,
+    "tags": [
+      "Houdini",
+      "Unreal",
+      "Shaders",
+      "Post-process"
+    ],
+    "poster": null,
+    "video": null,
+    "still": null,
+    "url": "",
+    "content": "../assets/content/angame-environment.html",
+    "phone": false
+  },
+  {
+    "id": "lemon-lagoon",
+    "title": "Lemon Lagoon",
+    "category": "Technical Art",
+    "featured": false,
+    "freelance": false,
+    "tags": [
+      "Unreal",
+      "Game Jam",
+      "Animation",
+      "Rigging",
+      "Tech Art",
+      "Cascadeur",
+      "C++"
+    ],
+    "poster": null,
+    "video": null,
+    "still": null,
+    "url": "https://fungusflip.itch.io/lemon-lagoon",
+    "content": "../assets/content/lemon-lagoon.html",
+    "phone": false
+  },
+  {
     "id": "idle-village",
     "title": "Idle Village",
     "category": "Programming",

@@ -112,7 +112,7 @@ async function openProject(p, opener, fromHash) {
   $('#dlgTitle').textContent = p.title;
   const tags = $('#dlgTags'); tags.replaceChildren();
   p.tags.forEach(t => tags.append(el('li', '', t)));
-  const link = $('#dlgLink'); link.href = p.url;
+  const link = $('#dlgLink'); link.href = p.url; link.style.display = p.url ? '' : 'none';
   const body = $('#dlgBody'); body.replaceChildren(el('p', 'dlg-error', 'Loading…'));
   body.scrollTop = 0;
   if (!dlg.open) dlg.showModal();
