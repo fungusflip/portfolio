@@ -1,21 +1,22 @@
 // Genererad av site/gen-data.mjs från js/projects.js. Kör om skriptet när listan ändras.
 export const PROJECTS = [
   {
-    "id": "camilla",
-    "title": "Camilla: Procedural Robots",
+    "id": "angame-environment",
+    "title": "AnGame: Procedural Environment",
     "category": "Technical Art",
     "featured": true,
-    "freelance": true,
+    "freelance": false,
     "tags": [
       "Houdini",
-      "Procedural",
-      "VFX"
+      "Unreal",
+      "Shaders",
+      "Post-process"
     ],
-    "poster": "../assets/posters/camilla-robots.jpg",
-    "video": "../assets/videos/camilla-robots.mp4",
+    "poster": "../assets/posters/player-tree-house.jpg",
+    "video": "../assets/content-media/angame/player-tree-house.mp4",
     "still": null,
-    "url": "https://filip.renemark.se/misc/1544",
-    "content": "../assets/content/camilla.html",
+    "url": "",
+    "content": "../assets/content/angame-environment.html",
     "phone": false
   },
   {
@@ -88,6 +89,28 @@ export const PROJECTS = [
     "url": "https://filip.renemark.se/misc/mutation-protocol",
     "content": "../assets/content/mutation-protocol.html",
     "phone": true
+  },
+  {
+    "id": "lemon-lagoon",
+    "title": "Lemon Lagoon",
+    "category": "Technical Art",
+    "featured": true,
+    "freelance": false,
+    "tags": [
+      "Unreal",
+      "Game Jam",
+      "Animation",
+      "Rigging",
+      "Tech Art",
+      "Cascadeur",
+      "C++"
+    ],
+    "poster": "../assets/posters/kitchen-scene.jpg",
+    "video": null,
+    "still": "../assets/content-media/lemon-lagoon/kitchen-scene.jpg",
+    "url": "https://fungusflip.itch.io/lemon-lagoon",
+    "content": "../assets/content/lemon-lagoon.html",
+    "phone": false
   },
   {
     "id": "vat-fluid",
@@ -164,44 +187,21 @@ export const PROJECTS = [
     "phone": false
   },
   {
-    "id": "angame-environment",
-    "title": "AnGame: Procedural Environment",
+    "id": "camilla",
+    "title": "Camilla: Procedural Robots",
     "category": "Technical Art",
     "featured": false,
-    "freelance": false,
+    "freelance": true,
     "tags": [
       "Houdini",
-      "Unreal",
-      "Shaders",
-      "Post-process"
+      "Procedural",
+      "VFX"
     ],
-    "poster": "../assets/posters/player-tree-house.jpg",
-    "video": "../assets/content-media/angame/player-tree-house.mp4",
+    "poster": "../assets/posters/camilla-robots.jpg",
+    "video": "../assets/videos/camilla-robots.mp4",
     "still": null,
-    "url": "",
-    "content": "../assets/content/angame-environment.html",
-    "phone": false
-  },
-  {
-    "id": "lemon-lagoon",
-    "title": "Lemon Lagoon",
-    "category": "Technical Art",
-    "featured": false,
-    "freelance": false,
-    "tags": [
-      "Unreal",
-      "Game Jam",
-      "Animation",
-      "Rigging",
-      "Tech Art",
-      "Cascadeur",
-      "C++"
-    ],
-    "poster": "../assets/posters/kitchen-scene.jpg",
-    "video": null,
-    "still": "../assets/content-media/lemon-lagoon/kitchen-scene.jpg",
-    "url": "https://fungusflip.itch.io/lemon-lagoon",
-    "content": "../assets/content/lemon-lagoon.html",
+    "url": "https://filip.renemark.se/misc/1544",
+    "content": "../assets/content/camilla.html",
     "phone": false
   },
   {
