@@ -175,8 +175,8 @@ export const PROJECTS = [
       "Shaders",
       "Post-process"
     ],
-    "poster": null,
-    "video": null,
+    "poster": "../assets/posters/player-tree-house.jpg",
+    "video": "../assets/content-media/angame/player-tree-house.mp4",
     "still": null,
     "url": "",
     "content": "../assets/content/angame-environment.html",
