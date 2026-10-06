@@ -21,9 +21,9 @@ import { WORLDS } from './core.js';
 //   linkText – texten på länken i infopanelen. Utelämnad = "Open the full page →".
 export const PROJECTS = [
   // --- Hemma: de sex främsta, längs huvudvägen från garaget (vänster) mot Tech Art-grottan (höger). ---
-  { world: WORLDS.hub, title: 'AnGame: Procedural Environment', media: 'assets/content-media/angame/player-tree-house.mp4', url: '', category: 'Houdini · Unreal · Shaders · Post-process', content: 'assets/content/angame-environment.html' },
-  { world: WORLDS.hub, title: 'Foliage Generator', media: 'assets/videos/foliage-generator.mp4', url: 'https://filip.renemark.se/misc/folliage-generator', category: 'Houdini · Procedural · Unreal', content: 'assets/content/foliage-generator.html' },
   { world: WORLDS.hub, title: 'Water Shader', media: 'assets/videos/water-shader.mp4', url: 'https://filip.renemark.se/shaders-rendering/project-water-shader', category: 'Shaders · Real-Time Rendering', content: 'assets/content/water-shader.html' },
+  { world: WORLDS.hub, title: 'Foliage Generator', media: 'assets/videos/foliage-generator.mp4', url: 'https://filip.renemark.se/misc/folliage-generator', category: 'Houdini · Procedural · Unreal', content: 'assets/content/foliage-generator.html' },
+  { world: WORLDS.hub, title: 'AnGame: Procedural Environment', media: 'assets/videos/angame-moon-wall.mp4', url: '', category: 'Houdini · Unreal · Shaders · Post-process', content: 'assets/content/angame-environment.html' },
   { world: WORLDS.hub, title: 'SpookChester: Pixel Art Render', media: 'assets/videos/spookchester.mp4', url: 'https://filip.renemark.se/misc/spookchester-pixelart-render', category: 'Houdini · Procedural · Pipeline', content: 'assets/content/spookchester.html' },
   { world: WORLDS.hub, title: 'Mutation Protocol', media: 'assets/videos/mutation-protocol.mp4', url: 'https://filip.renemark.se/misc/mutation-protocol', category: '★ Freelance · Houdini · Rigging · Animation', content: 'assets/content/mutation-protocol.html', phone: true },
   { world: WORLDS.hub, title: 'Lemon Lagoon', media: 'assets/content-media/lemon-lagoon/kitchen-scene.jpg', url: 'https://fungusflip.itch.io/lemon-lagoon', category: 'Unreal · Game Jam · Animation · Rigging · Tech Art · Cascadeur · C++', content: 'assets/content/lemon-lagoon.html' },

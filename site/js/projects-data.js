@@ -1,22 +1,20 @@
 // Genererad av site/gen-data.mjs från js/projects.js. Kör om skriptet när listan ändras.
 export const PROJECTS = [
   {
-    "id": "angame-environment",
-    "title": "AnGame: Procedural Environment",
+    "id": "water-shader",
+    "title": "Water Shader",
     "category": "Technical Art",
     "featured": true,
     "freelance": false,
     "tags": [
-      "Houdini",
-      "Unreal",
       "Shaders",
-      "Post-process"
+      "Real-Time Rendering"
     ],
-    "poster": "../assets/posters/player-tree-house.jpg",
-    "video": "../assets/content-media/angame/player-tree-house.mp4",
+    "poster": "../assets/posters/water-shader.jpg",
+    "video": "../assets/videos/water-shader.mp4",
     "still": null,
-    "url": "",
-    "content": "../assets/content/angame-environment.html",
+    "url": "https://filip.renemark.se/shaders-rendering/project-water-shader",
+    "content": "../assets/content/water-shader.html",
     "phone": false
   },
   {
@@ -38,20 +36,22 @@ export const PROJECTS = [
     "phone": false
   },
   {
-    "id": "water-shader",
-    "title": "Water Shader",
+    "id": "angame-environment",
+    "title": "AnGame: Procedural Environment",
     "category": "Technical Art",
     "featured": true,
     "freelance": false,
     "tags": [
+      "Houdini",
+      "Unreal",
       "Shaders",
-      "Real-Time Rendering"
+      "Post-process"
     ],
-    "poster": "../assets/posters/water-shader.jpg",
-    "video": "../assets/videos/water-shader.mp4",
+    "poster": "../assets/posters/angame-moon-wall.jpg",
+    "video": "../assets/videos/angame-moon-wall.mp4",
     "still": null,
-    "url": "https://filip.renemark.se/shaders-rendering/project-water-shader",
-    "content": "../assets/content/water-shader.html",
+    "url": "",
+    "content": "../assets/content/angame-environment.html",
     "phone": false
   },
   {
