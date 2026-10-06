@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Filip Renemark · Technical Artist</title>
+  <meta name="description" content="Filip Renemark, technical artist with a love for systems. Procedural work, shaders and tools: Houdini, Unreal, Unity, HLSL and more.">
+  <meta name="theme-color" content="#3d3358">
+  <link rel="icon" type="image/svg+xml" href="../assets/images/favicon.svg">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Filip Renemark · Technical Artist">
+  <meta property="og:description" content="Procedural work, shaders and tools. Portfolio of a technical artist.">
+  <meta property="og:image" content="https://fungusflip.github.io/portfolio/assets/images/preview.jpg?v=3">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&display=swap">
+  <link rel="stylesheet" href="css/site.css?v=1">
+  <!-- Markerar att JS finns, så att reveal-animationerna bara döljer saker när de kan visas igen. -->
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header" id="top">
+    <div class="wrap header-row">
+      <a class="brand" href="#top" aria-label="Filip Renemark, back to top">
+        <img src="../assets/images/favicon.svg" alt="" width="36" height="36">
+        <span class="brand-name">Filip Renemark</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="siteNav">
+        <span class="visually-hidden">Menu</span>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <nav class="site-nav" id="siteNav" aria-label="Main">
+        <ul>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#skills">Skills</a></li>
+          <li><a href="#words">Kind words</a></li>
+          <li><a href="#cv">CV</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+        <a class="nav-drive" href="../index.html">Drive the 3D version</a>
+        <a class="icon-link" href="https://filip.renemark.se/wp-content/uploads/2026/05/Filip_Renemark_CV.pdf" target="_blank" rel="noopener" aria-label="Download CV (PDF), opens in a new tab">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 3h7l5 5v13H7z M14 3v5h5 M10 13h6 M10 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          <span class="icon-label">CV</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="leaves" id="leaves" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Filip Renemark</p>
+          <h1 id="heroTitle"><span class="display">Technical Artist</span><span class="hero-sub">with a love for systems</span></h1>
+          <p class="lede">Procedural work, shaders, and tools, brewed with SOLID principles, DRY leaves, and a hint of green tea.</p>
+          <ul class="skill-line" aria-label="Tools and languages">
+            <li>Unreal Engine</li><li>Houdini</li><li>Maya</li><li>Substance Painter</li><li>HLSL</li><li>C#</li><li>C++</li><li>Python</li><li>Unity</li><li>Godot</li>
+          </ul>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="mailto:filip@renemark.me">Contact me</a>
+            <a class="btn btn-ghost" href="#work">See the work</a>
+            <a class="btn btn-ghost" href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a>
+          </div>
+        </div>
+        <a class="drive-card" href="../index.html">
+          <img src="../assets/images/preview.jpg" alt="The 3D portfolio: a red car on an autumn road in front of project screens" width="1200" height="630" decoding="async">
+          <span class="drive-body">
+            <span class="drive-kicker">Prefer to play?</span>
+            <span class="drive-title">Drive my portfolio</span>
+            <span class="drive-sub">The same work as a small 3D autumn world. Park in front of a screen to watch a project.</span>
+            <span class="ticket">Start driving</span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <!-- WORK -->
+    <section class="section" id="work" aria-labelledby="workTitle">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Selected projects</p>
+          <h2 id="workTitle" class="display">Work</h2>
+          <p class="section-lede">Open a card for the full write-up. On desktop, hover or focus one for a short preview.</p>
+        </div>
+        <div class="chips" role="group" aria-label="Filter projects by category" id="chips">
+          <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-filter="Technical Art" aria-pressed="false">Technical Art</button>
+          <button class="chip" type="button" data-filter="Art" aria-pressed="false">Art</button>
+          <button class="chip" type="button" data-filter="Programming" aria-pressed="false">Programming</button>
+        </div>
+        <p class="visually-hidden" id="filterStatus" role="status" aria-live="polite"></p>
+        <ul class="grid" id="grid">
+          <li class="noscript-note"><noscript>The project grid needs JavaScript. All projects are also listed on <a href="https://filip.renemark.se/">filip.renemark.se</a>.</noscript></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="section section-alt" id="about" aria-labelledby="aboutTitle">
+      <div class="wrap about-grid">
+        <div class="reveal">
+          <p class="eyebrow">Hello!</p>
+          <h2 id="aboutTitle" class="display">About</h2>
+          <p class="big">Technical artist. I build procedural tools, shaders and rigs.</p>
+          <p>I sit between art and code: making the pipelines, materials and tools that let a team move faster and keep a look consistent. Most of my work starts as a Houdini network or a shader graph and ends up as something an artist can use with a few sliders.</p>
+          <p>I like clean systems, small reusable pieces and a good cup of matcha while they compile.</p>
+        </div>
+        <ul class="pillars reveal">
+          <li><h3>Technical Art</h3><p>Procedural generators, vertex animation textures, rigs and the tools that connect DCCs to the engine.</p></li>
+          <li><h3>Art</h3><p>Characters, props, materials and mood: lighting, Substance Designer and stylised looks.</p></li>
+          <li><h3>Programming</h3><p>C# in Unity, C++ with OpenGL, and tools, AI and systems in between.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="section" id="skills" aria-labelledby="skillsTitle">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">What I use</p>
+          <h2 id="skillsTitle" class="display">Skills</h2>
+        </div>
+        <div class="skills reveal">
+          <div>
+            <h3>Engines and content tools</h3>
+            <ul class="tags"><li>Unreal Engine</li><li>Unity</li><li>Godot</li><li>Houdini</li><li>Maya</li><li>Substance Painter</li></ul>
+          </div>
+          <div>
+            <h3>Languages</h3>
+            <ul class="tags"><li>HLSL</li><li>C#</li><li>C++</li><li>Python</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KIND WORDS -->
+    <section class="section section-alt" id="words" aria-labelledby="wordsTitle">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Testimonials</p>
+          <h2 id="wordsTitle" class="display">What people I have worked with say</h2>
+        </div>
+        <ul class="quotes">
+          <li class="reveal"><figure>
+            <blockquote><p>Filip is an outstanding person and a strong asset to any team he’s part of. Over six months working together on my project, he proved reliable, proactive, and solution-driven.</p></blockquote>
+            <figcaption><strong>Michael Tattershall</strong><span>Project Lead &amp; Programmer</span></figcaption>
+          </figure></li>
+          <li class="reveal"><figure>
+            <blockquote><p>Filip is absolutely amazing, very detailed and ensures that projects line up perfectly with my vision.</p></blockquote>
+            <figcaption><strong>Burrito Bandit</strong><span>Project Lead</span></figcaption>
+          </figure></li>
+          <li class="reveal"><figure>
+            <blockquote><p>He’s fast and great, always delivers what you ask. Really good person and strong 3D artist.</p></blockquote>
+            <figcaption><strong>IBO</strong><span>Creative Director</span></figcaption>
+          </figure></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- CV -->
+    <section class="section" id="cv" aria-labelledby="cvTitle">
+      <div class="wrap">
+        <div class="cta-panel reveal">
+          <div>
+            <h2 id="cvTitle" class="display">CV</h2>
+            <p>The short version of everything above, with dates and details.</p>
+          </div>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="https://filip.renemark.se/wp-content/uploads/2026/05/Filip_Renemark_CV.pdf" target="_blank" rel="noopener">Download PDF<span class="visually-hidden"> (opens in a new tab)</span></a>
+            <a class="btn btn-ghost" href="https://filip.renemark.se/975-2" target="_blank" rel="noopener">View online<span class="visually-hidden"> (opens in a new tab)</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="section section-alt" id="contact" aria-labelledby="contactTitle">
+      <div class="wrap contact-grid">
+        <div class="reveal">
+          <p class="eyebrow">Say hello</p>
+          <h2 id="contactTitle" class="display">Contact</h2>
+          <p class="big">Have a project, a pipeline problem or just a question about a shader? Write me.</p>
+          <p><a class="mail" href="mailto:filip@renemark.me">filip@renemark.me</a></p>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="mailto:filip@renemark.me">Contact me</a>
+            <a class="btn btn-ghost" href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a>
+          </div>
+        </div>
+        <a class="drive-mini reveal" href="../index.html">
+          <span class="drive-kicker">One more thing</span>
+          <span class="drive-title">Drive my portfolio</span>
+          <span class="drive-sub">A small 3D autumn world where every project is a screen.</span>
+          <span class="ticket">Start driving</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <p>&copy; 2026 Filip Renemark</p>
+      <p><a href="../index.html">Drive my portfolio</a> · <a href="https://filip.renemark.se/">filip.renemark.se</a> · <a href="mailto:filip@renemark.me">Email</a></p>
+    </div>
+  </footer>
+
+  <!-- PROJEKTVY: en <dialog>. Innehållet hämtas från assets/content/*.html. -->
+  <dialog class="project-dialog" id="projectDialog" aria-labelledby="dlgTitle">
+    <article class="dlg">
+      <header class="dlg-head">
+        <div>
+          <p class="dlg-cat" id="dlgCat"></p>
+          <h2 class="display" id="dlgTitle"></h2>
+          <ul class="tags tags-sm" id="dlgTags"></ul>
+        </div>
+        <button class="dlg-close" id="dlgClose" type="button" aria-label="Close project">&times;</button>
+      </header>
+      <div class="dlg-body" id="dlgBody"></div>
+      <footer class="dlg-foot">
+        <a class="btn btn-primary" id="dlgLink" target="_blank" rel="noopener">Open the full page<span class="visually-hidden"> (opens in a new tab)</span><span class="arrow" aria-hidden="true">&rarr;</span></a>
+        <button class="btn btn-ghost" id="dlgClose2" type="button">Close</button>
+      </footer>
+    </article>
+  </dialog>
+
+  <script type="module" src="js/site.js?v=1"></script>
+</body>
+</html>
