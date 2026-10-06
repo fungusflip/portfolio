@@ -45,10 +45,10 @@ export function rowLamps(world) {
 
 // Delas av alla lyktor.
 const lampPostMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.lampPost, roughness: 0.7, metalness: 0.4 });
-const postGeometry = new THREE.CylinderGeometry(0.09, 0.13, LAMP_HEIGHT, 8);
-const armGeometry = new THREE.BoxGeometry(0.1, 0.1, LAMP_REACH + 0.1);
-const headGeometry = new THREE.BoxGeometry(0.5, 0.2, 0.7);
-const bulbGeometry = new THREE.BoxGeometry(0.38, 0.06, 0.52);
+const postGeometry = new THREE.CylinderGeometry(0.055, 0.085, LAMP_HEIGHT, 8); // Slank stolpe.
+const armGeometry = new THREE.CylinderGeometry(0.035, 0.045, LAMP_REACH + 0.1, 6).rotateX(Math.PI / 2); // Slank rörarm (längs z).
+const headGeometry = new THREE.CylinderGeometry(0.2, 0.36, 0.2, 14); // Rund, låg skärm (modern LED-armatur).
+const bulbGeometry = new THREE.CylinderGeometry(0.27, 0.27, 0.04, 14); // Platt lysande skiva under skärmen.
 const haloGeometry = new THREE.PlaneGeometry(2.2, 2.2);
 const poolGeometry = new THREE.PlaneGeometry(LAMP_POOL_SIZE, LAMP_POOL_SIZE);
 poolGeometry.rotateX(-Math.PI / 2); // Lägg ner den på marken.
