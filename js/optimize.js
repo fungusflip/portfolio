@@ -38,6 +38,7 @@ function cheaperMaterial(material) {
       emissive: material.emissive,
       emissiveIntensity: material.emissiveIntensity,
       flatShading: material.flatShading,
+      vertexColors: material.vertexColors,
       side: material.side,
       transparent: material.transparent,
       opacity: material.opacity,
@@ -81,10 +82,10 @@ export function optimizeWorld(world) {
     if (meshes.length < 2) continue; // Inget att slå ihop med.
     const geometries = meshes.map((mesh) => {
       // toNonIndexed gör om formen till en enkel lista av trianglar, så att alla former
-      // är byggda på samma sätt. Bara läge, normal och uv behövs.
+      // är byggda på samma sätt. Bara läge, normal och uv behövs, plus color för material med vertexColors (mossiga stenar).
       const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
       for (const name of Object.keys(geometry.attributes)) {
-        if (!['position', 'normal', 'uv'].includes(name)) geometry.deleteAttribute(name);
+        if (!(material.vertexColors ? ['position', 'normal', 'uv', 'color'] : ['position', 'normal', 'uv']).includes(name)) geometry.deleteAttribute(name);
       }
       // Flytta formens hörn dit objektet står i världen: då ligger hörnen redan rätt.
       geometry.applyMatrix4(mesh.matrixWorld);

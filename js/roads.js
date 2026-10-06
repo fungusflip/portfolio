@@ -6,6 +6,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { PALETTE, MAX_ANISOTROPY, worldGroup, towardCamera } from './core.js';
 import { billboards, PAD_DISTANCE, BAY_WIDTH, BAY_LENGTH } from './billboards.js';
 import { makeGravelImage } from './gravel.js';
+import { paintStone, paintVertices, stoneTint } from './moss.js';
 
 export const ROAD_WIDTH = 5;  // Vägarnas bredd i enheter.
 const ROAD_EDGE = 0.5;        // Marginal runt en väg (kantsten + lite luft) där inga stenar läggs.
@@ -89,7 +90,9 @@ const CURB_HEIGHT = 0.17;  // Hur högt blocket står.
 const CURB_LENGTH = 0.72;  // Blockets längd längs kanten.
 const CURB_STEP = 0.74;    // Avstånd mellan blockens mitt (lite större än längden = en tunn fog).
 const curbGeometry = new RoundedBoxGeometry(CURB_WIDTH, CURB_HEIGHT, CURB_LENGTH, 2, 0.045);
-const curbMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+// Lite moss som kryper in från kanterna på ovansidan och en fuktigt mörk fot (se moss.js).
+paintVertices(curbGeometry, { strength: 0.6, damp: 0.3, bottomY: -CURB_HEIGHT / 2, topY: CURB_HEIGHT / 2 });
+const curbMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff', vertexColors: true });
 
 // En bit kantsten är en linje av punkter [{ x, z }, ...] där blocken ska stå. curbRun lägger bara
 // upp biten; fixCorners räknar ut hörnen mellan bitarna och placeRun sätter sedan ut blocken.
@@ -336,8 +339,11 @@ const stoneGeometry = new THREE.IcosahedronGeometry(1, 1);
     position.setXYZ(i, position.getX(i) * scale, position.getY(i) * scale, position.getZ(i) * scale);
   }
   stoneGeometry.computeVertexNormals();
+  // Moss på ytor som pekar uppåt, fuktigt mörk fot och enstaka orange lav (moss.js).
+  paintStone(stoneGeometry, { mossAmount: 0.55, damp: 0.4, lichen: 0.05 });
 }
-const stoneMaterial = new THREE.MeshLambertMaterial({ flatShading: true });
+// vertexColors: mossan sitter i formens hörnfärger. Färgen per sten (instanceColor) gångras ovanpå.
+const stoneMaterial = new THREE.MeshLambertMaterial({ flatShading: true, vertexColors: true });
 
 function buildEdgeStones(world, group, roads) {
   const pads = billboards.filter((billboard) => billboard.project.world === world).map((billboard) => ({ x: billboard.padX, z: billboard.padZ }));
@@ -374,8 +380,7 @@ function buildEdgeStones(world, group, roads) {
           if (pads.some((pad) => Math.hypot(x - pad.x, z - pad.z) < STONE_DEAD_END)) continue;
           if (deadEnds.some((end) => Math.hypot(x - end.x, z - end.z) < STONE_DEAD_END)) continue;
           const size = (row === 0 ? 0.11 + Math.random() * 0.12 : 0.05 + Math.random() * 0.07) * scaleFactor;
-          const color = lightColor.clone().lerp(darkColor, Math.random());
-          if (Math.random() < 0.18) color.lerp(mossColor, 0.5); // Några mossiga.
+          const color = stoneTint(lightColor, darkColor, mossColor); // Några mossiga, ett fåtal helt gröna.
           stones.push({ x, z, size, color });
         }
       }
@@ -395,7 +400,8 @@ export function addStoneInstances(group, stones) {
   const scale = new THREE.Vector3();
   const spot = new THREE.Vector3();
   stones.forEach((stone, index) => {
-    rotation.set(Math.random() * Math.PI, Math.random() * Math.PI * 2, Math.random() * Math.PI);
+    // Bara vridning runt Y och en liten lutning: stenen ligger "rätt väg upp", så att mossan hamnar överst.
+    rotation.set((Math.random() - 0.5) * 0.6, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.6);
     quaternion.setFromEuler(rotation);
     // Tillplattad (y mindre) och halvt nedsjunken i marken.
     scale.set(stone.size * (0.9 + Math.random() * 0.5), stone.size * (0.5 + Math.random() * 0.35), stone.size * (0.9 + Math.random() * 0.5));
