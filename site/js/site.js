@@ -129,6 +129,10 @@ async function openProject(p, opener, fromHash) {
     if (!res.ok) throw new Error(res.status);
     const tpl = document.createElement('template');
     tpl.innerHTML = await res.text();
+    // Egna media i innehållet pekar relativt repo-roten (assets/...), så de funkar i 3D-spelet; här görs de om på samma sätt som projects-data (../assets/...).
+    tpl.content.querySelectorAll('[src^="assets/"], [poster^="assets/"]').forEach(n => {
+      ['src', 'poster'].forEach(a => { const v = n.getAttribute(a); if (v && v.startsWith('assets/')) n.setAttribute(a, R('../' + v)); });
+    });
     // Spara data: inga videor/bilder laddas före scroll, och inga autoplay.
     tpl.content.querySelectorAll('video').forEach(v => { v.preload = 'none'; v.removeAttribute('autoplay'); });
     tpl.content.querySelectorAll('img, iframe').forEach(i => { i.loading = 'lazy'; if (!i.hasAttribute('alt') && i.tagName === 'IMG') i.alt = ''; });
