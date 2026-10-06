@@ -164,6 +164,26 @@ export const PROJECTS = [
     "phone": false
   },
   {
+    "id": "bioyield",
+    "title": "BioYield: Unreal VFX & Systems",
+    "category": "Technical Art",
+    "featured": false,
+    "freelance": false,
+    "tags": [
+      "Unreal",
+      "Niagara",
+      "VFX",
+      "Post-process",
+      "Houdini"
+    ],
+    "poster": "../assets/posters/bioyield.jpg",
+    "video": "../assets/videos/bioyield.mp4",
+    "still": null,
+    "url": "",
+    "content": "../assets/content/bioyield.html",
+    "phone": false
+  },
+  {
     "id": "angame-environment",
     "title": "AnGame: Procedural Environment",
     "category": "Technical Art",
