@@ -12,6 +12,7 @@ import {
 } from './core.js';
 import { setParkedAt, leaveParking } from './ui.js';
 import { PROJECTS } from './projects.js'; // Projektlistan (ÄNDRA projekten där).
+import { makeGravelImage } from './gravel.js';
 import { makeBulbs, rectanglePoints, makeSearchlight, makePadGlow, burstAt } from './magic.js';
 import { markMoving } from './optimize.js';
 
@@ -320,10 +321,15 @@ function makePadTexture(lit) {
   image.width = 512;
   image.height = 256;
   const brush = image.getContext('2d');
-  brush.fillStyle = lit ? PALETTE.signGlow : PALETTE.sign;
   brush.font = 'bold 96px system-ui, sans-serif';
   brush.textAlign = 'center';
   brush.textBaseline = 'middle';
+  brush.lineJoin = 'round';
+  // Fickan är samma ljusa grus som vägen: mörkt varmbrunt (tänd: orange) med en krämfärgad kontur, så att orden syns.
+  brush.lineWidth = 14;
+  brush.strokeStyle = 'rgba(255, 243, 214, 0.9)';
+  brush.strokeText('ENTER', 256, 134);
+  brush.fillStyle = lit ? PALETTE.signGlow : '#4a3224';
   brush.fillText('ENTER', 256, 134);
   const texture = new THREE.CanvasTexture(image);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -333,67 +339,62 @@ function makePadTexture(lit) {
 export const padTexture = makePadTexture(false);
 export const padTextureActive = makePadTexture(true);
 
-// En mörk asfaltsruta med målade linjer. grus = här kör man, asfalt = här parkerar man.
-// Asfalten tonas över i grus i änden mot vägen, så att fickan smälter ihop med infarten.
+// Parkeringsfickan: samma grus som vägen (samma bild, se gravel.js), så att fickan och uppfarten flyter ihop utan
+// färgsteg, brus eller kant mot vägen. Ytterkanten blandas mot marken (inte mot vägen): ett SKÖRT av grus
+// i mjuka, oregelbundna fläckar som tonar över i gräsets färg och glesnar utåt. Det läses som en mjuk
+// övergång, men är ändå ogenomskinligt (alphaTest), så att det inte ritas över bilen.
 export const BAY_WIDTH = 5.4; // Samma som en väg inklusive kantlinjer.
 export const BAY_LENGTH = 6.5;
-// Fickans kant blandas in i marken i stället för att ha en tydlig linje: innanför kanten tonas asfalten
-// över i grus, och utanför ligger ett SKÖRT av grus och lite mossa som glesnar utåt som ett
-// prickmönster (varje bildpunkt är antingen med eller inte, och chansen sjunker ju längre ut man kommer).
-// Det läses som en mjuk övergång, men är ändå ogenomskinligt (alphaTest), så att det inte ritas över bilen.
-export const BAY_SKIRT = 0.6;          // Hur långt skörtet når utanför fickan (inte mot vägen), i enheter.
-const BAY_PIXELS_PER_UNIT = 50;
+export const BAY_SKIRT = 0.9;          // Hur långt skörtet når utanför fickan (inte mot vägen), i enheter.
+const BAY_PIXELS_PER_UNIT = 64;        // Samma skala som vägens grus (256 bildpunkter = 4 enheter), så att stenarna är lika stora.
 const SKIRT_PX = Math.round(BAY_SKIRT * BAY_PIXELS_PER_UNIT);
-const bayW = Math.round(BAY_WIDTH * BAY_PIXELS_PER_UNIT);   // 270
-const bayH = Math.round(BAY_LENGTH * BAY_PIXELS_PER_UNIT);  // 325
+const bayW = Math.round(BAY_WIDTH * BAY_PIXELS_PER_UNIT);
+const bayH = Math.round(BAY_LENGTH * BAY_PIXELS_PER_UNIT);
 const bayImage = document.createElement('canvas');
 bayImage.width = bayW + SKIRT_PX * 2;
 bayImage.height = bayH + SKIRT_PX; // Skört på sidorna och bakom, inte mot vägen.
 const bayPen = bayImage.getContext('2d');
+// I bilden är y = 0 änden mot skylten och y = bayH + SKIRT_PX änden mot vägen.
+// 1. Underlaget: vägens grus, kakelplatta vid kakelplatta.
+bayPen.fillStyle = bayPen.createPattern(makeGravelImage(256), 'repeat');
+bayPen.fillRect(0, 0, bayImage.width, bayImage.height);
+// 2. Målade linjer, öppna mot vägen: tunna och mjuka, så att de inte blir brus på gruset.
+bayPen.save();
 bayPen.translate(SKIRT_PX, SKIRT_PX); // Fickan ritas innanför skörtet.
-// I bilden är y = 0 änden mot skylten och y = bayH änden mot vägen.
-const BLEND_START = bayH * 0.6; // Härifrån och ner till infarten tonas asfalten över i grus.
-// 1. Underlaget: vägens grus i en mörkare ton (så att den ljusa ENTER-texten syns), nästan utan korn.
-// (Förut mörk asfalt med många ljusa korn: det blev för bruskigt.)
-bayPen.fillStyle = '#6e6053'; // Vägens grus (#b7a08a) ungefär 60 % ljust.
-bayPen.fillRect(0, 0, bayW, bayH);
-bayPen.fillStyle = 'rgba(130, 114, 98, 0.35)';
-for (let i = 0; i < 90; i++) bayPen.fillRect(Math.random() * bayW, Math.random() * bayH, 3, 3);
-// 2. Toning mot grusets färg (#b7a08a = 183, 160, 138).
-const bayBlend = bayPen.createLinearGradient(0, BLEND_START, 0, bayH);
-bayBlend.addColorStop(0, 'rgba(183, 160, 138, 0)');
-bayBlend.addColorStop(1, 'rgba(183, 160, 138, 1)');
-bayPen.fillStyle = bayBlend;
-bayPen.fillRect(0, BLEND_START, bayW, bayH - BLEND_START);
-// 3. Småsten som "spiller in" från vägen, tätast vid infarten.
-for (let i = 0; i < 110; i++) {
-  bayPen.fillStyle = i % 2 === 0 ? 'rgba(214, 196, 176, 0.55)' : 'rgba(143, 122, 102, 0.55)';
-  const size = 2.5 + Math.random() * 3.5;
-  const y = bayH - Math.random() * Math.random() * (bayH - BLEND_START) * 1.3;
-  bayPen.fillRect(Math.random() * bayW, y, size, size);
-}
-// 4. Tre målade linjer, öppna mot vägen.
-bayPen.strokeStyle = PALETTE.sign;
-bayPen.lineWidth = 8;
+bayPen.strokeStyle = 'rgba(255, 243, 214, 0.45)';
+bayPen.lineWidth = 4;
 bayPen.lineCap = 'round';
+bayPen.lineJoin = 'round';
 bayPen.beginPath();
-bayPen.moveTo(24, BLEND_START);
-bayPen.lineTo(24, 24);
-bayPen.lineTo(bayW - 24, 24);
-bayPen.lineTo(bayW - 24, BLEND_START);
+bayPen.moveTo(26, bayH * 0.72);
+bayPen.lineTo(26, 26);
+bayPen.lineTo(bayW - 26, 26);
+bayPen.lineTo(bayW - 26, bayH * 0.72);
 bayPen.stroke();
-bayPen.setTransform(1, 0, 0, 1, 0, 0);
-// 5. Kanten: bildpunkt för bildpunkt. d = avstånd (i bildpunkter) utanför fickans rundade rektangel
+bayPen.restore();
+// 3. Kanten: bildpunkt för bildpunkt. d = avstånd (i bildpunkter) utanför fickans rundade rektangel
 // (minus = innanför). Rektangeln är öppen mot vägen (sträcker sig långt nedåt), så där blir ingen kant.
 {
   const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  const gravelLight = hexToRgb(PALETTE.gravelLight);
-  const gravelDark = hexToRgb(PALETTE.gravelDark);
-  const gravelMid = hexToRgb(PALETTE.gravel);
-  const moss = hexToRgb(PALETTE.grassRoot);
-  const corner = 50;                  // Rundade hörn bort från vägen (1 enhet).
-  const edgeBlend = 34;               // Hur långt innanför kanten underlaget tonas över i vägens grus (mjuk, inte brusig).
+  const groundMix = hexToRgb(PALETTE.ground);
+  const corner = 64;                  // Rundade hörn bort från vägen (1 enhet).
   const reach = bayH + 2000;          // "Öppen mot vägen".
+  // Mjukt värdebrus (fläckar ~10 bildpunkter): bilinjärt över ett slumpat rutnät.
+  const CELL = 10;
+  const gridW = Math.ceil(bayImage.width / CELL) + 2;
+  const grid = Array.from({ length: gridW * (Math.ceil(bayImage.height / CELL) + 2) }, () => Math.random());
+  const blob = (x, y) => {
+    const gx = x / CELL;
+    const gy = y / CELL;
+    const x0 = Math.floor(gx);
+    const y0 = Math.floor(gy);
+    const fx = gx - x0;
+    const fy = gy - y0;
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    const g = (a, b) => grid[(y0 + b) * gridW + x0 + a];
+    return (g(0, 0) * (1 - sx) + g(1, 0) * sx) * (1 - sy) + (g(0, 1) * (1 - sx) + g(1, 1) * sx) * sy;
+  };
   const image = bayPen.getImageData(0, 0, bayImage.width, bayImage.height);
   const data = image.data;
   for (let y = 0; y < bayImage.height; y++) {
@@ -405,22 +406,15 @@ bayPen.setTransform(1, 0, 0, 1, 0, 0);
       const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - corner;
       const i = (y * bayImage.width + x) * 4;
       if (d <= 0) {
-        // Innanför: asfalten tonas över i grus närmast kanten.
-        const fall = Math.max(0, 1 - -d / edgeBlend);
-        const mix = fall * fall * 0.95; // Mjuk kurva mot vägens färg.
-        if (mix > 0) {
-          for (let c = 0; c < 3; c++) data[i + c] = data[i + c] * (1 - mix) + gravelMid[c] * mix;
-        }
-        data[i + 3] = 255;
+        data[i + 3] = 255; // Innanför: ren väggrus.
       } else if (d < SKIRT_PX) {
-        // Skörtet: chansen att en bildpunkt finns sjunker mjukt ju längre ut den ligger.
-        if (Math.random() < Math.pow(1 - d / SKIRT_PX, 2.2)) {
-          // Mest samma grus som vägen (lite brus), bara några enstaka ljusa, mörka och mossiga korn.
-          const roll = Math.random();
-          const color = roll < 0.06 ? moss : roll < 0.2 ? gravelLight : roll < 0.34 ? gravelDark : gravelMid;
-          data[i] = color[0];
-          data[i + 1] = color[1];
-          data[i + 2] = color[2];
+        // Skörtet: fläckar av grus som glesnar utåt, mest vid hörnen mot vägen. Färgen tonas mot gräset.
+        const reachK = d / SKIRT_PX;
+        const mouth = Math.max(0, (y - SKIRT_PX - bayH * 0.7) / (bayH * 0.3)); // 0 -> 1 mot infarten.
+        const n = blob(x, y);
+        if (1 - reachK + (n - 0.5) * 0.9 + mouth * 0.35 > 0.55) {
+          const t = Math.min(1, Math.max(0, reachK * 0.75 + (n - 0.5) * 0.3));
+          for (let c = 0; c < 3; c++) data[i + c] = data[i + c] * (1 - t) + groundMix[c] * t;
           data[i + 3] = 255;
         } else {
           data[i + 3] = 0;
