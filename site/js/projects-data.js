@@ -164,6 +164,28 @@ export const PROJECTS = [
     "phone": false
   },
   {
+    "id": "lemon-lagoon",
+    "title": "Lemon Lagoon",
+    "category": "Technical Art",
+    "featured": false,
+    "freelance": false,
+    "tags": [
+      "Unreal",
+      "Game Jam",
+      "Animation",
+      "Rigging",
+      "Tech Art",
+      "Cascadeur",
+      "C++"
+    ],
+    "poster": null,
+    "video": null,
+    "still": null,
+    "url": "https://fungusflip.itch.io/lemon-lagoon",
+    "content": "../assets/content/lemon-lagoon.html",
+    "phone": false
+  },
+  {
     "id": "idle-village",
     "title": "Idle Village",
     "category": "Programming",

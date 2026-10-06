@@ -6,8 +6,9 @@ const src = fs.readFileSync('js/projects.js', 'utf8')
 const { PROJECTS } = new Function(src + '; return {PROJECTS};')();
 const cat = { hub: 'Technical Art', techart: 'Technical Art', art: 'Art', prog: 'Programming' };
 const out = PROJECTS.map(p => {
-  const base = p.media.split('/').pop().replace(/\.\w+$/, '');
-  const isVideo = /\.(mp4|webm)$/.test(p.media);
+  const media = p.media || '';
+  const base = media.split('/').pop().replace(/\.\w+$/, '');
+  const isVideo = /\.(mp4|webm)$/.test(media);
   const poster = fs.existsSync(`assets/posters/${base}.jpg`) ? `../assets/posters/${base}.jpg` : null;
   return {
     id: p.content.split('/').pop().replace('.html', ''),
