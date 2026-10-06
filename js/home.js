@@ -123,7 +123,15 @@ homeGroup.add(door);
 const cabinWindow = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 0.1), new THREE.MeshBasicMaterial({ color: PALETTE.windowGlow }));
 cabinWindow.position.set(CABIN_X - 1, 1.6, CABIN_Z + CABIN_SIZE / 2);
 homeGroup.add(cabinWindow);
-addFakeLight(CABIN_X - 1, CABIN_Z + CABIN_SIZE / 2 + 2, 3.4, 4, 0.7); // Ljuset ut genom fönstret.
+addFakeLight(CABIN_X - 1.3, CABIN_Z + CABIN_SIZE / 2 + 1.2, 3, 2.2, 0.55); // Ljuset ut genom fönstret (kort, så att det inte lägger sig på gångvägen).
+// En liten lykta vid stugdörren: stolpe, lysande glas och en liten ljuspöl. Den enda lampan vid stugan.
+const lanternPost = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), postMaterial);
+lanternPost.position.set(CABIN_X + 2.6, 0.55, CABIN_Z + CABIN_SIZE / 2 + 0.5);
+homeGroup.add(lanternPost);
+const lanternGlass = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.34, 0.3), new THREE.MeshBasicMaterial({ color: PALETTE.windowGlow }));
+lanternGlass.position.set(CABIN_X + 2.6, 1.28, CABIN_Z + CABIN_SIZE / 2 + 0.5);
+homeGroup.add(lanternGlass);
+addFakeLight(CABIN_X + 2.6, CABIN_Z + CABIN_SIZE / 2 + 0.5, 2.4, 2.4, 0.5);
 
 // Parkeringsfickan utanför garaget. Här startar bilen.
 const HOME_PAD_Z = PAD_DISTANCE;
@@ -197,7 +205,7 @@ const TEA_CUPS = [
   [3.5, 3.4, 0.45, 0.2, 'cold'],   // Nästan slut, kall. Mellan garaget och stugan.
   [9.3, 1.0, 0.55, 0.9, 'hot'],    // Full och varm, till höger om stugan.
   [9.5, -1.6, 0.45, 0, 'cold'],    // Tom.
-  [8.9, 4.0, 0.5, 0.6, 'hot'],     // Vid stugdörrens gång.
+  [9.7, 4.3, 0.5, 0.6, 'hot'],     // Vid stugdörren, bortom lyktan.
   [1.4, -3.3, 0.5, 0.85, 'cold'],  // Bakom garaget: full men kall (bortglömd).
 ];
 const steamSpots = []; // Var ångan ska komma ut ur de varma kopparna, och hur stor den är.

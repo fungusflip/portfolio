@@ -248,6 +248,7 @@ function buildCurbs(world, group, roads) {
   const blocks = [];
   const runs = []; // Alla bitar av kantsten. Hörnen lagas (fixCorners) innan blocken sätts ut (placeRun).
   roads.forEach((road, i) => {
+    if (road.noCurb) return; // Egen kantsten hoppas över (vägen räknas ändå som en del av unionen för de andra).
     const width = road.width || ROAD_WIDTH;
     const thin = width < ROAD_WIDTH; // Gångvägen får lägre, smalare kantsten.
     const radius = width / 2 + CURB_OFFSET;

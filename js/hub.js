@@ -107,11 +107,23 @@ export function buildHubBillboards() {
 export function buildHubRoads() {
   for (const portal of PORTALS) if (portal.world === hub) buildPortal(portal);
 
-  // Gångvägen från parkeringen till stugans dörr: två smala bitar i vinkel.
+  // Gångvägen från stugans dörr till sidan av parkeringen: en mjuk kurva (kubisk Bezier) av
+  // åtta korta, raka och smala bitar. Ingen kantsten (noCurb), bara stenar längs kanten.
   const PATH_WIDTH = 1.3;
+  const PATH_SEGMENTS = 8;
   const DOOR_X = CABIN_X + 1.1;
   const DOOR_Z = CABIN_Z + CABIN_SIZE / 2;
-  const PATH_TURN_Z = DOOR_Z + 2.6;
+  const pathCurve = [[DOOR_X, DOOR_Z + 0.3], [DOOR_X, DOOR_Z + 2.4], [DOOR_X - 1.4, 5.7], [2.7, 5.5]]; // Start, två styrpunkter, slut.
+  const pathAt = (t) => {
+    const u = 1 - t;
+    const [a, b, c, d] = pathCurve;
+    const bezier = (i) => u * u * u * a[i] + 3 * u * u * t * b[i] + 3 * u * t * t * c[i] + t * t * t * d[i];
+    return homePoint(bezier(0), bezier(1));
+  };
+  const footpath = [];
+  for (let i = 0; i < PATH_SEGMENTS; i++) {
+    footpath.push({ from: pathAt(i / PATH_SEGMENTS), to: pathAt((i + 1) / PATH_SEGMENTS), width: PATH_WIDTH, noCurb: true });
+  }
   // Varje rad är en rak väg från en punkt till en annan. ÄNDRA HÄR för fler eller färre vägar.
   const roads = [
     // Huvudvägen: från uppfarten förbi alla skyltar, till under Tech Art-grottan.
@@ -123,8 +135,7 @@ export function buildHubRoads() {
     // Uppfarten: från garageporten ner till huvudvägen.
     { from: towardCamera({ x: HOME_X, z: HOME_Z }, GARAGE_Z + GARAGE_DEPTH / 2), to: homeRoadPoint },
     ...billboardDriveways(hub), // En kort infart till varje skylts ficka. ... = packa upp listan.
-    { from: homePoint(DOOR_X, DOOR_Z + 0.3), to: homePoint(DOOR_X, PATH_TURN_Z), width: PATH_WIDTH },
-    { from: homePoint(DOOR_X, PATH_TURN_Z), to: homePoint(2, PATH_TURN_Z), width: PATH_WIDTH },
+    ...footpath,
   ];
   buildRoads(hub, roads);
 
