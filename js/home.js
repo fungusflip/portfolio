@@ -293,6 +293,7 @@ const TEA_CUPS = [
   [9.7, 4.3, 0.5, 0.6, 'hot'],     // Vid stugdörren, bortom lyktan.
   [1.4, -3.3, 0.5, 0.85, 'cold'],  // Bakom garaget: full men kall (bortglömd).
 ];
+export const teaCups = []; // [{ cup, x, z, radius }]: kopparna gungar till när bilen kör över dem (hub.js).
 const steamSpots = []; // Var ångan ska komma ut ur de varma kopparna, och hur stor den är.
 for (const [x, z, size, fill, heat] of TEA_CUPS) {
   const cup = new THREE.Group();
@@ -300,6 +301,8 @@ for (const [x, z, size, fill, heat] of TEA_CUPS) {
   cup.rotation.y = Math.random() * Math.PI * 2; // Handtaget åt olika håll.
   cup.scale.setScalar(size);
   homeGroup.add(cup);
+  markMoving(cup); // Gungar till vid körning över: får inte slås ihop.
+  teaCups.push({ cup, x, z, radius: 1.3 * size });
   const saucer = new THREE.Mesh(saucerGeometry, cupMaterial);
   saucer.position.y = 0.07;
   cup.add(saucer);
@@ -348,7 +351,7 @@ export function homePoint(x, z) {
 }
 
 // --- Brevlådan: i hörnet mellan uppfarten och huvudvägen ---
-const mailbox = new THREE.Group();
+export const mailbox = new THREE.Group(); // Exporteras så att hub.js kan låta den välta (knockables.js).
 mailbox.position.set(3.9, 0, ROAD_DISTANCE - 3.9);
 mailbox.scale.setScalar(1.4); // Lite överdrivet stor, så att den syns från kameran.
 homeGroup.add(mailbox);
@@ -373,7 +376,7 @@ const FLAG_DOWN = Math.PI / 2; // Vriden 90° = ligger ner längs lådan.
 mailFlag.rotation.x = FLAG_DOWN;
 const MAILBOX_RADIUS = 6; // Hur nära bilen måste vara för att flaggan ska fällas upp.
 // Flaggan fälls, och porten och hålet bakom den göms och visas: de får inte slås ihop (se optimize.js).
-markMoving(mailFlag, garageDoor, garageOpening);
+markMoving(mailFlag, mailbox, garageDoor, garageOpening); // mailbox välter när bilen kör över den.
 
 // Fickans och brevlådans platser i världen.
 worldGroup(WORLDS.hub).updateMatrixWorld(true);

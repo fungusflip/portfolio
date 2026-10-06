@@ -16,10 +16,10 @@ const MAX_STEP = 0.35;              // Längsta sträckan bilen flyttas åt gån
 const MAX_STEPS = 24;
 const EPSILON = 0.002;              // Lite extra utanför hindret, så att bilen inte darrar på kanten.
 const HARD_HIT = 12;                // Fart in i hindret som räknas som en full smäll.
-const MAX_LOSS = 0.25;              // Så stor del av farten som går förlorad vid en full smäll.
+const MAX_LOSS = 0.15;             // Så stor del av farten som går förlorad vid en full smäll.
 const SOFT_MIN_SPEED = 0.8;         // Långsammare än så välter bilen inget mjukt hinder.
-const SOFT_LOSS_MIN = 0.02;         // Fartförlust vid en mjuk träff: 2 % ...
-const SOFT_LOSS = 0.04;             // ... upp till 6 % vid full fart.
+const SOFT_LOSS_MIN = 0.01;         // Fartförlust vid en mjuk träff: 1 % ...
+const SOFT_LOSS = 0.03;             // ... upp till 4 % vid full fart.
 const SOFT_COOLDOWN = 0.6;          // Sekunder innan samma (icke-fallande) hinder kan träffas igen.
 
 const grid = new Map(); // ruta → lista med hinder som når in i rutan.
