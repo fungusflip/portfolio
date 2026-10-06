@@ -4,10 +4,58 @@
   <figcaption>A summoned villager picks a need and walks to the right tile. Filmed on an iPhone 11, iOS 18.5.</figcaption>
 </figure>
 
+<h3>Village</h3>
+<p>The village is an isometric tile map. The captures are from the Unity 6.3 editor in a phone-sized Game view. There is a bottom bar with four buttons and a clock and a Delete button at the top.</p>
+<figure>
+ <video src="assets/content-media/idle-village/village-overview.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Panning over the village: houses, trees, rocks, a pond and a brown plot of ground at the top.</figcaption>
+</figure>
+<figure>
+ <video src="assets/content-media/idle-village/village-night-buildings.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Night. The screen goes dark and a debug log at the top prints lines like &ldquo;Zanmir entered Inn&rdquo;. A building opens a panel with item slots, then a &ldquo;Select Your Character&rdquo; row with stars and a bar per villager.</figcaption>
+</figure>
+<figure>
+ <video src="assets/content-media/idle-village/village-smithy-roster.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Lobby, then the village. The Smithy panel has Auto and Forge buttons and a &ldquo;?&rdquo; result slot. A list shows three villagers by name.</figcaption>
+</figure>
+<figure>
+ <video src="assets/content-media/idle-village/village-craft-minigame.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Shop panel, then the Smithy again, then a green line of text that says a minigame gives crafting a 1.5x bonus. Last is a villager sheet for Lunrix: Chef, level 1, XP 0, tier 1, with accessory, clothing and tool slots.</figcaption>
+</figure>
+<!-- TODO Filip: what do the four bottom-bar buttons do? Capture B-ae6ab960 (red and pink tiles with villagers) was not used, what is it? -->
+
+<h3>Battle</h3>
+<p>There is a battle scene where wolves run around a field and fight the villagers. The text at the top says &ldquo;Enemies remaining: 4/4&rdquo;. The field is darker than the village.</p>
+<figure>
+ <video src="assets/content-media/idle-village/battle-wolves.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Four wolves against the villagers. White circles are on the ground around them, and one wolf turns red.</figcaption>
+</figure>
+<figure>
+ <video src="assets/content-media/idle-village/battle-dusk-bubbles.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Villagers also talk here. One bubble reads &ldquo;i want to woork. YAHOO&rdquo;, another &ldquo;ahum. Wish i had books.&rdquo; Wolves carry a red marker.</figcaption>
+</figure>
+<!-- TODO Filip: how does a villager hit or die in battle? What do the white circles and the red markers mean? Is the battle automatic? -->
+
+<h3>Summon</h3>
+<p>The summon scene is a Lobby with a white pedestal and a Summon button at the bottom. Pressing it plays a blue particle effect above a ring. Then a card shows the new villager: a portrait, up to five stars and three ability icons.</p>
+<figure>
+ <video src="assets/content-media/idle-village/summon-circle-fx.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>The summon effect on a black background: blue sparks over the ring.</figcaption>
+</figure>
+<figure>
+ <video src="assets/content-media/idle-village/summon-card-reveal.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Two summons in a row on a green background. The first card has four stars, the second has one star and horns.</figcaption>
+</figure>
+<figure><img src="assets/content-media/idle-village/summon-card-4star.png" alt="Summon card with a pink-haired villager with horns and four stars" loading="lazy"><figcaption>A four star card.</figcaption></figure>
+<figure><img src="assets/content-media/idle-village/summon-card-1star.png" alt="Summon card with a red-haired villager with horns and one star" loading="lazy"><figcaption>A one star card.</figcaption></figure>
+<!-- TODO Filip: what do the ability icons on the card mean? Is the green background the final look or a keyed placeholder? -->
+
 <h3>Works now</h3>
 <ul>
  <li>Anonymous login that remembers you</li>
- <li>Summoning with random tiers</li>
+ <li>Summoning with random tiers, shown as a star card (1 to 5 stars)</li>
+ <li>A battle scene where wolves fight the villagers</li>
+ <li>Building panels (Smithy, Inn and others) where you pick a villager</li>
  <li>Utility AI picks a need and a target tile</li>
  <li>2D NavMesh pathing over the Tilemap</li>
  <li>Save state, mirrored to Firebase</li>
@@ -21,5 +69,6 @@
 </ul>
 
 <h3>Log</h3>
-<p>10 Aug 2025: utility AI hooked to the personalities, first summon tiers.<br>15 Aug 2025: summon revamp, tile targets, on-device video.</p>
+<p>10 Aug 2025: utility AI hooked to the personalities, first summon tiers.<br>15 Aug 2025: summon revamp, tile targets, on-device video.<br>Later: summon scene with cards, battle scene, building panels.</p>
+<!-- TODO Filip: dates for the later work -->
 <p><a href="https://docs.google.com/document/d/1sg9sw09azX95HqQNMAE3EebvAbjB2xtNvtVX-KCMqjY/edit?usp=sharing" target="_blank" rel="noopener">Full tech spec →</a></p>
