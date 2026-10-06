@@ -420,6 +420,7 @@ export function buildHubCollision({ lamps, signposts, trees = [] }) {
       add(homePoint(CABIN_X - HALF + (i / 4) * HALF * 2, CABIN_Z - HALF + (j / 4) * HALF * 2), 0.75);
     }
   }
+  for (const z of [-1.8, -1.1, -0.4]) add(homePoint(CABIN_X + 3.0, CABIN_Z + z), 0.6); // Vedboden på stugans högra sida.
   add(homePoint(3.9, ROAD_DISTANCE - 3.9), 0.3);
 
   // Allt som level design lagt till (fontän, pelare, damm, bro, kiosk, tehus, häckar, stenar): hubprops.js.
