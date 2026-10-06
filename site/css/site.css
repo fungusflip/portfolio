@@ -194,7 +194,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
 .js .reveal.in { opacity: 1; transform: none; }
 
-/* ---------- About / Skills / Quotes ---------- */
+/* ---------- About / Clients & collaborators ---------- */
 .about-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(28px, 5vw, 64px); align-items: start; }
 .about-grid p { max-width: 38em; }
 .pillars { display: grid; gap: 16px; }
@@ -203,11 +203,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 .pillars p { margin: 0; color: var(--text-dim); font-size: 15.5px; }
 @media (max-width: 860px) { .about-grid { grid-template-columns: 1fr; } }
 
-.skills { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; }
-.skills h3 { font: 700 14px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 14px; }
-.skills .tags li { font-size: 16px; padding: 9px 18px; background: var(--surface); border: 1px solid var(--line); }
-@media (max-width: 700px) { .skills { grid-template-columns: 1fr; } }
-
 .quotes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 22px; }
 .quotes figure { margin: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; position: relative; }
 .quotes figure::before { content: '\201C'; position: absolute; top: 2px; left: 18px; font: 400 64px/1 var(--display); color: var(--glow); }
@@ -215,6 +210,16 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 .quotes blockquote p { margin: 0; }
 .quotes figcaption { display: flex; flex-direction: column; font-size: 14px; color: var(--text-dim); }
 .quotes figcaption strong { color: var(--text); font-size: 16px; }
+
+/* Clients & collaborators: kompakt, ligger först. Citaten är mindre och verktygen en smal rad under. */
+.section-tight { padding: clamp(40px, 6vw, 72px) 0; }
+.quotes-compact { gap: 16px; }
+.quotes-compact figure { padding: 20px 22px; gap: 14px; }
+.quotes-compact figure::before { font-size: 52px; left: 16px; }
+.quotes-compact blockquote { padding-top: 20px; font-size: 16px; }
+.toolbelt { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.toolbelt-title { margin: 0; font: 700 12px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); }
+.toolbelt .tags { gap: 6px; }
 
 /* ---------- CV + kontakt ---------- */
 .cta-panel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; padding: clamp(24px, 4vw, 44px); border-radius: 24px; background: linear-gradient(135deg, var(--surface), var(--surface-2)); border: 1px solid var(--line); box-shadow: var(--shadow); }

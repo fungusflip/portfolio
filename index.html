@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=113">
   <!-- Den vanliga webbplatsen under spelet (se site/). site.css laddas EFTER style.css och är
        avgränsad till .site-root, så att de två inte krockar. -->
-  <link rel="stylesheet" href="site/css/site.css?v=3">
+  <link rel="stylesheet" href="site/css/site.css?v=4">
   <!-- Markerar att JS finns, så att reveal-animationerna bara döljer saker när de kan visas igen. -->
   <script>document.documentElement.classList.add('js');</script>
 
@@ -93,10 +93,9 @@
       </button>
       <nav class="site-nav" id="siteNav" aria-label="Main">
         <ul>
+          <li><a href="#clients">Clients</a></li>
           <li><a href="#work">Work</a></li>
           <li><a href="#about">About</a></li>
-          <li><a href="#skills">Skills</a></li>
-          <li><a href="#words">Kind words</a></li>
           <li><a href="#cv">CV</a></li>
           <li><a href="#contact">Contact</a></li>
         </ul>
@@ -159,8 +158,36 @@
   <div class="site-root site-page" id="site">
     <main id="main">
     <!-- @sections -->
+    <!-- CLIENTS & COLLABORATORS (först: vilka jag har jobbat med + verktygen i en smal rad) -->
+    <section class="section section-tight" id="clients" aria-labelledby="clientsTitle">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow">Clients &amp; collaborators</p>
+          <h2 id="clientsTitle" class="display">Who I have worked with</h2>
+        </div>
+        <ul class="quotes quotes-compact">
+          <li class="reveal"><figure>
+            <blockquote><p>Filip is an outstanding person and a strong asset to any team he’s part of. Over six months working together on my project, he proved reliable, proactive, and solution-driven.</p></blockquote>
+            <figcaption><strong>Michael Tattershall</strong><span>Project Lead &amp; Programmer</span></figcaption>
+          </figure></li>
+          <li class="reveal"><figure>
+            <blockquote><p>Filip is absolutely amazing, very detailed and ensures that projects line up perfectly with my vision.</p></blockquote>
+            <figcaption><strong>Burrito Bandit</strong><span>Project Lead</span></figcaption>
+          </figure></li>
+          <li class="reveal"><figure>
+            <blockquote><p>He’s fast and great, always delivers what you ask. Really good person and strong 3D artist.</p></blockquote>
+            <figcaption><strong>IBO</strong><span>Creative Director</span></figcaption>
+          </figure></li>
+        </ul>
+        <div class="toolbelt reveal">
+          <h3 class="toolbelt-title" id="toolsTitle">Tools</h3>
+          <ul class="tags tags-sm" aria-labelledby="toolsTitle"><li>Unreal Engine</li><li>Unity</li><li>Godot</li><li>Houdini</li><li>Maya</li><li>Substance Painter</li><li>HLSL</li><li>C#</li><li>C++</li><li>Python</li></ul>
+        </div>
+      </div>
+    </section>
+
     <!-- WORK -->
-    <section class="section" id="work" aria-labelledby="workTitle">
+    <section class="section section-alt" id="work" aria-labelledby="workTitle">
       <div class="wrap">
         <div class="section-head reveal">
           <p class="eyebrow">Selected projects</p>
@@ -181,7 +208,7 @@
     </section>
 
     <!-- ABOUT -->
-    <section class="section section-alt" id="about" aria-labelledby="aboutTitle">
+    <section class="section" id="about" aria-labelledby="aboutTitle">
       <div class="wrap about-grid">
         <div class="reveal">
           <p class="eyebrow">Hello!</p>
@@ -198,52 +225,8 @@
       </div>
     </section>
 
-    <!-- SKILLS -->
-    <section class="section" id="skills" aria-labelledby="skillsTitle">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <p class="eyebrow">What I use</p>
-          <h2 id="skillsTitle" class="display">Skills</h2>
-        </div>
-        <div class="skills reveal">
-          <div>
-            <h3>Engines and content tools</h3>
-            <ul class="tags"><li>Unreal Engine</li><li>Unity</li><li>Godot</li><li>Houdini</li><li>Maya</li><li>Substance Painter</li></ul>
-          </div>
-          <div>
-            <h3>Languages</h3>
-            <ul class="tags"><li>HLSL</li><li>C#</li><li>C++</li><li>Python</li></ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- KIND WORDS -->
-    <section class="section section-alt" id="words" aria-labelledby="wordsTitle">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <p class="eyebrow">Testimonials</p>
-          <h2 id="wordsTitle" class="display">What people I have worked with say</h2>
-        </div>
-        <ul class="quotes">
-          <li class="reveal"><figure>
-            <blockquote><p>Filip is an outstanding person and a strong asset to any team he’s part of. Over six months working together on my project, he proved reliable, proactive, and solution-driven.</p></blockquote>
-            <figcaption><strong>Michael Tattershall</strong><span>Project Lead &amp; Programmer</span></figcaption>
-          </figure></li>
-          <li class="reveal"><figure>
-            <blockquote><p>Filip is absolutely amazing, very detailed and ensures that projects line up perfectly with my vision.</p></blockquote>
-            <figcaption><strong>Burrito Bandit</strong><span>Project Lead</span></figcaption>
-          </figure></li>
-          <li class="reveal"><figure>
-            <blockquote><p>He’s fast and great, always delivers what you ask. Really good person and strong 3D artist.</p></blockquote>
-            <figcaption><strong>IBO</strong><span>Creative Director</span></figcaption>
-          </figure></li>
-        </ul>
-      </div>
-    </section>
-
     <!-- CV -->
-    <section class="section" id="cv" aria-labelledby="cvTitle">
+    <section class="section section-alt" id="cv" aria-labelledby="cvTitle">
       <div class="wrap">
         <div class="cta-panel reveal">
           <div>
@@ -259,7 +242,7 @@
     </section>
 
     <!-- CONTACT -->
-    <section class="section section-alt" id="contact" aria-labelledby="contactTitle">
+    <section class="section" id="contact" aria-labelledby="contactTitle">
       <div class="wrap contact-grid">
         <div class="reveal">
           <p class="eyebrow">Say hello</p>
