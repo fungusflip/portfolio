@@ -1,5 +1,11 @@
 {
   "liveServer.settings.port": 5500,
   "liveServer.settings.donotShowInfoMsg": true,
-  "liveServer.settings.donotVerifyTags": true
+  "liveServer.settings.donotVerifyTags": true,
+  "liveServer.settings.ignoreFiles": [
+    ".vscode/**",
+    ".claude/**",
+    ".git/**",
+    "node_modules/**"
+  ]
 }
