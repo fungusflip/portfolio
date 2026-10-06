@@ -64,18 +64,15 @@ function makeTuftGeometry() {
 // Bygger gräset för en värld. grassAmount(x, z) ska ge 0 (inget gräs, t.ex. på en väg)
 // till 1 (fullt gräs). Svaret ritas in i en liten bild ("masken") som shadern läser av.
 // area = { x, z, size }: den fyrkant på marken som masken täcker.
-const fallbackGround = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
-fallbackGround.needsUpdate = true;
-// Markens bild i liten, suddig version (32 x 32): bara de stora mjuka fläckarna finns kvar, inte
-// löven och strecken. Vertexshadern kan inte mip-mappa (läser alltid skarpaste nivån), så ett strå
-// som hamnade på ett löv fick lövets färg, medan ögat ser marken som ett medelvärde.
-function makeBlurredGround(groundMap) {
+// Markens dominerande färg: medelvärdet av hela kakelbilden (det ögat ser på avstånd). Alla strå får
+// den som rotfärg, så gräset aldrig kan skilja sig från marken under det. Returnerar null utan bild.
+function makeGroundBase(groundMap) {
   const source = groundMap && groundMap.image;
   if (!source || !source.getContext) return null;
   let size = source.width;
   let from = source;
-  while (size > 32) { // Halvera i steg: varje steg medelvärdesbildar fyra pixlar till en.
-    size /= 2;
+  while (size > 1) { // Halvera i steg ner till en enda pixel (= medelfärgen).
+    size = Math.max(1, size / 2);
     const step = document.createElement('canvas');
     step.width = step.height = size;
     const pen = step.getContext('2d');
@@ -83,14 +80,12 @@ function makeBlurredGround(groundMap) {
     pen.drawImage(from, 0, 0, size, size);
     from = step;
   }
-  const texture = new THREE.CanvasTexture(from);
-  texture.colorSpace = THREE.SRGBColorSpace; // Samma som markens: läses om till linjärt i shadern.
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  return texture;
+  const [r, g, b] = from.getContext('2d').getImageData(0, 0, 1, 1).data;
+  return new THREE.Color().setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace); // Till linjärt, som marken.
 }
 
 export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
-  const blurredGround = makeBlurredGround(area.groundMap);
+  const groundBase = makeGroundBase(area.groundMap);
   // --- Masken: 256 x 256 pixlar över hela marken. Varje pixel = hur mycket gräs. ---
   const MASK_SIZE = 256;
   const maskData = new Uint8Array(MASK_SIZE * MASK_SIZE * 4);
@@ -136,9 +131,8 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
       uMaskSize: { value: area.size },
       uArea: { value: GRASS_AREA },
       // Markens bild: gräset tar färg från marken under sig, så att det läses som en del av terrängen.
-      uGround: { value: blurredGround || fallbackGround },
-      uGroundParams: { value: new THREE.Vector3(area.x - area.size / 2, area.z + area.size / 2, area.groundUnits || 16) },
-      uGroundMix: { value: blurredGround ? 1 : 0 },
+      uGroundBase: { value: groundBase || new THREE.Color() },
+      uGroundMix: { value: groundBase ? 1 : 0 },
       // THREE.Color gör om färgen till den "linjära" form som shadern räknar med.
       uRoot: { value: new THREE.Color(PALETTE.grassRoot) },
       uTip: { value: new THREE.Color(PALETTE.grassTip) },
@@ -160,10 +154,7 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
         varying float vHeight;
         varying float vWave;
         varying float vSeed;
-        varying float vBurn;
-        uniform sampler2D uGround;
-        uniform vec3 uGroundParams;
-        varying vec3 vGround;`)
+        varying float vBurn;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         // 1. Vrid tuvan efter sitt frö.
         float turn = aSpot.z * 6.2832;
@@ -175,8 +166,6 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
         vec4 maskSample = texture2D(uMask, (spot - uMaskOrigin) / uMaskSize);
         float grow = maskSample.r;
         vBurn = maskSample.g;
-        // Markens färg precis här (samma kakelbild och uppställning som marken i hub.js).
-        vGround = texture2D(uGround, vec2((spot.x - uGroundParams.x) / uGroundParams.z, (uGroundParams.y - spot.y) / uGroundParams.z)).rgb;
         grow *= smoothstep(uArea, uArea - 6.0, edge) * (0.7 + 0.6 * fract(aSpot.z * 13.7));
         transformed *= grow;
         // 4. Vinden. En våg som rullar över fältet i brisens riktning, plus vindbyn.
@@ -203,7 +192,7 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
         varying float vWave;
         varying float vSeed;
         varying float vBurn;
-        varying vec3 vGround;
+        uniform vec3 uGroundBase;
         uniform float uGroundMix;`)
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
         // Mörkt vid roten, ljust i toppen. Var sjunde tuva har höstgula toppar.
@@ -215,14 +204,14 @@ export function makeGrass(world, grassAmount, area, grassBurn = () => 0) {
         float groundMix = uGroundMix * (1.0 - 0.5 * vBurn);
         // Roten har EXAKT markens färg (så att gräset växer ut ur marken utan någon skarv); toppen
         // är bara lite färgad av marken. Det brända gräset vid vägarna är brunt mest i topparna.
-        vec3 baseRoot = mix(uRoot, vGround, groundMix);
-        // Toppen = markens färg, lite ljusare, med en liten jämn variation per tuva (±4 %).
-        tip = mix(tip, vGround * (1.12 + 0.08 * (fract(vSeed * 7.3) - 0.5)), groundMix * 0.9);
+        vec3 baseRoot = mix(uRoot, uGroundBase, groundMix);
+        // Toppen = markens färg, bara några procent ljusare. Ingen variation mellan tuvor.
+        tip = mix(tip, uGroundBase * 1.04, groundMix);
         vec3 root = mix(baseRoot, vec3(0.30, 0.20, 0.10), vBurn * 0.35);
         tip = mix(tip, vec3(0.62, 0.47, 0.22), vBurn);
         vec4 diffuseColor = vec4(mix(root, tip, vHeight), 1.0);
         // Ett svagt skimmer i topparna när vågen passerar: lite magi.
-        diffuseColor.rgb += uShimmer * vHeight * smoothstep(0.75, 1.0, vWave) * 0.15;`);
+        diffuseColor.rgb += uShimmer * vHeight * smoothstep(0.75, 1.0, vWave) * 0.15 * (1.0 - uGroundMix);`);
   };
 
   addSaturation(material, 1.2);
