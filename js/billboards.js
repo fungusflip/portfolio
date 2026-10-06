@@ -506,6 +506,7 @@ export const billboards = []; // Allt som behövs om varje byggd skylt medan pro
 //   baseY(isPhone) – hur högt över marken skärmens underkant sitter.
 //   border         – ramens bredd runt skärmen.
 //   signGap        – extra luft mellan ramen och titelskylten.
+//   signZ          – (valfri) hur långt fram titelskylten flyttas, i panelens z. Standard 0.
 //   build(parts)   – bygger huset. parts = { group, panel, width, height, border, baseY, isPhone }.
 //     group = hela skylten (står på marken, +z mot kameran).
 //     panel = det som lutar bakåt med skärmen (y = uppåt längs skärmen, z = ut ur skärmen).
@@ -527,6 +528,8 @@ function box(parent, material, b, h, d, x, y, z) {
   parent.add(mesh);
   return mesh;
 }
+
+const SIGN_Z = 1.5; // Arkadens titelskylt flyttas så här långt fram (panel-z), framför bakväggen.
 
 const DISPLAYS = {
   // --- Hemma: drive-in-bio. En duk på två stolpar (mobilen står direkt på marken). ---
@@ -582,10 +585,12 @@ const DISPLAYS = {
     baseY: () => 1.5,
     border: 0.25,
     signGap: 0.15,
+    // Panelen lutar bakåt, så skylten vid z = 0 hamnade bakom maskinens bakvägg och göms. Flytta fram den.
+    signZ: SIGN_Z,
     build({ group, panel, width, height, border, baseY }) {
       const outerWidth = width + border * 2;
       const lean = Math.sin(SCREEN_TILT) * (height + border * 2);       // Hur långt bakåt skärmens överkant lutar.
-      const topY = baseY + Math.cos(SCREEN_TILT) * (height + border * 2) + 1.7; // Maskinens höjd, inklusive titeln.
+      const topY = baseY + Math.cos(SCREEN_TILT) * (height + border * 2) + 2.3; // Maskinens höjd, inklusive titeln.
       box(panel, arcadeMaterial, outerWidth, height + border * 2, 0.3, 0, height / 2 + border, -0.16); // Skärmens kant.
       // Sidogavlarna, med en lysande neonlist längs framkanten.
       const depth = lean + 1.8;
@@ -596,6 +601,11 @@ const DISPLAYS = {
       }
       box(group, arcadeMaterial, outerWidth, topY, 0.8, 0, topY / 2, -lean - 0.6);    // Baksidan.
       box(group, arcadeMaterial, outerWidth, 0.3, depth, 0, topY - 0.15, 0.4 - depth / 2); // Taket, lika djupt som gavlarna.
+      // Neonlister över och under titeln (skylten sitter 5.35–6.45 över panelens underkant, se buildBillboards).
+      const marqueeBottom = height + border * 2 + 0.2 + 0.15;
+      for (const y of [marqueeBottom - 0.05, marqueeBottom + SIGN_HEIGHT + 0.05]) {
+        box(panel, glow(PALETTE.progTrace), outerWidth - 0.4, 0.06, 0.06, 0, y, SIGN_Z);
+      }
       // Nedre fronten och kontrollpanelen.
       box(group, arcadeMaterial, outerWidth, baseY - 0.45, 0.3, 0, (baseY - 0.45) / 2, 0.35);
       box(group, arcadeMaterial, outerWidth, 0.3, 1.1, 0, baseY - 0.3, 0.55);
@@ -755,7 +765,7 @@ export function buildBillboards(world) {
     const titleTextureActive = makeTitleTexture(project.title, true);
     const signMaterial = new THREE.MeshBasicMaterial({ map: titleTexture, fog: false });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(signWidth, signHeight), signMaterial);
-    sign.position.set(0, height + border * 2 + 0.2 + display.signGap + signHeight / 2, 0);
+    sign.position.set(0, height + border * 2 + 0.2 + display.signGap + signHeight / 2, display.signZ || 0);
     panel.add(sign);
     markMoving(sign); // Skylten gungar lite (se updateBillboards).
 
