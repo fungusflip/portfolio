@@ -217,9 +217,9 @@ export const PROJECTS = [
       "Cascadeur",
       "C++"
     ],
-    "poster": null,
+    "poster": "../assets/posters/kitchen-scene.jpg",
     "video": null,
-    "still": null,
+    "still": "../assets/content-media/lemon-lagoon/kitchen-scene.jpg",
     "url": "https://fungusflip.itch.io/lemon-lagoon",
     "content": "../assets/content/lemon-lagoon.html",
     "phone": false
