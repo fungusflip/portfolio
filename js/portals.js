@@ -28,24 +28,27 @@ import { makeSwirl } from './magic.js';
 //   style   – 'cave' (grotta) eller 'pad' (teleportplatta).
 //   at      – grottöppningens/plattans mitt, { x, z }.
 export const PORTALS = [
-  // Alla tre grottor ligger NEDANFÖR huvudvägen på en rad, med öppningen uppåt mot vägen.
-  // Tech Art: längst till höger, en bit bortom den sista skylten.
-  { world: WORLDS.hub, leadsTo: WORLDS.techart, style: 'cave', at: hubPoint(42, 28) },
-  // Programming: mitt under skyltraden.
-  { world: WORLDS.hub, leadsTo: WORLDS.prog, style: 'cave', at: hubPoint(0, 28) },
-  // Art: bredvid Programming-grottan, längre åt vänster.
-  { world: WORLDS.hub, leadsTo: WORLDS.art, style: 'cave', at: hubPoint(-24, 28) },
+  // De tre grottorna ligger NEDANFÖR huvudvägen, förskjutna i djupled så att de inte står på en
+  // rad, med öppningen uppåt mot vägen. Tech Art: högt upp till höger, en bit bortom sista skylten.
+  { world: WORLDS.hub, leadsTo: WORLDS.techart, style: 'cave', at: hubPoint(35.5, 29) },
+  // Programming: till höger om torget, längre ner.
+  { world: WORLDS.hub, leadsTo: WORLDS.prog, style: 'cave', at: hubPoint(21, 40) },
+  // Art: längst ner till vänster, bortom dammen och bron.
+  { world: WORLDS.hub, leadsTo: WORLDS.art, style: 'cave', at: hubPoint(-22.5, 44.5) },
   // I de andra världarna ligger plattan hem 8 enheter "nedåt på skärmen" från mitten.
   { world: WORLDS.techart, leadsTo: WORLDS.hub, style: 'pad', at: towardCamera(WORLDS.techart, 8) },
   { world: WORLDS.prog, leadsTo: WORLDS.hub, style: 'pad', at: towardCamera(WORLDS.prog, 8) },
   { world: WORLDS.art, leadsTo: WORLDS.hub, style: 'pad', at: towardCamera(WORLDS.art, 8) },
 ];
 export const [techartCave, progCave, artCave] = PORTALS; // De tre första: grottorna hemma.
-// Hur långt åt höger (från skyltradens mitt) varje grotta ligger. Vägarna ner till dem utgår
-// från huvudvägen på samma sida.
-techartCave.right = 42;
-progCave.right = 0;
-artCave.right = -24;
+// Var varje grotta ligger räknat från skyltradens mitt (hubPoint): åt höger och nedåt på skärmen.
+// Vägarna dit byggs i hub.js och slutar rakt in i öppningen.
+techartCave.right = 35.5;
+techartCave.down = 29;
+progCave.right = 21;
+progCave.down = 40;
+artCave.right = -22.5;
+artCave.down = 44.5;
 // Punkterna bilen kör mellan. För en grotta räknas de från öppningen: öppningen vetter uppåt,
 // så "framför" den är uppåt på skärmen och berget ligger nedåt (mot kameran).
 for (const portal of PORTALS) {
