@@ -119,6 +119,7 @@ export function buildHubRoads() {
   // åtta korta, raka och smala bitar. Ingen kantsten (noCurb), bara stenar längs kanten.
   const PATH_WIDTH = 1.3;
   const TECH_ROAD_RIGHT = 35.5;   // Där Tech Art-vägen lämnar huvudvägen.
+  const LAST_SIGN_ROAD_END = 46;  // Huvudvägen slutar här: lite förbi sjätte skylten (3 x 14.14 = 42.4 åt höger om mitten).
   const PATH_SEGMENTS = 8;
   const DOOR_X = CABIN_X + 1.1;
   const DOOR_Z = CABIN_Z + CABIN_SIZE / 2;
@@ -137,6 +138,8 @@ export function buildHubRoads() {
   const roads = [
     // Huvudvägen: från uppfarten förbi alla skyltar, till avfarten mot Tech Art-grottan.
     { from: homeRoadPoint, to: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE) },
+    // Förlängning förbi Tech Art-avfarten, så att den sjätte skyltens (Lemon Lagoon) infart når en väg.
+    { from: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE), to: hubPoint(LAST_SIGN_ROAD_END, ROAD_DISTANCE) },
     // Tech Art: en mjuk S-kurva ner från huvudvägen, och de sista 6.5 enheterna rakt in i öppningen.
     { from: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE), to: hubPoint(38.5, 17) },
     { from: hubPoint(38.5, 17), to: hubPoint(35.5, 22.5) },
