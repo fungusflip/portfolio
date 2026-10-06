@@ -25,7 +25,7 @@ import {
   renderer, scene, camera, cameraOffset, cameraLead, keyLight, SUN_DIRECTION, SUN_DISTANCE,
   WORLDS, currentWorld, towardCamera, toTheRight, FOG_NEAR, FOG_FAR, CAMERA_PITCH,
 } from './core.js';
-import { introOpen, panelOpen, setLoadingProgress, setReady, setFade, placeParkPrompt } from './ui.js';
+import { introOpen, panelOpen, canvasVisible, setLoadingProgress, setReady, setFade, placeParkPrompt } from './ui.js';
 import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
 // Projektlistan fungerar direkt, även under laddningen (den behöver bara projektdatan).
 import { setWorldJumper } from './project-list.js';
@@ -37,6 +37,7 @@ import { startFromCode } from './ui.js';
 const timer = new THREE.Timer(); // Mäter tiden mellan bilderna.
 renderer.setAnimationLoop((time) => {
   timer.update(time);
+  if (!canvasVisible) { timer.getDelta(); return; } // Startskärmen är scrollad ur bild: rita inget.
   renderLoadingScene(Math.min(timer.getDelta(), 0.1));
 });
 
@@ -254,6 +255,9 @@ const PROMPT_DISTANCE = 3; // Var uppmaningen sitter: så långt framför skylte
 const promptPoint = new THREE.Vector3();
 let focusZoom = 1;
 function gameFrame(time) {
+  // Webbplatsen ligger ovanpå och spelet syns inte: rita inget (sparar grafikkortet).
+  // Klockan går ändå, så att första bilden efteråt inte får ett jättehopp.
+  if (!canvasVisible) { timer.update(time); timer.getDelta(); return; }
   if (perf.skipFrame(time)) return; // 30-låset (se perf.js).
   const frameStart = performance.now();
   timer.update(time);
@@ -277,7 +281,7 @@ function gameFrame(time) {
   // Kameran följer bilen: siktpunkten = bilen + försprånget, kameran = siktpunkten + avståndet.
   updateLookAhead(delta);
   const target = cameraTarget.copy(car.position).add(cameraLead).add(lookAhead);
-  if (!introOpen) introShift = THREE.MathUtils.damp(introShift, 0, 2.5, delta);
+  introShift = THREE.MathUtils.damp(introShift, introOpen ? 1 : 0, 2.5, delta); // Glider tillbaka efter "Back to site".
   if (introShift > 0.001) {
     const shift = introCameraShift();
     target.x += shift.x;

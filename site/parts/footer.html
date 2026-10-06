@@ -1,0 +1,25 @@
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <p>&copy; 2026 Filip Renemark</p>
+      <nav aria-label="Footer"><a href="{{DRIVE}}" data-drive>Drive my portfolio</a><a href="https://filip.renemark.se/">filip.renemark.se</a><a href="https://filip.renemark.se/store" target="_blank" rel="noopener">Support my work<span class="visually-hidden"> (opens in a new tab)</span></a><a href="mailto:filip@renemark.me">Email</a></nav>
+    </div>
+  </footer>
+
+  <!-- PROJEKTVY: en <dialog>. Innehållet hämtas från assets/content/*.html. -->
+  <dialog class="project-dialog" id="projectDialog" aria-labelledby="dlgTitle">
+    <article class="dlg">
+      <header class="dlg-head">
+        <div>
+          <p class="dlg-cat" id="dlgCat"></p>
+          <h2 class="display" id="dlgTitle"></h2>
+          <ul class="tags tags-sm" id="dlgTags"></ul>
+        </div>
+        <button class="dlg-close" id="dlgClose" type="button" aria-label="Close project">&times;</button>
+      </header>
+      <div class="dlg-body" id="dlgBody"></div>
+      <footer class="dlg-foot">
+        <a class="btn btn-primary" id="dlgLink" target="_blank" rel="noopener">Open the full page<span class="visually-hidden"> (opens in a new tab)</span><span class="arrow" aria-hidden="true">&rarr;</span></a>
+        <button class="btn btn-ghost" id="dlgClose2" type="button">Close</button>
+      </footer>
+    </article>
+  </dialog>

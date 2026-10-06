@@ -152,9 +152,13 @@ document.getElementById('projectsButton').addEventListener('click', open);
 // capture: true = den här lyssnaren körs FÖRE de andra. Då kan Esc först stänga
 // infopanelen (om den är öppen ovanpå listan) och först nästa gång själva listan.
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'KeyP' && !e.repeat && !panelOpen) {
+  if (document.querySelector('dialog[open]')) return; // Webbplatsens projektdialog är uppe: den har sina egna tangenter.
+  if (e.code === 'KeyP' && !e.repeat && !panelOpen && !e.ctrlKey && !e.metaKey && !e.altKey) {
     if (isOpen) close();
     else open();
   }
-  if (e.code === 'Escape' && isOpen && !panelOpen) close();
+  if (e.code === 'Escape' && isOpen && !panelOpen) {
+    close();
+    e.preventDefault(); // Markerar att Esc är förbrukat, så att ui.js inte också lämnar spelet.
+  }
 }, { capture: true });
