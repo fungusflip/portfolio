@@ -717,12 +717,18 @@ export function buildBillboards(world) {
     const border = display.border;
     const baseY = display.baseY(isPhone); // Skärmens underkant över marken.
     // Panelen = allt som lutar (ram, skärm, textskylt). Den lutar runt sin underkant som ett gångjärn.
+    // Hela visningen (skärm, ram, stativ/ben/gavlar, skylt, lampor) ligger i `display`, som växer när bilen
+    // parkerar. Den skalas runt gruppens mittpunkt på marken (y = 0), så att fötterna stannar kvar i marken.
+    // Parkeringsfickan, pollarna, strålkastaren och ENTER-texten ligger direkt i `group` och skalas inte.
+    const display3d = new THREE.Group();
+    group.add(display3d);
+    markMoving(display3d); // Växer (se POP_SCALE): varken sammanslagen eller fryst, och inte heller något i den.
     const panel = new THREE.Group();
     panel.position.y = baseY;
     panel.rotation.x = -SCREEN_TILT;
-    group.add(panel);
-    markMoving(panel); // Panelen växer när bilen parkerar (se POP_SCALE): får inte slås ihop.
-    display.build({ group, panel, width, height, border, baseY, isPhone });
+    display3d.add(panel);
+    markMoving(panel);
+    display.build({ group: display3d, panel, width, height, border, baseY, isPhone });
 
     // Skärmens canvas, med play-symbolen från början. Mobilen får en stående canvas.
     const screenImage = document.createElement('canvas');
@@ -774,7 +780,7 @@ export function buildBillboards(world) {
     // Strålkastaren bakom skylten, och en ljuspöl på marken under skärmen som alltid lyser.
     const searchlight = makeSearchlight(world === WORLDS.hub ? PALETTE.bulbs : world.accent, Math.random());
     searchlight.position.set((Math.random() < 0.5 ? -1 : 1) * width * 0.35, 0, -2);
-    group.add(searchlight);
+    group.add(searchlight); // Skalas inte.
     const stageLight = new THREE.Mesh(stageLightGeometry, makeGlowMaterial(0.8));
     stageLight.position.set(0, 0.08, 2.4);
     stageLight.userData.noShadow = true;
@@ -793,7 +799,7 @@ export function buildBillboards(world) {
       bulbs: bulbs.active, bulbTint: bulbs.tint, ledUpdate: bulbs.update || null, sign, signY: sign.position.y, swing: Math.random() * 10, // Rörelserna.
       halo, haloColor: halo.material.color.clone(),
       posterColor: new THREE.Color(world === WORLDS.hub ? PALETTE.bulbs : world.accent), // Byts mot affischens färg.
-      panel, popScale: 1, popSpeed: 0, // Hur stor panelen är just nu, och hur fort den växer.
+      panel, display: display3d, popScale: 1, popSpeed: 0, // Hur stor visningen är just nu, och hur fort den växer.
       stageLight, stageColor: new THREE.Color(world === WORLDS.hub ? PALETTE.bulbs : world.accent),
       poster,
       width, height,  // Skärmens mått, för videons beskärning.
@@ -934,7 +940,7 @@ export function updateBillboards(delta, carPosition) {
     const popGoal = billboard.active ? POP_SCALE : 1;
     billboard.popSpeed += ((popGoal - billboard.popScale) * POP_STIFFNESS - billboard.popSpeed * POP_DAMPING) * delta;
     billboard.popScale += billboard.popSpeed * delta;
-    billboard.panel.scale.setScalar(billboard.popScale);
+    billboard.display.scale.setScalar(billboard.popScale); // Hela visningen, inte bara panelen.
     // Lamporna: springer när ingen tittar, lyser lugnt när bilen står i fickan (se magic.js).
     billboard.bulbs.value = THREE.MathUtils.damp(billboard.bulbs.value, billboard.active ? 1 : 0, 3, delta);
     // Lamporna lyser i skärmens färg (samma utjämnade färg som skenet på marken).
