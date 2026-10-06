@@ -7,7 +7,7 @@ import {
   PALETTE, WORLDS, GROUND_SIZE, TILE_PIXELS, TILE_UNITS, DRIVE_RADIUS, HUB_X, HUB_Z, BILLBOARD_FACING,
   towardCamera, worldGroup, makeEdgeFade, makeTileTexture,
 } from './core.js';
-import { buildBillboards, BAY_WIDTH, BAY_LENGTH, BAY_SKIRT } from './billboards.js';
+import { billboards, buildBillboards, BAY_WIDTH, BAY_LENGTH, BAY_SKIRT } from './billboards.js';
 import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad, bayFrames } from './roads.js';
 import {
@@ -24,6 +24,7 @@ import { makeTrees, randomTree, leafColors } from './trees.js';
 import { makeGrass, addSaturation } from './magic.js';
 import { addContactShadows, scatterStones } from './grounding.js';
 import { addObstacles } from './collision.js';
+import { knockableInstances, wobbler } from './knockables.js';
 
 const hub = WORLDS.hub;
 // Armen på en lykta pekar åt (right, down) på skärmen. (0, 1) = nedåt, (-1, 0) = åt vänster.
@@ -197,6 +198,10 @@ export function buildHubRoads() {
   return { roads, lamps, signposts };
 }
 
+// ÄNDRA HÄR: true = bilen kör över träden (de välter och blockerar inte), false = fasta stammar.
+const TREES_DRIVEABLE = false;
+let treeMeshes = null; // [stammar, kronor] när träden är byggda.
+
 // Lönnar på genomtänkta platser: grupper som ramar in vägarna, torget och dammen, en tät vägg bakom
 // skyltraden (så att bakgrunden får djup och världens kant göms), och slumpade träd längst ut.
 export function buildHubTrees({ roads, lamps, signposts }) {
@@ -267,7 +272,8 @@ export function buildHubTrees({ roads, lamps, signposts }) {
     const spot = homeGroup.localToWorld(new THREE.Vector3(x, 0, z));
     trees.push({ x: spot.x, z: spot.z, angle: Math.random() * Math.PI * 2, scale, color: leafColors[colorIndex] });
   }
-  worldGroup(hub).add(...makeTrees(trees));
+  treeMeshes = makeTrees(trees); // [stammar, kronor], sparas så att träden kan välta (buildHubCollision).
+  worldGroup(hub).add(...treeMeshes);
   return trees; // Gräset och marken runt träden (se buildHubGrass/buildHubGrounding) behöver platserna.
 }
 
@@ -355,14 +361,26 @@ export function buildHubCollision({ lamps, signposts, trees = [] }) {
       z: origin.z - Math.sin(angle) * x + Math.cos(angle) * z,
     };
   }
-  function add(spot, radius) {
-    obstacles.push({ x: spot.x, z: spot.z, radius });
+  function add(spot, radius, extra) {
+    obstacles.push({ x: spot.x, z: spot.z, radius, ...extra });
+  }
+  // Mjukt hinder: bilen kör igenom och föremålet reagerar (se collision.js, knockables.js).
+  // once = välter och ligger kvar; annars gungar det och kan träffas igen.
+  function soft(spot, radius, kind, onHit, once) {
+    add(spot, radius, { soft: true, kind, onHit, once });
   }
 
-  for (const tree of trees) add(tree, 0.35 * tree.scale); // Bara stammen; kronan är högt över bilen.
-  for (const lamp of lamps) add(lamp.at, 0.3);
+  trees.forEach((tree, i) => {
+    const radius = 0.35 * tree.scale; // Bara stammen; kronan är högt över bilen.
+    if (!TREES_DRIVEABLE || !treeMeshes) return add(tree, radius);
+    const [trunks, crowns] = treeMeshes;
+    const parts = [{ mesh: trunks, index: i }];
+    for (let j = 0; j < 3; j++) parts.push({ mesh: crowns, index: i * 3 + j }); // 3 kronbollar per träd (trees.js).
+    soft(tree, radius, 'tree', knockableInstances(tree, parts, null, 1.3), true);
+  });
+  for (const lamp of lamps) soft(lamp.at, 0.3, 'lamp', lamp.knock, true);
   // Vägskyltarna: bara stolpen. Brädan sitter över bilens tak.
-  for (const sign of signposts) add(placed(sign.at, BILLBOARD_FACING, 0, -0.14), 0.25);
+  for (const sign of signposts) soft(placed(sign.at, BILLBOARD_FACING, 0, -0.14), 0.25, 'signpost', sign.knock, true);
 
   // Biodukarna: två stolpar (x = +-3, se DISPLAYS.cinema), mobilskyltarna står direkt på marken.
   for (const project of PROJECTS) {
@@ -370,7 +388,10 @@ export function buildHubCollision({ lamps, signposts, trees = [] }) {
     if (project.phone) {
       for (const x of [-1.4, 0, 1.4]) add(placed(project, BILLBOARD_FACING, x, -0.2), 0.45);
     } else {
-      for (const x of [-3, 3]) add(placed(project, BILLBOARD_FACING, x, -0.16), 0.3);
+      // Biostolparna är mjuka: skärmen gungar till när bilen kör genom en stolpe.
+      const entry = billboards.find((billboard) => billboard.project === project);
+      const wobble = entry ? wobbler(entry.panel) : null;
+      for (const x of [-3, 3]) soft(placed(project, BILLBOARD_FACING, x, -0.16), 0.3, 'billboard', wobble, false);
     }
   }
 

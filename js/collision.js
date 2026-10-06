@@ -1,7 +1,9 @@
 // ============================================================================
 // collision.js — mjuk kollision: bilen puttas ut ur fasta saker och glider längs dem.
 // ============================================================================
-// Hindren är cirklar { x, z, radius } (träd, lyktor, stolpar, berg ...). Bilen är två
+// Hindren är cirklar { x, z, radius } (träd, lyktor, stolpar, berg ...). Ett hinder med
+// soft: true blockerar inte: bilen kör rakt igenom och får bara en liten fartförlust, och
+// hindrets onHit(dirX, dirZ, strength) körs (t.ex. så att en lyktstolpe välter, se knockables.js). Bilen är två
 // cirklar, en vid nosen och en vid aktern, så att den fyller sin 1.2 x 2.4 stora kaross.
 // Den här filen behöver varken THREE eller sidan, så den går att köra i vanliga Node.
 // car.js äger fart och riktning; det här ändrar dem bara när bilen träffar något.
@@ -15,6 +17,10 @@ const MAX_STEPS = 24;
 const EPSILON = 0.002;              // Lite extra utanför hindret, så att bilen inte darrar på kanten.
 const HARD_HIT = 12;                // Fart in i hindret som räknas som en full smäll.
 const MAX_LOSS = 0.25;              // Så stor del av farten som går förlorad vid en full smäll.
+const SOFT_MIN_SPEED = 0.8;         // Långsammare än så välter bilen inget mjukt hinder.
+const SOFT_LOSS_MIN = 0.02;         // Fartförlust vid en mjuk träff: 2 % ...
+const SOFT_LOSS = 0.04;             // ... upp till 6 % vid full fart.
+const SOFT_COOLDOWN = 0.6;          // Sekunder innan samma (icke-fallande) hinder kan träffas igen.
 
 const grid = new Map(); // ruta → lista med hinder som når in i rutan.
 
@@ -50,7 +56,7 @@ export const lastImpact = { strength: 0, x: 0, z: 0, time: 0 };
 
 // Putsar ut en cirkel (mitt centerX/centerZ) ur hindren genom att flytta `position`.
 // Returnerar antal träffar. Normalerna (från hindret ut mot bilen) läggs i `normals`.
-function pushOutOfCircles(position, centerX, centerZ, radius, normals, fallbackX, fallbackZ) {
+function pushOutOfCircles(position, centerX, centerZ, radius, normals, fallbackX, fallbackZ, softOut) {
   const list = grid.get(cellKey(Math.floor(centerX / CELL), Math.floor(centerZ / CELL)));
   if (!list) return 0;
   let hits = 0;
@@ -60,6 +66,10 @@ function pushOutOfCircles(position, centerX, centerZ, radius, normals, fallbackX
     const minimum = obstacle.radius + radius;
     const distanceSquared = dx * dx + dz * dz;
     if (distanceSquared >= minimum * minimum) continue;
+    if (obstacle.soft) { // Mjukt: puttas inte ut, bara rapporteras.
+      if (softOut && !obstacle.done) softOut.push(obstacle);
+      continue;
+    }
     const distance = Math.sqrt(distanceSquared);
     // Exakt i hindrets mitt finns ingen riktning: välj bakåt längs bilen.
     const nx = distance > 1e-6 ? dx / distance : fallbackX;
@@ -78,12 +88,12 @@ function pushOutOfCircles(position, centerX, centerZ, radius, normals, fallbackX
 // Puttar ut bilen (position { x, z }) ur hindren. Utan heading testas en cirkel med
 // radien carRadius; med heading (bilens nos, radianer) två cirklar, nos och akter.
 // Returnerar antal träffar. normals (valfri lista) fylls med [nx, nz, nx, nz ...].
-export function resolveCollisions(position, carRadius = CAR_RADIUS, heading = null, normals = null) {
+export function resolveCollisions(position, carRadius = CAR_RADIUS, heading = null, normals = null, softOut = null) {
   let total = 0;
   for (let iteration = 0; iteration < ITERATIONS; iteration++) {
     let hits = 0;
     if (heading === null) {
-      hits = pushOutOfCircles(position, position.x, position.z, carRadius, normals, 1, 0);
+      hits = pushOutOfCircles(position, position.x, position.z, carRadius, normals, 1, 0, softOut);
     } else {
       const fx = Math.sin(heading);
       const fz = Math.cos(heading);
@@ -91,7 +101,7 @@ export function resolveCollisions(position, carRadius = CAR_RADIUS, heading = nu
         hits += pushOutOfCircles(
           position,
           position.x + fx * CAR_HALF_LENGTH * sign, position.z + fz * CAR_HALF_LENGTH * sign,
-          carRadius, normals, -fx * sign, -fz * sign
+          carRadius, normals, -fx * sign, -fz * sign, softOut
         );
       }
     }
@@ -101,7 +111,38 @@ export function resolveCollisions(position, carRadius = CAR_RADIUS, heading = nu
   return total;
 }
 
+// Senaste mjuka träffen (körde över något soft): kind, var, när och hur hårt (0–1).
+export const lastSoftHit = { kind: '', strength: 0, x: 0, z: 0, time: 0 };
+
+// true under bilden om bilen tryckte mot ett FAST hinder (car.js låter den då svänga lite
+// på stället, så att den kan vända bort från hindret utan att backa).
+export const contact = { hard: false };
+
 const normalList = [];
+const softList = [];
+
+// Körs för varje mjukt hinder bilen överlappar: fartförlust, lastSoftHit och onHit.
+function handleSoftHits(state) {
+  const speed = Math.abs(state.speed);
+  if (speed < SOFT_MIN_SPEED) return;
+  const sign = state.speed > 0 ? 1 : -1;
+  const dirX = Math.sin(state.slide) * sign;
+  const dirZ = Math.cos(state.slide) * sign;
+  const now = performance.now();
+  for (const obstacle of softList) {
+    if (obstacle.done || now < (obstacle.nextHit || 0)) continue;
+    const strength = Math.min(1, speed / HARD_HIT);
+    obstacle.nextHit = now + SOFT_COOLDOWN * 1000;
+    if (obstacle.once) obstacle.done = true; // Välten: tas aldrig om (ligger kvar nere).
+    state.speed *= 1 - (SOFT_LOSS_MIN + SOFT_LOSS * strength);
+    lastSoftHit.kind = obstacle.kind || '';
+    lastSoftHit.strength = strength;
+    lastSoftHit.x = obstacle.x;
+    lastSoftHit.z = obstacle.z;
+    lastSoftHit.time = now;
+    if (obstacle.onHit) obstacle.onHit(dirX, dirZ, strength);
+  }
+}
 
 // Flyttar bilen (position { x, z }) dx, dz och krockar med hindren på vägen.
 // state = { speed, slide, heading } ändras vid träff: farten in i hindret tas bort och
@@ -111,6 +152,7 @@ const normalList = [];
 export function moveWithCollision(position, dx, dz, state, carRadius = CAR_RADIUS) {
   const steps = Math.min(MAX_STEPS, Math.max(1, Math.ceil(Math.hypot(dx, dz) / MAX_STEP)));
   let strongest = 0;
+  contact.hard = false;
   for (let step = 0; step < steps; step++) {
     const remaining = steps - step;
     const stepX = dx / remaining;
@@ -120,7 +162,11 @@ export function moveWithCollision(position, dx, dz, state, carRadius = CAR_RADIU
     position.x += stepX;
     position.z += stepZ;
     normalList.length = 0;
-    if (resolveCollisions(position, carRadius, state.heading, normalList) === 0) continue;
+    softList.length = 0;
+    const hardHits = resolveCollisions(position, carRadius, state.heading, normalList, softList);
+    if (softList.length > 0) handleSoftHits(state);
+    if (hardHits === 0) continue;
+    contact.hard = true;
     // Ta bort den del av farten som pekar in i hindret, för varje träffad yta.
     let vx = Math.sin(state.slide) * state.speed;
     let vz = Math.cos(state.slide) * state.speed;

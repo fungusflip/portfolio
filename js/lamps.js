@@ -18,6 +18,7 @@ import { BILLBOARD_SPACING } from './billboards.js';
 import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE } from './roads.js';
 import { makeMoths } from './magic.js';
+import { knockableInstances } from './knockables.js';
 
 export const LAMP_SIDE = ROAD_WIDTH / 2 + 1.2; // Hur långt från vägens mitt stolpen står.
 const LAMP_HEIGHT = 4;          // Stolpens höjd.
@@ -63,6 +64,8 @@ const lampPart = new THREE.Object3D();
 lampBase.add(lampPart);
 const haloHelper = new THREE.Object3D();
 
+const black = new THREE.Color(0, 0, 0);
+const dimBulb = new THREE.Color();
 const lampSets = []; // En post per värld som har byggt lyktor, så att de kan flimra.
 
 // Bygger lyktorna i en värld. lamps = [{ at: {x, z}, arm: vinkel }, ...]. Ljuset får världens färg.
@@ -105,6 +108,21 @@ export function buildLamps(world, lamps) {
     // Var femte lykta är "trasig" och flimrar ibland. % 5 === 2 = nummer 2, 7, 12 ...
     lamp.faulty = i % 5 === 2;
     lamp.flickerLeft = 0; // Sekunder kvar av en pågående flimmerattack.
+    // lamp.knock(dirX, dirZ): bilen kör över lyktan. Stolpe, arm, hus och lampa välter runt
+    // foten; skenet, ljuspölen och lampan släcks. Anropas från collision.js (via hub.js).
+    lamp.knock = knockableInstances(lamp.at, [
+      { mesh: posts, index: i }, { mesh: arms, index: i }, { mesh: heads, index: i },
+      { mesh: bulbs, index: i }, { mesh: halos, index: i },
+    ], () => {
+      lamp.knocked = true; // updateLamps låter den vara släckt.
+      black.set(0, 0, 0);
+      halos.setColorAt(i, black);
+      pools.setColorAt(i, black);
+      bulbs.setColorAt(i, dimBulb.copy(bulbColor).multiplyScalar(0.15));
+      halos.instanceColor.needsUpdate = true;
+      pools.instanceColor.needsUpdate = true;
+      bulbs.instanceColor.needsUpdate = true;
+    });
   });
   worldGroup(world).add(posts, arms, heads, bulbs, halos, pools, makeMoths(mothCenters, world.accent));
   lampSets.push({ world, lamps, bulbs, halos, pools, glowColor, bulbColor });
@@ -122,7 +140,7 @@ export function updateLamps(delta) {
     if (set.world !== currentWorld) continue;
     let changed = false;
     set.lamps.forEach((lamp, i) => {
-      if (!lamp.faulty) return;
+      if (!lamp.faulty || lamp.knocked) return;
       let brightness = 1;
       if (lamp.flickerLeft > 0) {
         lamp.flickerLeft -= delta;

@@ -2,6 +2,8 @@
 // signposts.js — små träskyltar med en pil och en text.
 // ============================================================================
 import * as THREE from 'three';
+import { markMoving } from './optimize.js';
+import { knockableObject } from './knockables.js';
 import { PALETTE, BILLBOARD_FACING, MAX_ANISOTROPY, SCREEN_TILT, worldGroup, postMaterial } from './core.js';
 
 const SIGNPOST_WIDTH = 4.2;
@@ -58,5 +60,9 @@ export function buildSignposts(world, signposts) {
     group.position.set(signpost.at.x, 0, signpost.at.z);
     group.rotation.y = BILLBOARD_FACING; // Vänd mot kameran.
     worldGroup(world).add(group);
+    // Bilen kan köra över skylten: den välter runt foten (signpost.knock, se hub.js).
+    // markMoving: en grupp som rör sig får inte slås ihop eller frysas av optimize.js.
+    markMoving(group);
+    signpost.knock = knockableObject(group);
   }
 }

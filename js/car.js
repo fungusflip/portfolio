@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { scene, PALETTE, DRIVE_RADIUS, currentWorld, paintMaterial, glassMaterial } from './core.js';
 import { keys } from './ui.js';
-import { moveWithCollision } from './collision.js';
+import { moveWithCollision, contact } from './collision.js';
 
 // ---------------------------------------------------------------------------
 // MODELLEN – byggd av lådor och cylindrar. Fronten pekar längs +Z.
@@ -121,6 +121,7 @@ export let nitro = 1;  // Nitrotanken, 0–1.
 export let drifting = false; // true medan bilen driftar (magic.js ger då mer damm).
 export let boosting = false; // true medan nitron används.
 export let sliding = false;  // true när bilen slirar av sig själv (för fort i en sväng).
+const PINNED_TURN = 0.3; // Hur stor del av full svängförmåga man har när bilen är fastkörd mot ett hinder.
 let heading = Math.PI / 4; // Åt vilket håll bilen pekar. PI / 4 = rakt uppåt på skärmen.
 let grip = GRIP;           // Nuvarande grepp (glider mellan DRIFT_GRIP och GRIP).
 let slide = heading;       // Åt vilket håll bilen RÖR sig. Samma som heading utom i drift.
@@ -221,7 +222,12 @@ export function updateCar(delta, travelling) {
   speed = Math.max(speed, -MAX_SPEED / 2); // Backen går hälften så fort.
   // (speed / MAX_SPEED) = 0 när bilen står still, så den kan inte snurra på stället.
   // Math.min: nitron ska inte göra att bilen svänger snabbare än på vanlig toppfart.
-  heading += steer * TURN_RATE * (drifting ? DRIFT_TURN_BOOST : 1) * Math.min(speed / MAX_SPEED, 1) * delta;
+  // Svänghjälp: kör bilen fast mot ett fast hinder (förra bildens kollision) får den svänga
+  // lite på stället, så att den kan vända bort utan att backa. Åt samma håll som vanligt
+  // (backar man vänder rattens effekt, som i en riktig bil).
+  let turnFactor = Math.min(speed / MAX_SPEED, 1);
+  if (contact.hard && throttle !== 0 && Math.abs(turnFactor) < PINNED_TURN) turnFactor = PINNED_TURN * throttle;
+  heading += steer * TURN_RATE * (drifting ? DRIFT_TURN_BOOST : 1) * turnFactor * delta;
   // Rörelseriktningen hakar efter nosen. I drift hakar den långsamt, så bilen glider.
   // Greppet byts mjukt: snabbt ner när driften börjar, långsamt tillbaka när den släpps,
   // så att bilen glider ut i stället för att tvärstanna i sidled.
