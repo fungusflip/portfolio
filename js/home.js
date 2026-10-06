@@ -8,13 +8,14 @@ import {
   PALETTE, WORLDS, BILLBOARD_FACING, CAMERA_PITCH, MAX_ANISOTROPY,
   towardCamera, toTheRight, worldGroup, postMaterial, paintMaterial, makeGlowMaterial,
 } from './core.js';
-import { PAD_DISTANCE, PAD_RADIUS, addParkingBay, lightPad } from './billboards.js';
+import { PAD_DISTANCE, PAD_RADIUS, BAY_WIDTH, BAY_LENGTH, addParkingBay, lightPad } from './billboards.js';
 import { PROJECTS } from './projects.js';
 import { ROAD_DISTANCE } from './roads.js';
 import { setParkedAt, leaveParking } from './ui.js';
 import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
 import { makeSmoke, makeMatchaMaterial } from './magic.js';
+import { computeHomeCups, LIFT } from './teacups.js';
 
 // Texten på namnskylten.
 const HOME_NAME = 'Filip Renemark';
@@ -313,7 +314,7 @@ homeGroup.add(door);
 addBox(trimMaterial, 1.3, 0.14, 0.14, DOOR_X_LOCAL, 2.0, CABIN_FRONT);          // Överliggare.
 for (const side of [-1, 1]) addBox(trimMaterial, 0.14, 1.95, 0.14, DOOR_X_LOCAL + side * 0.57, 0.975, CABIN_FRONT);
 addBox(postMaterial, 1.8, 0.16, 1.0, DOOR_X_LOCAL, 0.08, CABIN_FRONT + 0.5);       // Verandans platta.
-addBox(postMaterial, 1.4, 0.08, 0.35, DOOR_X_LOCAL, 0.04, CABIN_FRONT + 1.17);     // Trappsteget.
+// (Trappsteget byggs längre ner, tillsammans med kopparna: måtten kommer från teacups.js.)
 addBox(roofMaterial, 2.2, 0.1, 1.35, DOOR_X_LOCAL, 2.55, CABIN_FRONT + 0.6, [0.25, 0, 0]); // Skärmtaket lutar utåt.
 for (const side of [-1, 1]) addBox(postMaterial, 0.12, 2.35, 0.12, DOOR_X_LOCAL + side * 0.95, 1.18, CABIN_FRONT + 1.2);
 // Fönstret lyser varmt: någon är hemma.
@@ -323,7 +324,7 @@ homeGroup.add(cabinWindow);
 // Fönsterkarm med spröjs, en bräda under (fönsterbänk) och gröna luckor på sidorna.
 const WINDOW_X = CABIN_X - 1;
 addBox(postMaterial, 1.7, 0.12, 0.16, WINDOW_X, 2.2, CABIN_FRONT);
-addBox(postMaterial, 1.8, 0.1, 0.5, WINDOW_X, 1.0, CABIN_FRONT + 0.18);
+// (Fönsterbänken byggs längre ner, tillsammans med kopparna.)
 for (const side of [-1, 1]) {
   addBox(postMaterial, 0.12, 1.2, 0.16, WINDOW_X + side * 0.76, 1.6, CABIN_FRONT);
   addBox(shutterMaterial, 0.5, 1.2, 0.08, WINDOW_X + side * 1.15, 1.6, CABIN_FRONT + 0.02);
@@ -440,33 +441,50 @@ const cupBottomGeometry = new THREE.CircleGeometry(CUP_BOTTOM, 24).rotateX(-Math
 const cupHandleGeometry = new THREE.TorusGeometry(0.36, 0.1, 8, 20);
 // Kopparna på marken: [x, z (i hem-gruppen), storlek, hur full (0 = tom, 1 = full), värme]. ÄNDRA HÄR.
 // Värme: 'hot' = ångar, 'warm' = färskt grönt men ingen ånga, 'cold' = mörkare grönt, ingen ånga.
-// De ligger tätt intill husen (garagets vägg är x = -2.8, stugans x = 3.1 .. 8.1).
-const TEA_CUPS = [
-  [-4.9, -1.5, 1.3, 0.5, 'warm'],  // Den stora, bredvid garagets vänstra vägg: halvdrucken, ljummen.
-  [-3.7, 1.7, 0.5, 0.5, 'hot'],    // Halvdrucken, fortfarande varm. Tätt intill garagets hörn.
+// De ligger tätt intill husen (garagets vägg är x = -2.8, stugans x = 3.1 .. 8.1), men computeHomeCups (teacups.js) skjuter
+// ut dem ur väggar, sockel, trappa och gångväg och vrider handtaget bort från hindret. Kopparna uppe på huset (fönsterbrädor,
+// ledstång, trappsteg, bord) placeras av samma kod ur väggens normal; brädorna byggs här av dess mått. Test: node tests/teacups.test.mjs.
+const GROUND_CUPS = [
+  [-5.1, -1.5, 1.3, 0.5, 'warm'],  // Den stora, bredvid garagets vänstra vägg: halvdrucken, ljummen.
+  [-3.85, 1.7, 0.5, 0.5, 'hot'],   // Halvdrucken, fortfarande varm. Tätt intill garagets hörn.
   [-3.5, 3.4, 0.45, 0, 'cold'],    // Tom.
   [3.5, 3.4, 0.45, 0.2, 'cold'],   // Nästan slut, kall. Mellan garaget och stugan.
   [9.1, 1.2, 0.55, 0.9, 'hot'],    // Full och varm, intill stugans högra vägg.
   [10.5, -1.6, 0.45, 0, 'cold'],   // Tom. Flyttad utåt för vedboden.
   [1.4, -3.3, 0.5, 0.85, 'cold'],  // Bakom garaget: full men kall (bortglömd).
 ];
-// Kopparna uppe på huset: [x, y (höjden på underlaget), z, storlek, fylld, värme, förälder]. Dekoration: de är
-// inte hinder och står inte i teaCups/teaCupSpots (föräldern är homeGroup om inget annat anges).
-const WINDOW_SILL_Y = 1.05;
-const TEA_CUPS_UP = [
-  [-2.74, 1.03, GARAGE_FRONT + 0.25, 0.2, 0.7, 'hot'],           // Garagets fönsterbräda (vid porten, vänster).
-  [WINDOW_X - 0.45, WINDOW_SILL_Y, CABIN_FRONT + 0.18, 0.22, 0.8, 'hot'],  // Stugans fönsterbräda.
-  [WINDOW_X + 0.45, WINDOW_SILL_Y, CABIN_FRONT + 0.18, 0.2, 0.4, 'cold'],
-  [DOOR_X_LOCAL - 0.95, 0.99, CABIN_FRONT + 0.65, 0.2, 0.6, 'hot'],       // Verandans räcke.
-  [DOOR_X_LOCAL + 0.4, 0.08, CABIN_FRONT + 1.18, 0.18, 0.3, 'cold'],      // Trappsteget.
-];
+// Gångvägen från stugdörren (samma kurva som i hub.js): kopparna på marken håller sig borta från den.
+const FOOTPATH_CURVE = [[DOOR_X_LOCAL, CABIN_FRONT + 0.3], [DOOR_X_LOCAL, CABIN_FRONT + 2.4], [DOOR_X_LOCAL - 1.4, 5.7], [2.7, 5.5]];
+const FOOTPATH = [];
+for (let i = 0; i <= 16; i++) {
+  const t = i / 16;
+  const u = 1 - t;
+  const [a, b, c, d] = FOOTPATH_CURVE;
+  FOOTPATH.push([0, 1].map((k) => u * u * u * a[k] + 3 * u * u * t * b[k] + 3 * u * t * t * c[k] + t * t * t * d[k]));
+}
+const cupLayout = computeHomeCups({
+  GARAGE_WIDTH, GARAGE_DEPTH, GARAGE_HEIGHT, GARAGE_FRONT, CABIN_X, CABIN_Z, CABIN_SIZE, CABIN_HEIGHT, WINDOW_X, DOOR_X: DOOR_X_LOCAL, SHED_X,
+  PAD_Z: HOME_PAD_Z, PAD_HALF_W: BAY_WIDTH / 2, PAD_HALF_L: BAY_LENGTH / 2, PATH_WIDTH: 1.3, FOOTPATH, GROUND_CUPS,
+});
+// Brädorna kopparna står på. En bräda: x0..x1, z0..z1, översta ytan top, tjocklek thick.
+function addLedge({ x0, x1, z0, z1, top, thick }) {
+  return addBox(postMaterial, x1 - x0, thick, z1 - z0, (x0 + x1) / 2, top - thick / 2, (z0 + z1) / 2);
+}
+addLedge(cupLayout.garageSill);  // Garagets fönsterbräda.
+addLedge(cupLayout.cabinSill);   // Stugans fönsterbänk.
+{
+  const { cx, cz, w, d, top, thick } = cupLayout.railPad;
+  addLedge({ x0: cx - w / 2, x1: cx + w / 2, z0: cz - d / 2, z1: cz + d / 2, top, thick }); // Liten bräda på ledstången.
+  const { x0, x1, z0, z1, top: stepTop } = cupLayout.step;
+  addBox(postMaterial, x1 - x0, stepTop, z1 - z0, (x0 + x1) / 2, stepTop / 2, (z0 + z1) / 2); // Trappsteget.
+}
 export const teaCups = []; // [{ cup, x, z, radius }]: kopparna gungar till när bilen kör över dem (hub.js).
 const steamSpots = []; // Var ångan ska komma ut ur de varma kopparna, och hur stor den är.
 // Bygger en kopp i parent (x, y, z = mitten av tefatets undersida) och lägger till ånga om den är varm.
-function addTeaCup(parent, x, y, z, size, fill, heat) {
+function addTeaCup(parent, x, y, z, size, fill, heat, yaw) {
   const cup = new THREE.Group();
   cup.position.set(x, y, z);
-  cup.rotation.y = Math.random() * Math.PI * 2; // Handtaget åt olika håll.
+  cup.rotation.y = yaw; // Handtaget åt det håll computeHomeCups valt (bort från väggar).
   cup.scale.setScalar(size);
   parent.add(cup);
   const saucer = new THREE.Mesh(saucerGeometry, cupMaterial);
@@ -492,18 +510,16 @@ function addTeaCup(parent, x, y, z, size, fill, heat) {
   if (heat === 'hot') steamSpots.push({ cup, height: 0.16 + fill * CUP_HEIGHT + 0.15, size });
   return cup;
 }
-for (const [x, z, size, fill, heat] of TEA_CUPS) {
-  const cup = addTeaCup(homeGroup, x, 0, z, size, fill, heat);
+for (const { x, y, z, size, yaw, fill, heat } of cupLayout.ground) {
+  const cup = addTeaCup(homeGroup, x, y, z, size, fill, heat, yaw);
   markMoving(cup); // Gungar till vid körning över: får inte slås ihop.
   teaCups.push({ cup, x, z, radius: 1.3 * size });
 }
-for (const [x, y, z, size, fill, heat] of TEA_CUPS_UP) addTeaCup(homeGroup, x, y, z, size, fill, heat);
+for (const { x, y, z, size, yaw, fill, heat } of cupLayout.up) addTeaCup(homeGroup, x, y, z, size, fill, heat, yaw);
 // Ett litet runt bord till vänster om verandan, under fönstret, med två koppar. Bordet är en mjuk prydnad
 // (gungar till, kopparna följer med) och står därför i teaCups, men inte i teaCupSpots.
-const TABLE_X = DOOR_X_LOCAL - 1.7;
-const TABLE_Z = CABIN_FRONT + 0.95;
 const teaTable = new THREE.Group();
-teaTable.position.set(TABLE_X, 0, TABLE_Z);
+teaTable.position.set(cupLayout.table.x, 0, cupLayout.table.z);
 homeGroup.add(teaTable);
 markMoving(teaTable);
 const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.07, 14), postMaterial);
@@ -515,9 +531,8 @@ teaTable.add(tableLeg);
 const tableFoot = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.3, 0.05, 10), postMaterial);
 tableFoot.position.y = 0.025;
 teaTable.add(tableFoot);
-addTeaCup(teaTable, -0.28, 0.695, 0.02, 0.24, 0.75, 'hot');
-addTeaCup(teaTable, 0.3, 0.695, -0.08, 0.2, 0.2, 'cold');
-teaCups.push({ cup: teaTable, x: TABLE_X, z: TABLE_Z, radius: 0.6 });
+for (const { dx, dz, y, size, yaw, fill, heat } of cupLayout.tableCups) addTeaCup(teaTable, dx, y, dz, size, fill, heat, yaw - teaTable.rotation.y); // Bordet är inte vridet: yaw gäller rakt av.
+teaCups.push({ cup: teaTable, x: cupLayout.table.x, z: cupLayout.table.z, radius: cupLayout.table.R });
 
 // Garagets lilla fönster på pelaren vänster om porten: karm, lysande ruta, fönsterbräda (koppen står på den).
 const garageWindowX = -2.6;
@@ -527,9 +542,8 @@ homeGroup.add(garageWindow);
 for (const dy of [-0.43, 0.43]) addBox(postMaterial, 0.36, 0.06, 0.1, garageWindowX, 1.6 + dy, GARAGE_FRONT + 0.04);
 for (const dx of [-0.15, 0.15]) addBox(postMaterial, 0.05, 0.92, 0.1, garageWindowX + dx, 1.6, GARAGE_FRONT + 0.04);
 addBox(postMaterial, 0.08, 0.7, 0.04, garageWindowX, 1.6, GARAGE_FRONT + 0.06); // Spröjs.
-addBox(postMaterial, 0.7, 0.06, 0.5, -2.72, 1.0, GARAGE_FRONT + 0.25);            // Fönsterbrädan (x -3.07 .. -2.37, y 1.0).
 // Porträcket på verandans vänstra sida: ledstång, undre list och tre spjälor (koppen står på ledstången).
-addBox(postMaterial, 0.1, 0.07, 1.15, DOOR_X_LOCAL - 0.95, 0.95, CABIN_FRONT + 0.62);
+addBox(postMaterial, 0.1, 0.07, 1.15, DOOR_X_LOCAL - 0.95, 0.95, CABIN_FRONT + 0.62);   // (Brädan koppen står på: längre ner.)
 addBox(postMaterial, 0.08, 0.05, 1.15, DOOR_X_LOCAL - 0.95, 0.2, CABIN_FRONT + 0.62);
 for (const dz of [0.25, 0.6, 0.95]) addBox(postMaterial, 0.04, 0.78, 0.04, DOOR_X_LOCAL - 0.95, 0.57, CABIN_FRONT + dz);
 
@@ -588,7 +602,7 @@ markMoving(mailFlag, mailbox, garageDoor, garageOpening); // mailbox välter nä
 // Fickans och brevlådans platser i världen.
 worldGroup(WORLDS.hub).updateMatrixWorld(true);
 // Tekopparnas platser i världen (gräset växer inte under dem, se hub.js).
-export const teaCupSpots = TEA_CUPS.map(([x, z]) => homeGroup.localToWorld(new THREE.Vector3(x, 0, z)));
+export const teaCupSpots = cupLayout.ground.map(({ x, z }) => homeGroup.localToWorld(new THREE.Vector3(x, 0, z)));
 const homePadWorld = homeGroup.localToWorld(new THREE.Vector3(0, 0, HOME_PAD_Z));
 const mailboxWorld = mailbox.getWorldPosition(new THREE.Vector3());
 // Rök ur skorstenen. Pufferna räknar själva ut var de är, från skorstenens topp i världen.
