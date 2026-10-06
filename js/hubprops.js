@@ -643,8 +643,8 @@ function buildGazebo(local) {
   for (let i = 0; i < 14; i++) part(roof, round(5.6, 0.08, 0.14, 0.03), timberMaterial, 0, 0.1, -2.7 + i * 0.415);
   part(roof, round(2.7, 0.12, 5.4, 0.05), sedumMaterial, -1.4, 0.2, 0);
   gazebo.add(roof);
-  // Bänken inuti, vid bakre kanten, vänd framåt.
-  addBench(gazebo, 0, -1.9, 0, 0.16, 2.1);
+  // Bänken inuti, längs högra sidan och vänd inåt: bakre kanten är där paviljongvägen kommer in, den ska vara fri.
+  addBench(gazebo, 1.9, 0, -Math.PI / 2, 0.16, 2.1);
   // Ett litet lysande lampfält under taket.
   part(gazebo, new THREE.CylinderGeometry(0.3, 0.3, 0.04, 12), new THREE.MeshBasicMaterial({ color: PALETTE.windowGlow }), 0, 2.86, 0.3);
   local.add(gazebo);
@@ -694,8 +694,28 @@ function addBench(parent, x, z, angle, y = 0, length = 1.9) {
   for (const side of [-1, 1]) part(bench, benchLeg, steelMaterial, side * (length / 2 - 0.15), 0.23, 0);
   parent.add(bench);
 }
+// Står bänken på en väg (även infarter och gångvägar) eller i vatten? Då flyttas den till närmaste fria plats.
+const BENCH_ROAD_MARGIN = 1.3;
+function benchOk(right, down) {
+  const spot = hubPoint(right, down);
+  if (roadsForPlanting.some((road) => distanceToRoad(spot.x, spot.z, road) < (road.width || ROAD_WIDTH) / 2 + BENCH_ROAD_MARGIN)) return false;
+  return distanceToWater(spot.x, spot.z) > 1;
+}
+function freeBenchSpot(right, down) {
+  if (benchOk(right, down)) return [right, down];
+  for (let reach = 0.5; reach <= 8; reach += 0.5) {
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      const r = right + Math.cos(angle) * reach;
+      const d = down + Math.sin(angle) * reach;
+      if (benchOk(r, d)) return [r, d];
+    }
+  }
+  return [right, down];
+}
 function buildBenches(local, benches) {
-  for (const [right, down, faceX, faceZ] of benches) {
+  for (const [wantRight, wantDown, faceX, faceZ] of benches) {
+    const [right, down] = freeBenchSpot(wantRight, wantDown);
     addBench(local, right, down, Math.atan2(faceX, faceZ));
     addObstacle(right, down, 0.5, 0, true);
   }
