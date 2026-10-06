@@ -694,14 +694,15 @@ function addBench(parent, x, z, angle, y = 0, length = 1.9) {
   for (const side of [-1, 1]) part(bench, benchLeg, steelMaterial, side * (length / 2 - 0.15), 0.23, 0);
   parent.add(bench);
 }
-// Står bänken på en väg (även infarter och gångvägar) eller i vatten? Då flyttas den till närmaste fria plats.
+// Står bänken eller krukan på en väg (även infarter, parkeringsfickor och gångvägar) eller i vatten?
+// Då flyttas den till närmaste fria plats.
 const BENCH_ROAD_MARGIN = 1.3;
 function benchOk(right, down) {
   const spot = hubPoint(right, down);
   if (roadsForPlanting.some((road) => distanceToRoad(spot.x, spot.z, road) < (road.width || ROAD_WIDTH) / 2 + BENCH_ROAD_MARGIN)) return false;
   return distanceToWater(spot.x, spot.z) > 1;
 }
-function freeBenchSpot(right, down) {
+function freeSpot(right, down) {
   if (benchOk(right, down)) return [right, down];
   for (let reach = 0.5; reach <= 8; reach += 0.5) {
     for (let i = 0; i < 16; i++) {
@@ -715,7 +716,7 @@ function freeBenchSpot(right, down) {
 }
 function buildBenches(local, benches) {
   for (const [wantRight, wantDown, faceX, faceZ] of benches) {
-    const [right, down] = freeBenchSpot(wantRight, wantDown);
+    const [right, down] = freeSpot(wantRight, wantDown);
     addBench(local, right, down, Math.atan2(faceX, faceZ));
     addObstacle(right, down, 0.5, 0, true);
   }
@@ -723,7 +724,8 @@ function buildBenches(local, benches) {
 const planterGeometry = round(1.7, 0.6, 0.85, 0.12);
 const soilGeometry = round(1.5, 0.05, 0.65, 0.02);
 function buildPlanters(local, planters) {
-  for (const [right, down, angle] of planters) {
+  for (const [wantRight, wantDown, angle] of planters) {
+    const [right, down] = freeSpot(wantRight, wantDown);
     const planter = new THREE.Group();
     planter.position.set(right, 0, down);
     planter.rotation.y = angle;
