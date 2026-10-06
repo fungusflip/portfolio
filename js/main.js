@@ -51,7 +51,9 @@ async function step(fraction, text) {
 // 2. BYGG HEMVÄRLDEN – en bit i taget
 // ---------------------------------------------------------------------------
 await step(0.1, 'Starting the engine');
-const { car, beam, HEADLIGHT_STRENGTH, startAutoDrive, updateCar } = await import('./car.js');
+const nitroFill = document.getElementById('nitroFill');
+const carModule = await import('./car.js'); // Hela modulen sparas: nitro/drifting/boosting måste läsas live (ett uppackat värde fryser).
+const { car, beam, HEADLIGHT_STRENGTH, startAutoDrive, updateCar } = carModule;
 const { billboards, padTextureActive, updateBillboards, getFocus } = await import('./billboards.js');
 await step(0.2, 'Building the garage');
 const { HOME_X, HOME_Z, GARAGE_Z, home, garageDoor, updateHome } = await import('./home.js');
@@ -302,7 +304,8 @@ function gameFrame(time) {
     placeParkPrompt(null);
   }
   updateLeaves(delta, target); // Löven hålls i en låda runt samma punkt.
-  updateMagic(delta, car.position, wind, car.rotation.y); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
+  updateMagic(delta, car.position, wind, car.rotation.y, carModule.drifting || carModule.boosting); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
+  nitroFill.style.setProperty('--nitro', carModule.nitro.toFixed(3)); // Nitromätaren i guiden.
   const afterLeaves = performance.now();
 
   // Solen (och rutan där skuggor räknas ut) följer med bilen.

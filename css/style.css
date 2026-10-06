@@ -170,6 +170,22 @@ body.list-open .park-prompt { display: none; }
   text-align: center;
 }
 
+/* Nitromätaren: fylls och töms av js/main.js via --nitro (0–1). */
+.nitro-bar {
+  width: 64px;
+  height: 8px;
+  background: rgba(37, 50, 61, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.nitro-fill {
+  display: block;
+  height: 100%;
+  width: calc(var(--nitro, 1) * 100%);
+  background: #ff7a1a;
+  border-radius: 4px;
+}
+
 /* Infopanelen: samma "bubbla" som guiden, men större och med rullning. */
 .panel {
   position: fixed;

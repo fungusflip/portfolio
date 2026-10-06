@@ -380,12 +380,13 @@ let trailNext = 0;        // Nästa plats i ringbufferten.
 let trailRolled = 0;      // Hur långt bilen rullat sedan förra gnistparet.
 const lastCarSpot = new THREE.Vector3();
 
-function updateTrail(carPosition, carAngle) {
+function updateTrail(carPosition, carAngle, extra) {
   const moved = carPosition.distanceTo(lastCarSpot);
   lastCarSpot.copy(carPosition);
   if (moved > 2) return; // Ett hopp (en resa), inte körning.
   trailRolled += moved;
-  if (trailRolled < TRAIL_STEP) return;
+  // extra = drift eller nitro: puffarna kommer tätare (och 140 platser räcker fortfarande).
+  if (trailRolled < (extra ? TRAIL_STEP * 0.3 : TRAIL_STEP)) return;
   trailRolled = 0;
   // Bakhjulens plats: en bit bakom bilens mitt, en bit åt varje sida.
   const backX = -Math.sin(carAngle) * 0.9;
@@ -756,7 +757,7 @@ export function makeMatchaMaterial(hot) {
 // VARJE BILD
 // ---------------------------------------------------------------------------
 // wind = vinden från leaves.js { x, z, strength }.
-export function updateMagic(delta, carPosition, wind, carAngle = 0) {
+export function updateMagic(delta, carPosition, wind, carAngle = 0, extraDust = false) {
   shared.uTime.value += delta;
   shared.uCar.value.copy(carPosition);
   // Mjuk vind: shadern får en utjämnad version, så att gräset inte rycker till.
@@ -770,7 +771,7 @@ export function updateMagic(delta, carPosition, wind, carAngle = 0) {
   trailMaterial.uniforms.uScreenScale.value = smokeScreenScale.value;
   mothScreenScale.value = smokeScreenScale.value;
   burst.uScreenScale.value = smokeScreenScale.value;
-  updateTrail(carPosition, carAngle);
+  updateTrail(carPosition, carAngle, extraDust);
   fireflies.visible = currentWorld === WORLDS.hub;
 }
 

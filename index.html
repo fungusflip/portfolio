@@ -39,7 +39,7 @@
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=77">
+  <link rel="stylesheet" href="css/style.css?v=78">
 
   <!-- Import-karta: en ordlista för JavaScript. När js/main.js skriver
        import ... from 'three' slår webbläsaren upp 'three' här och hämtar
@@ -133,6 +133,15 @@
       <span class="guide-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
       <span>Drive</span>
     </div>
+    <div class="guide-row">
+      <span class="guide-keys"><kbd>Space</kbd></span>
+      <span>Drift</span>
+    </div>
+    <div class="guide-row">
+      <span class="guide-keys"><kbd>Shift</kbd></span>
+      <span>Nitro</span>
+      <span class="nitro-bar"><span class="nitro-fill" id="nitroFill"></span></span>
+    </div>
   </div>
 
   <!-- Uppmaningen när bilen står i en ficka: en stor biljett som poppar upp. Vid en skylt
@@ -178,6 +187,6 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="js/main.js?v=77"></script>
+  <script type="module" src="js/main.js?v=78"></script>
 </body>
 </html>

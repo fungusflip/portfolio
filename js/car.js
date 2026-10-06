@@ -99,15 +99,36 @@ const FRICTION = 6;        // Hur snabbt bilen saktar in när man släpper gasen
 const TURN_RATE = 2.4;     // Hur snabbt bilen svänger vid toppfart, radianer per sekund.
 const MAX_STEER = 0.5;     // Hur mycket framhjulen vrids, radianer (ca 29°).
 
+// --- DRIFT (Space) och NITRO (Shift) ---
+const GRIP = 14;               // Hur snabbt rörelseriktningen hakar i nosen vid vanlig körning (högt = ingen sladd).
+const DRIFT_GRIP = 1.6;        // ...och under drift (lågt = bilen glider åt sidan).
+const DRIFT_MIN_SPEED = 5;     // Under den här farten går det inte att drifta.
+const DRIFT_TURN_BOOST = 1.7;  // Bilen svänger snabbare i drift.
+const DRIFT_DRAG = 3;          // Farten som går förlorad per sekund i drift.
+const GRIP_RECOVERY = 2.5;     // Hur mjukt greppet kommer tillbaka när driften släpps (lågt = längre utglidning).
+const NITRO_MAX_SPEED = 15.5;  // Toppfart med nitro.
+const NITRO_ACCELERATION = 20; // Acceleration med nitro.
+const NITRO_DRAIN = 0.4;       // Nitrotanken töms så här mycket per sekund (1 = full tank).
+const NITRO_REGEN = 0.12;      // Fylls på så här mycket per sekund när den inte används.
+const NITRO_DRIFT_REGEN = 0.35; // Fylls på mycket snabbare medan man driftar.
+
 export let speed = 0;  // Nuvarande fart. Negativ = backar.
+export let nitro = 1;  // Nitrotanken, 0–1.
+export let drifting = false; // true medan bilen driftar (magic.js ger då mer damm).
+export let boosting = false; // true medan nitron används.
 let heading = Math.PI / 4; // Åt vilket håll bilen pekar. PI / 4 = rakt uppåt på skärmen.
+let grip = GRIP;           // Nuvarande grepp (glider mellan DRIFT_GRIP och GRIP).
+let slide = heading;       // Åt vilket håll bilen RÖR sig. Samma som heading utom i drift.
 
 // Andra filer ändrar fart och riktning med de här (ett importerat värde går bara att läsa).
 export function stopCar() {
   speed = 0;
+  drifting = false;
+  boosting = false;
 }
 export function setHeading(angle) {
   heading = angle;
+  slide = angle;
   car.rotation.y = angle;
 }
 
@@ -144,7 +165,10 @@ function updateAutoDrive(delta) {
     heading = turnTowards(heading, goal, 10, delta);
   }
   car.rotation.y = heading;
+  slide = heading;
   speed = 0;
+  drifting = false;
+  boosting = false;
   for (const spinner of spinners) spinner.rotation.x += (autoDrive.reverse ? -step : step) / WHEEL_RADIUS;
   for (const wheel of frontWheels) wheel.rotation.y = THREE.MathUtils.damp(wheel.rotation.y, 0, 12, delta);
   // Framme? Släpp autopiloten FÖRST, så att onDone kan starta en ny körning.
@@ -168,18 +192,36 @@ export function updateCar(delta, travelling) {
   const throttle = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
   // 1 = vänster, -1 = höger.
   const steer = (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) - (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0);
+  // Drift: Space, fart framåt och en sväng. Nitro: Shift, gas framåt och något kvar i tanken.
+  drifting = keys.has('Space') && speed > DRIFT_MIN_SPEED && steer !== 0;
+  boosting = keys.has('ShiftLeft') || keys.has('ShiftRight') ? throttle > 0 && nitro > 0 : false;
+  if (boosting) {
+    nitro = Math.max(0, nitro - NITRO_DRAIN * delta);
+  } else {
+    nitro = Math.min(1, nitro + (drifting ? NITRO_DRIFT_REGEN : NITRO_REGEN) * delta);
+  }
+  const topSpeed = boosting ? NITRO_MAX_SPEED : MAX_SPEED;
   if (throttle !== 0) {
-    speed += throttle * ACCELERATION * delta;
+    speed += throttle * (boosting ? NITRO_ACCELERATION : ACCELERATION) * delta;
   } else {
     // Ingen gas: bromsa mot 0, men aldrig förbi 0 (då skulle bilen darra).
     speed -= Math.sign(speed) * Math.min(Math.abs(speed), FRICTION * delta);
   }
-  speed = THREE.MathUtils.clamp(speed, -MAX_SPEED / 2, MAX_SPEED); // Backen går hälften så fort.
+  if (drifting) speed -= DRIFT_DRAG * delta;
+  // Över toppfart (nitron slut): sakta ner mjukt i stället för att fastna på en gång.
+  if (speed > topSpeed) speed = Math.max(topSpeed, speed - ACCELERATION * delta);
+  speed = Math.max(speed, -MAX_SPEED / 2); // Backen går hälften så fort.
   // (speed / MAX_SPEED) = 0 när bilen står still, så den kan inte snurra på stället.
-  heading += steer * TURN_RATE * (speed / MAX_SPEED) * delta;
+  // Math.min: nitron ska inte göra att bilen svänger snabbare än på vanlig toppfart.
+  heading += steer * TURN_RATE * (drifting ? DRIFT_TURN_BOOST : 1) * Math.min(speed / MAX_SPEED, 1) * delta;
+  // Rörelseriktningen hakar efter nosen. I drift hakar den långsamt, så bilen glider.
+  // Greppet byts mjukt: snabbt ner när driften börjar, långsamt tillbaka när den släpps,
+  // så att bilen glider ut i stället för att tvärstanna i sidled.
+  grip = THREE.MathUtils.damp(grip, drifting ? DRIFT_GRIP : GRIP, drifting ? 10 : GRIP_RECOVERY, delta);
+  slide = turnTowards(slide, heading, grip, delta);
   // sin/cos gör om vinkeln till en riktning.
-  car.position.x += Math.sin(heading) * speed * delta;
-  car.position.z += Math.cos(heading) * speed * delta;
+  car.position.x += Math.sin(slide) * speed * delta;
+  car.position.z += Math.cos(slide) * speed * delta;
   // Håll kvar bilen innanför cirkeln runt världens mitt (den glider längs kanten).
   const fromCenterX = car.position.x - currentWorld.x;
   const fromCenterZ = car.position.z - currentWorld.z;

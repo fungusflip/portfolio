@@ -13,7 +13,7 @@ export const keys = new Set();
 
 // e.code är tangentens PLATS på tangentbordet ('KeyW'), inte bokstaven som skrivs.
 // Då fungerar WASD likadant oavsett språk/layout.
-const DRIVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
+const DRIVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'];
 
 window.addEventListener('keydown', (e) => {
   if (!DRIVE_KEYS.includes(e.code)) return; // Inte en körtangent? Gör ingenting.
