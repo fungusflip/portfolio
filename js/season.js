@@ -47,7 +47,7 @@ export const RULES = [
     config: {
       palette: { background: '#443f70', sun: '#ffd0a0', skyLight: '#c4c0ff', ground: '#8fae58', groundDark: '#76964a', groundDry: '#b3b66e' },
       light: { hemi: 1.1, sun: 0.95 },
-      particles: { drift: { petals: { kind: 'petal', count: 90, colors: ['#ffc4d8', '#ffe0ea', '#fff0f4'], fall: 0.8, sway: 0.9, size: 0.16 } } },
+      particles: { drift: { petals: { kind: 'petal', count: 90, colors: ['#ffc4d8', '#ffe0ea', '#fff0f4'], fall: 0.8, sway: 0.9, size: 0.22 } } },
       site: { accent: '#ff9ec0', badge: 'flower' },
     },
   },
@@ -76,7 +76,7 @@ export const RULES = [
       caveTint: { color: '#6fe39a', strength: 0.5 },
       pondMist: { count: 7, color: '#c4b6e0', opacity: 0.2 },
       particles: {
-        drift: { dark: { kind: 'leaf', count: 70, colors: ['#e8661a', '#c4410f', '#f0a030', '#7a3a1a', '#5a2a4a'], fall: 0.5, sway: 1.2, size: 0.2 } },
+        drift: { dark: { kind: 'leaf', count: 70, colors: ['#e8661a', '#c4410f', '#f0a030', '#7a3a1a', '#5a2a4a'], fall: 0.5, sway: 1.2, size: 0.4 } },
         bats: { trees: 5, perTree: 2, color: '#120a1a' },
       },
       props: {
@@ -115,7 +115,7 @@ export const RULES = [
     name: 'midsummer', from: [6, 19], to: [6, 25], weekday: 5, demo: [6, 21],
     config: {
       light: { hemi: 1.25, sun: 1.2 },
-      particles: { drift: { petals: { kind: 'petal', count: 110, colors: ['#ffffff', '#ffe27a', '#8fb8ff', '#ff9ec0'], fall: 0.7, sway: 0.9, size: 0.16 } } },
+      particles: { drift: { petals: { kind: 'petal', count: 110, colors: ['#ffffff', '#ffe27a', '#8fb8ff', '#ff9ec0'], fall: 0.7, sway: 0.9, size: 0.22 } } },
       banner: 'Glad midsommar',
       site: { accent: '#ffd24a', badge: 'flower' },
     },
