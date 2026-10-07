@@ -2,6 +2,7 @@
 // Används av både site/index.html och index.html (3D-startsidan med webbplatsen under).
 import { PROJECTS } from './projects-data.js';
 import { getSeason, getSeasonConfig, seasonActive } from '../../js/season.js';
+import { createSeasonMenu } from '../../js/seasonmenu.js';
 
 // Sökvägarna i projects-data.js (../assets/...) räknas från site/-mappen. Här görs de om till
 // adresser som stämmer oavsett vilken sida som laddar skriptet.
@@ -260,3 +261,8 @@ if (seasonActive()) {
     setTimeout(() => banner.remove(), 9000);
   }
 }
+
+// ---------- Knappen "Season": prova alla säsongslooks (js/seasonmenu.js) ----------
+// I rubriken på båda sidorna, och (bara i 3D-sidan) som flytande knapp medan man kör.
+document.querySelectorAll('.site-header .site-nav').forEach((nav) => nav.append(createSeasonMenu()));
+if (document.getElementById('backButton')) document.body.append(createSeasonMenu('game'));
