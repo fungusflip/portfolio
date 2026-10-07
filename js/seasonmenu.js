@@ -45,7 +45,7 @@ function describe(params) {
   const season = last ? pretty(last) + (last === 'halloween' && state.week ? ' week ' + state.week : '') : 'No season';
   const forced = params.get('season');
   const dated = params.get('date');
-  const date = (value) => value.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = (value) => value.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   if (forced) {
     const found = SEASON_CHOICES.find(([, value]) => value === forced);
     return { preview: true, main: 'Preview: ' + (found ? found[0] : pretty(forced)), hint: 'Back to today, or try another' };
@@ -63,6 +63,11 @@ function urlFor(value) {
   return url.pathname + url.search + url.hash; // Relativt: ingen värd inbakad.
 }
 
+// Första besöket i den här fliken: knapparna pulserar ett par gånger så att man ser dem (båda knapparna, rubrikens och spelets).
+let nudge = false;
+try {
+  if (!sessionStorage.getItem('seasonNudged')) { sessionStorage.setItem('seasonNudged', '1'); nudge = true; }
+} catch (error) { /* sessionStorage spärrat: ingen puls */ }
 let menuCount = 0;
 // Bygger knappen + menyn. variant: 'header' (i rubriken) eller 'game' (flytande medan man kör).
 export function createSeasonMenu(variant = '') {
@@ -95,6 +100,7 @@ export function createSeasonMenu(variant = '') {
   button.setAttribute('aria-label', 'Change season. ' + info.main);
   button.append(glyph, text);
   if (info.preview) wrap.classList.add('season-switch--preview');
+  if (nudge) wrap.classList.add('season-switch--nudge');
 
   const menu = document.createElement('ul');
   menu.className = 'season-menu';

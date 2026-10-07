@@ -65,7 +65,7 @@ export const RULES = [
         // Friskt ljusgrönt med blommor (rosa) i kronorna; kronblad i stället för höstlöv.
         leaves: ['#6fcf5a', '#8adc62', '#f4a6c0', '#ffc8d8'], fallenLeaves: ['#f6b8cc', '#ffd9e4', '#fff0f4', '#ffc4d8', '#ffffff'], // Kronblad, inga löv.
       },
-      foliage: { leafLitter: 0, groundLeaves: 0.35, fallingLeaves: 0.5, litterAlt: '#ffd9e4', soilAlpha: 0.8, groundStyle: 'petals', fall: 'petals', debris: ['#ffc4d8', '#8ad060'] }, // Blommor, klöver och kronblad i stället för löv.
+      foliage: { leafLitter: 0, groundLeaves: 0.35, fallingLeaves: 0.5, litterAlt: '#ffd9e4', soilAlpha: 0.8, groundStyle: 'petals', fall: 'petals', debris: ['#ffc4d8', '#8ad060'], shrubColors: ['#4f9a3a', '#6fbf4a', '#7fcf5a', '#5fb046', '#f4a6c0'] }, // Blommor, klöver och kronblad i stället för löv.
       modules: { 'spring-summer': true },
       light: { hemi: 1.1, sun: 0.95 },
       particles: { drift: { petals: { kind: 'petal', count: 90, colors: ['#ffc4d8', '#ffe0ea', '#fff0f4'], fall: 0.8, sway: 0.9, size: 0.22 } } },
@@ -79,7 +79,7 @@ export const RULES = [
         // Djupt, fullt grönt.
         leaves: ['#2f7a24', '#3f8f2a', '#4fa030'], fallenLeaves: ['#8cb83a', '#a8c842', '#c8d44a'],
       },
-      foliage: { leafLitter: 0, groundLeaves: 0, fallingLeaves: 0, litterAlt: '#a8cc4a', soilAlpha: 0.7, groundStyle: 'meadow', debris: ['#f2d24a', '#8fbf45'] }, // Äng: inga löv. Pollen och fluff (particles.drift) i luften.
+      foliage: { leafLitter: 0, groundLeaves: 0, fallingLeaves: 0, litterAlt: '#a8cc4a', soilAlpha: 0.7, groundStyle: 'meadow', debris: ['#f2d24a', '#8fbf45'], shrubColors: ['#3f8a2a', '#4fa030', '#5fb03a', '#7ac04a', '#3a7a2a'] }, // Äng: inga löv. Pollen och fluff (particles.drift) i luften.
       modules: { 'spring-summer': true },
       light: { hemi: 1.18, sun: 1.12 },
       fog: { nearMul: 1.1, farMul: 1.15 },

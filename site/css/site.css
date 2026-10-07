@@ -323,7 +323,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 
 /* ---------- Datum + säsong i hörnet, med en liten meny (js/seasonmenu.js) ---------- */
 .season-switch { position: relative; --sw-bg: var(--bg-deep, #2f2745); --sw-text: var(--text, #fff3d6); --sw-line: var(--line-strong, rgba(255, 243, 214, 0.5)); --sw-accent: var(--accent, #ffb45e); }
-.season-btn { display: inline-flex; flex-direction: row; align-items: center; gap: 9px; min-height: 44px; padding: 3px 12px 3px 10px; border: 1.5px solid var(--sw-line); border-radius: 999px; background: color-mix(in srgb, var(--sw-bg) 78%, transparent); color: var(--sw-text); font: 500 12px/1.25 var(--body, system-ui, sans-serif); text-align: left; cursor: pointer; transition: background 0.15s, border-color 0.15s, box-shadow 0.15s; }
+.season-btn { display: inline-flex; flex-direction: row; align-items: center; gap: 10px; min-height: 46px; padding: 3px 14px 3px 12px; border: 1.5px solid var(--sw-line); border-radius: 999px; background: color-mix(in srgb, var(--sw-bg) 88%, transparent); color: var(--sw-text); font: 600 14px/1.25 var(--body, system-ui, sans-serif); text-align: left; cursor: pointer; transition: background 0.15s, border-color 0.15s, box-shadow 0.15s; }
 .season-btn::after { content: ""; flex: none; width: 7px; height: 7px; margin: -3px 2px 0 0; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); opacity: 0.8; }
 .season-btn[aria-expanded="true"]::after { transform: rotate(225deg); margin-top: 3px; }
 .season-btn:hover, .season-btn:focus-visible, .season-btn[aria-expanded="true"] { background: var(--sw-bg); border-color: var(--sw-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sw-accent) 30%, transparent); }
@@ -331,7 +331,10 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 .season-btn-glyph { display: inline-flex; flex: none; }
 .season-btn-text { display: flex; flex-direction: column; min-width: 0; }
 .season-btn-main { white-space: nowrap; font-weight: 600; }
-.season-btn-hint { white-space: nowrap; font-size: 11px; color: var(--sw-accent); }
+.season-btn-hint { white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--sw-accent); }
+.season-switch--nudge .season-btn { animation: season-nudge 1.6s ease-out 3; }
+@keyframes season-nudge { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sw-accent) 70%, transparent); } 70%, 100% { box-shadow: 0 0 0 14px transparent; } }
+@media (prefers-reduced-motion: reduce) { .season-switch--nudge .season-btn { animation: none; } }
 .season-switch--preview .season-btn-main { color: var(--sw-accent); font-weight: 700; }
 .season-menu { position: absolute; z-index: 60; top: calc(100% + 6px); right: 0; min-width: 190px; margin: 0; padding: 6px; list-style: none; background: var(--sw-bg); border: 1.5px solid var(--sw-line); border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 8, 30, 0.45); }
 .season-menu[hidden] { display: none; }
@@ -341,8 +344,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 .season-item[aria-checked="false"]::before { content: ""; display: inline-block; width: 1.1em; margin-right: 8px; }
 /* I 3D-spelet: liten text i nedre högra hörnet, bara medan man kör. */
 .season-switch--game { display: none; position: fixed; z-index: 12; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); --sw-bg: #2f2745; --sw-text: #fff3d6; --sw-line: rgba(255, 243, 214, 0.45); --sw-accent: #ffb45e; font-family: system-ui, sans-serif; }
-.season-switch--game .season-btn { background: rgba(35, 24, 54, 0.8); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-.season-switch--game .season-btn:hover, .season-switch--game .season-btn:focus-visible, .season-switch--game .season-btn[aria-expanded="true"] { background: rgba(35, 24, 54, 0.95); }
+.season-switch--game .season-btn { background: rgba(24, 16, 40, 0.88); border-color: rgba(255, 243, 214, 0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.season-switch--game .season-btn:hover, .season-switch--game .season-btn:focus-visible, .season-switch--game .season-btn[aria-expanded="true"] { background: rgba(24, 16, 40, 0.96); }
 .season-switch--game .season-menu { top: auto; bottom: calc(100% + 8px); }
 body.playing .season-switch--game { display: block; }
 body.list-open .season-switch--game, body.panel-open .season-switch--game { display: none; }

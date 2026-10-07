@@ -846,7 +846,7 @@ function buildBollards(local, spots) {
 
 // --- Buskar och stenblock ---
 const shrubGeometry = new THREE.IcosahedronGeometry(1, 0);
-const SHRUB_COLORS = ['#5b7a2f', '#6b8a35', '#7d8f45', '#a8602a', '#c78b2a'].map((hex) => new THREE.Color(hex));
+const SHRUB_COLORS = ((getSeasonConfig().foliage || {}).shrubColors || ['#5b7a2f', '#6b8a35', '#7d8f45', '#a8602a', '#c78b2a']).map((hex) => new THREE.Color(hex)); // Säsongen kan byta buskarnas färger (foliage.shrubColors).
 function buildShrubs(local, clusters) {
   const blobs = [];
   const bushes = []; // { right, down, first, count } per buske: vilka blobbar som hör ihop.
