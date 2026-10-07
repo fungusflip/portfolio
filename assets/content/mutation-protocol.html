@@ -1,72 +1,98 @@
+<div class="facts">
+ <div><b>Role</b><span>Freelance, from August 2025</span></div>
+ <div><b>Tools</b><span>Houdini, Cascadeur</span></div>
+ <div><b>Game</b><span>VR cyberpunk battle royale</span></div>
+ <div><b>Status</b><span>Development stopped when the funding ran out</span></div>
+</div>
+
+<p>A VR cyberpunk battle royale. I worked on it as a freelancer from August 2025, building procedural weapons and characters in Houdini, rigging and animating in Cascadeur, and integrating the VFX.</p>
 <p>Freelance work: a Houdini tool that fits and drapes clothing onto any character without manual retopology. Parameters control how the cloth behaves. Designs made together with <a href="https://elinakans.com/" target="_blank" rel="noopener">Elina Kans</a>.</p>
 
-<h2>Breakdown</h2>
-<p>A VR cyberpunk battle royale. I worked on it as a freelancer from August 2025. Development stopped when the funding ran out.</p>
-<ul>
- <li><strong>Problem:</strong> The art director wanted to play with weapon designs. Changing a weapon usually means redoing the rig and the animation, and that often breaks things.</li>
- <li><strong>What I built:</strong> A procedural weapon system in Houdini. The director changes the design with parameters and it is baked out for the engine. I also did the rigging and animation in Cascadeur and the VFX integration.</li>
- <li><strong>Result:</strong> Much faster iteration. The director can try designs without waiting for me.</li>
-</ul>
-<!-- TODO Filip: any number for how much faster iteration got (like the 4 weeks to 1 week on Camilla)? Remove the funding sentence above if you would rather not mention it. -->
-
-<h2>Nuke suit</h2>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__8_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__17_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-
-<h2>Banana hat and glasses</h2>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__10_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__13_.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-
-<h2>Characters</h2>
-<p>All characters come from one base, and parts are added or removed with parameters. The rat zombie walks on its arms, so I renamed the bones to trick the auto-rigger, and it worked.</p>
-<figure>
+<figure class="wide">
  <video src="assets/content-media/mutation-protocol/rat-zombie-anims.mp4" controls muted loop playsinline preload="metadata"></video>
  <figcaption>Rat zombie animations.</figcaption>
 </figure>
-<figure>
- <video src="assets/content-media/mutation-protocol/retarget-variants.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Retargeted to the other variants.</figcaption>
-</figure>
-<figure>
- <video src="assets/content-media/mutation-protocol/character-params.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Character parameters.</figcaption>
-</figure>
+
+<div class="breakdown">
+ <section class="bd bd-problem"><h3>Problem</h3><p>The art director wanted to play with weapon designs. Changing a weapon usually means redoing the rig and the animation, and that often breaks things.</p></section>
+ <section class="bd bd-built"><h3>What I built</h3><p>A procedural weapon system in Houdini. The director changes the design with parameters and it is baked out for the engine. I also did the rigging and animation in Cascadeur and the VFX integration.</p></section>
+ <section class="bd bd-result"><h3>Result</h3><p>Much faster iteration. The director can try designs without waiting for me.</p></section>
+</div>
+<!-- TODO Filip: any number for how much faster iteration got (like the 4 weeks to 1 week on Camilla)? Remove the funding sentence above if you would rather not mention it. -->
+
+<h2>Cloth tool: suits and hats</h2>
+<p>The nuke suit and the banana hat and glasses, as turntables.</p>
+<div class="media-row">
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__8_.mp4" controls muted loop playsinline preload="metadata"></video><figcaption>Nuke suit.</figcaption></figure>
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__17_.mp4" controls muted loop playsinline preload="metadata"></video><figcaption>Nuke suit, second view.</figcaption></figure>
+</div>
+<div class="media-row">
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__10_.mp4" controls muted loop playsinline preload="metadata"></video><figcaption>Banana hat and glasses.</figcaption></figure>
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/05/TurnTable__13_.mp4" controls muted loop playsinline preload="metadata"></video><figcaption>Banana hat and glasses, second view.</figcaption></figure>
+</div>
+
+<h2>Characters</h2>
+<p>All characters come from one base, and parts are added or removed with parameters. The rat zombie walks on its arms, so I renamed the bones to trick the auto-rigger, and it worked.</p>
+<aside class="callout"><strong>Rig trick.</strong> The rat zombie walks on its arms, so I renamed the bones to trick the auto-rigger.</aside>
+<div class="media-row">
+ <figure>
+  <video src="assets/content-media/mutation-protocol/retarget-variants.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Retargeted to the other variants.</figcaption>
+ </figure>
+ <figure>
+  <video src="assets/content-media/mutation-protocol/character-params.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Character parameters.</figcaption>
+ </figure>
+</div>
 <figure><img src="assets/content-media/mutation-protocol/parameter-example.gif" alt="Parameter example" loading="lazy"></figure>
 
 <h2>Early tests</h2>
-<figure><img src="assets/content-media/mutation-protocol/vellum-sim.gif" alt="Early vellum sim" loading="lazy"><figcaption>Vellum sim.</figcaption></figure>
-<figure><video src="assets/content-media/mutation-protocol/hood.mp4" poster="assets/content-media/mutation-protocol/hood-poster.jpg" aria-label="Hood iteration" controls muted loop playsinline preload="metadata"></video><figcaption>Hood.</figcaption></figure>
-<figure><img src="assets/content-media/mutation-protocol/nurse-costume.gif" alt="Nurse costume iteration" loading="lazy"><figcaption>Nurse costume.</figcaption></figure>
+<div class="media-row">
+ <figure><img src="assets/content-media/mutation-protocol/vellum-sim.gif" alt="Early vellum sim" loading="lazy"><figcaption>Vellum sim.</figcaption></figure>
+ <figure><video src="assets/content-media/mutation-protocol/hood.mp4" poster="assets/content-media/mutation-protocol/hood-poster.jpg" aria-label="Hood iteration" controls muted loop playsinline preload="metadata"></video><figcaption>Hood.</figcaption></figure>
+ <figure><img src="assets/content-media/mutation-protocol/nurse-costume.gif" alt="Nurse costume iteration" loading="lazy"><figcaption>Nurse costume.</figcaption></figure>
+</div>
 
 <h2>Weapons and props</h2>
 <p>Blocked out silhouette-first, then detailed. The machine gun took several passes before the proportions felt right.</p>
-<figure><img src="assets/content-media/mutation-protocol/machine-gun.gif" alt="Machine gun" loading="lazy"><figcaption>Machine gun.</figcaption></figure>
-<figure><video src="assets/content-media/mutation-protocol/handgun.mp4" poster="assets/content-media/mutation-protocol/handgun-poster.jpg" aria-label="Handgun" controls muted loop playsinline preload="metadata"></video><figcaption>Handgun.</figcaption></figure>
-<figure><img src="assets/content-media/mutation-protocol/machine-gun-early.gif" alt="Machine gun, early Houdini version" loading="lazy"><figcaption>Early Houdini version.</figcaption></figure>
-<figure>
- <video src="assets/content-media/mutation-protocol/muzzle-flash.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Muzzle flash: random textures swap every frame so it never repeats. The handgun uses the same setup.</figcaption>
-</figure>
-<figure><img src="assets/content-media/mutation-protocol/cupcake-hat.gif" alt="Cupcake hat" loading="lazy"><figcaption>Cupcake hat.</figcaption></figure>
+<div class="media-row">
+ <figure><img src="assets/content-media/mutation-protocol/machine-gun.gif" alt="Machine gun" loading="lazy"><figcaption>Machine gun.</figcaption></figure>
+ <figure><video src="assets/content-media/mutation-protocol/handgun.mp4" poster="assets/content-media/mutation-protocol/handgun-poster.jpg" aria-label="Handgun" controls muted loop playsinline preload="metadata"></video><figcaption>Handgun.</figcaption></figure>
+ <figure><img src="assets/content-media/mutation-protocol/machine-gun-early.gif" alt="Machine gun, early Houdini version" loading="lazy"><figcaption>Early Houdini version.</figcaption></figure>
+</div>
+<div class="media-row">
+ <figure>
+  <video src="assets/content-media/mutation-protocol/muzzle-flash.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Muzzle flash: random textures swap every frame so it never repeats. The handgun uses the same setup.</figcaption>
+ </figure>
+ <figure><img src="assets/content-media/mutation-protocol/cupcake-hat.gif" alt="Cupcake hat" loading="lazy"><figcaption>Cupcake hat.</figcaption></figure>
+</div>
 
 <h2>Improved workflow</h2>
 <p>I added a texture workflow to the HDA. It has texture parameters now, so I can try different colours and texture details quickly. The rat textures come from this. In the scene the rat is one node called "rat". It has a Geo tab and a Rat Texture tab, sections for Tail, Ears and Fingers (count, amplitude, radius) and an output path for the FBX export.</p>
-<figure>
- <video src="assets/content-media/mutation-protocol-new/houdini-rat-network.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>The rat node and its parameters next to the viewport. First loose armor pieces, then the grey rat.</figcaption>
-</figure>
+<ul class="chips"><li>HDA texture parameters</li><li>Geo tab</li><li>Rat Texture tab</li><li>Tail / Ears / Fingers</li><li>FBX export path</li></ul>
+<div class="media-row">
+ <figure>
+  <video src="assets/content-media/mutation-protocol-new/houdini-rat-network.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>The rat node and its parameters next to the viewport. First loose armor pieces, then the grey rat.</figcaption>
+ </figure>
+ <figure>
+  <video src="assets/content-media/mutation-protocol-new/cloths-hiplc.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Adjusting jaw and finger joints on the rat.</figcaption>
+ </figure>
+</div>
 <p>In the second clip I move joints and rotate fingers directly on the green rat in the viewport, in Cloths.hiplc.</p>
-<figure>
- <video src="assets/content-media/mutation-protocol-new/cloths-hiplc.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Adjusting jaw and finger joints on the rat.</figcaption>
-</figure>
 <!-- TODO Filip: confirm the points in the second clip are rig joints. -->
 
 <h2>Textured rats</h2>
 <p>These are the textured rat variants. They all come from the same base, so they share the rig and the animations. I made the textures with the texture parameters on the HDA, which lets me try colours and details quickly.</p>
-<figure><img src="assets/content-media/mutation-protocol-new/rat-purple.png" alt="Purple textured rat" loading="lazy"><figcaption>Purple rat with a yellow eye and red scars, hunched over on its arms.</figcaption></figure>
-<figure><img src="assets/content-media/mutation-protocol-new/rat-purple-head.png" alt="Purple rat head close-up" loading="lazy"><figcaption>Close-up of the purple rat's head, with a grey armor piece at the neck.</figcaption></figure>
-<figure><img src="assets/content-media/mutation-protocol-new/rat-green-1.jpg" alt="Green rat with armor pieces" loading="lazy"><figcaption>Green rat with dark and white armor pieces on its back and neck.</figcaption></figure>
-<figure><img src="assets/content-media/mutation-protocol-new/rat-green-2.png" alt="Green rat seen from above" loading="lazy"><figcaption>Green rat from above, with dark cuffs on its wrists.</figcaption></figure>
-<figure><img src="assets/content-media/mutation-protocol-new/rat-green-3.png" alt="Green rat from the side" loading="lazy"><figcaption>Green rat from the side, standing hunched with cuffs on its wrists and ankles.</figcaption></figure>
+<div class="media-row">
+ <figure><img src="assets/content-media/mutation-protocol-new/rat-purple.png" alt="Purple textured rat" loading="lazy"><figcaption>Purple rat with a yellow eye and red scars, hunched over on its arms.</figcaption></figure>
+ <figure><img src="assets/content-media/mutation-protocol-new/rat-purple-head.png" alt="Purple rat head close-up" loading="lazy"><figcaption>Close-up of the purple rat's head, with a grey armor piece at the neck.</figcaption></figure>
+</div>
+<div class="media-row">
+ <figure><img src="assets/content-media/mutation-protocol-new/rat-green-1.jpg" alt="Green rat with armor pieces" loading="lazy"><figcaption>Green rat with dark and white armor pieces on its back and neck.</figcaption></figure>
+ <figure><img src="assets/content-media/mutation-protocol-new/rat-green-2.png" alt="Green rat seen from above" loading="lazy"><figcaption>Green rat from above, with dark cuffs on its wrists.</figcaption></figure>
+ <figure><img src="assets/content-media/mutation-protocol-new/rat-green-3.png" alt="Green rat from the side" loading="lazy"><figcaption>Green rat from the side, standing hunched with cuffs on its wrists and ankles.</figcaption></figure>
+</div>
 <!-- TODO Filip: check the captions (colour names, which rats have armor) -->

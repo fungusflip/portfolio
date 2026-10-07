@@ -1,16 +1,26 @@
-<p>A team game, six weeks long. I did VFX, shaders, tools and animation scripts. It was the first time I saw my work connect with everyone else’s.</p>
-<p><a href="https://zominator16.itch.io/spite-catharsis" target="_blank" rel="noopener">Play it on itch.io</a></p>
+<div class="facts">
+ <div><b>Role</b><span>VFX, shaders, tools, animation scripts</span></div>
+ <div><b>Tools</b><span>Houdini, Maya (Python), Substance Designer, EmberGen, HLSL</span></div>
+ <div><b>Engine</b><span>Custom DX11 engine</span></div>
+ <div><b>Team</b><span>Six-week team project</span></div>
+</div>
 
-<h3>Water projectile</h3>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/Yaup-1.gif" alt="Water projectile VFX" loading="lazy"></figure>
+<p>A team game, six weeks long. I did VFX, shaders, tools and animation scripts. It was the first time I saw my work connect with everyone else’s.</p>
+
+<figure class="wide"><img src="https://filip.renemark.se/wp-content/uploads/2024/12/Yaup-1.gif" alt="Water projectile VFX" loading="lazy"><figcaption>Water projectile VFX.</figcaption></figure>
+
+<p><a href="https://zominator16.itch.io/spite-catharsis" target="_blank" rel="noopener">Play it on itch.io</a></p>
+<ul class="chips"><li>HLSL</li><li>Houdini RBD</li><li>Maya Python tool</li><li>Substance Designer</li><li>EmberGen flipbooks</li></ul>
+
+<h2>Water projectile</h2>
 <p>My first VFX on a team. Layered meshes, HLSL in the material, and my first textures made in Substance Designer. I got stuck on UV seams for a long time.</p>
 
-<h3>Rubble tool (Houdini)</h3>
+<h2>Rubble tool (Houdini)</h2>
 <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/rubble-Falliin.gif" alt="Falling rubble simulation" loading="lazy"></figure>
 <p>Drop a folder of FBX files in and it breaks them apart and drops them with physics. Filepattern → for-each loop → RBD Material Fracture → gravity sim. I made it for non-technical teammates.</p>
 <pre><code>detail("../filepattern1", "filelist", @iteration, "string")</code></pre>
 
-<h3>FK hand tool (Maya, Python)</h3>
+<h2>FK hand tool (Maya, Python)</h2>
 <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/FKHAND-1.gif" alt="FK finger rig tool" loading="lazy"></figure>
 <p>Pick a knuckle, click one button and you get a full FK finger chain with controllers and offset groups. Animators start it from a small custom window. It saved our riggers a lot of clicking.</p>
 <details>
@@ -69,17 +79,17 @@ class Window(object):
 Window()</code></pre>
 </details>
 
-<h3>Health shader</h3>
+<h2>Health shader</h2>
 <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/healthShader_Half.gif" alt="Pulsing health orb" loading="lazy"></figure>
 <p>Pulses like a heartbeat, swirls with polar UVs and changes color with health.</p>
 <pre><code>float HeartPumpWave(float t) {
     return 0.9 + 0.2 * (sin(t * 0.6 * 6.28) + sin(t * 1.2 * 6.28));
 }</code></pre>
 
-<h3>Sword swipe</h3>
+<h2>Sword swipe</h2>
 <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/12/laserYxa.gif" alt="Sword swipe VFX" loading="lazy"></figure>
 <p>Simulated in EmberGen, baked to a flipbook and played by an HLSL shader in our DX11 engine.</p>
 <pre><code>int frame = (int)(time * playbackSpeed) % totalFrames;
 float2 uvOffset = CalculateFlipbookOffset(frame, gridSize);
 float4 flipbookSample = tex.Sample(sampler, uv + uvOffset);</code></pre>
-<p>One thing went wrong: I didn’t explain the effect well to my TA partner, so they built something else, and we noticed too late. Now I show references early.</p>
+<aside class="callout"><strong>What went wrong.</strong> I didn’t explain the effect well to my TA partner, so they built something else, and we noticed too late. Now I show references early.</aside>

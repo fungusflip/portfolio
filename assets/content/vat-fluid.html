@@ -1,19 +1,26 @@
+<div class="facts">
+ <div><b>Tools</b><span>Houdini, Unreal Engine, Maya</span></div>
+ <div><b>Animation</b><span><a href="https://www.philipanderson.site/" target="_blank" rel="noopener">Philip Anderson</a> (Maya)</span></div>
+</div>
+
 <p>A liquid sim in Houdini, baked to a Vertex Animation Texture and played in Unreal. The animation is by <a href="https://www.philipanderson.site/" target="_blank" rel="noopener">Philip Anderson</a> (Maya).</p>
-<img src="https://filip.renemark.se/wp-content/uploads/2025/03/ezgif-73de167a516905.gif" alt="Final VAT fluid" loading="lazy">
-<p>Final: materials, synced animation and a spline camera.</p>
-<video src="assets/content-media/vat-fluid/vat-fluid.mp4" controls muted loop playsinline preload="metadata"></video>
-<p>WIP: camera and lighting.</p>
+
+<figure class="wide"><img src="https://filip.renemark.se/wp-content/uploads/2025/03/ezgif-73de167a516905.gif" alt="Final VAT fluid" loading="lazy"><figcaption>Final: materials, synced animation and a spline camera.</figcaption></figure>
+
+<figure class="wide"><video src="assets/content-media/vat-fluid/vat-fluid.mp4" controls muted loop playsinline preload="metadata"></video><figcaption>WIP: camera and lighting.</figcaption></figure>
+
+<ul class="chips"><li>Houdini liquid sim</li><li>Vertex Animation Texture</li><li>Translucent material</li><li>Spline camera</li></ul>
 
 <h2>Problems I hit</h2>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/89bd9880f53c3f7e508be06ef62eb7d7.gif" alt="" loading="lazy"></figure>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/72b60e968cc6264f6478c5fdf5577526.gif" alt="" loading="lazy"></figure>
-<ul>
- <li>Maya, Houdini and Unreal disagreed on FPS and substeps.</li>
- <li>Fresnel didn’t work on the translucent material until I set the lighting mode to Surface ForwardShading.</li>
- <li>I had faked forces to keep the liquid in the cup, and the bake made every small error visible as jitter. UV precision, legacy VAT and cleaner forces fixed it.</li>
-</ul>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/4d60bb89bdd9bd08606a19713be8b39d-1.gif" alt="" loading="lazy"></figure>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/c70ed902cd1f1f7d18fdfcccce738303-1.gif" alt="" loading="lazy"></figure>
-<ul>
- <li>On import, empty data in the textures broke the quads, and the plugin was broken in some Unreal versions. Lots of trial and error.</li>
-</ul>
+<div class="media-row">
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/89bd9880f53c3f7e508be06ef62eb7d7.gif" alt="" loading="lazy"></figure>
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/72b60e968cc6264f6478c5fdf5577526.gif" alt="" loading="lazy"></figure>
+</div>
+<aside class="callout"><strong>Frame rate and substeps.</strong> Maya, Houdini and Unreal disagreed on FPS and substeps.</aside>
+<aside class="callout"><strong>Fresnel.</strong> Fresnel didn’t work on the translucent material until I set the lighting mode to Surface ForwardShading.</aside>
+<aside class="callout"><strong>Jitter.</strong> I had faked forces to keep the liquid in the cup, and the bake made every small error visible as jitter. UV precision, legacy VAT and cleaner forces fixed it.</aside>
+<div class="media-row">
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/4d60bb89bdd9bd08606a19713be8b39d-1.gif" alt="" loading="lazy"></figure>
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2025/03/c70ed902cd1f1f7d18fdfcccce738303-1.gif" alt="" loading="lazy"></figure>
+</div>
+<aside class="callout"><strong>Import.</strong> On import, empty data in the textures broke the quads, and the plugin was broken in some Unreal versions. Lots of trial and error.</aside>
