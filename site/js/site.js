@@ -1,6 +1,7 @@
 // Den vanliga portfolion: grid, filter, förhandsvideo, projektdialog, reveal.
 // Används av både site/index.html och index.html (3D-startsidan med webbplatsen under).
 import { PROJECTS } from './projects-data.js';
+import { getSeason, getSeasonConfig, seasonActive } from '../../js/season.js';
 
 // Sökvägarna i projects-data.js (../assets/...) räknas från site/-mappen. Här görs de om till
 // adresser som stämmer oavsett vilken sida som laddar skriptet.
@@ -222,3 +223,40 @@ if (peek && peekList) {
 applyFilter('all');
 fromHash();
 addEventListener('hashchange', fromHash);
+
+// ---------- Säsong (js/season.js): samma kalender som i 3D-spelet ----------
+// Utan en regel som ändrar något händer ingenting här. ?season=NAMN och ?date=ÅÅÅÅ-MM-DD funkar likadant.
+const BADGES = {
+  pumpkin: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 5c.4-1.6 1.2-2.4 2.4-2.8" fill="none" stroke="#6b8a35" stroke-width="2" stroke-linecap="round"/><path d="M12 6C6 4 2 8 2 13s4 8 10 8 10-3 10-8-4-9-10-7z" fill="#f48c06"/><path d="M12 6c-2 2-2 13 0 15M12 6c2 2 2 13 0 15" fill="none" stroke="#c4410f" stroke-width="1.2"/><path d="M8 11l2 2H6zM16 11l2 2h-4zM8 16h8l-1 2h-2l-1-1-1 1H9z" fill="#2a1838"/></svg>',
+  snowflake: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#cfe0ff" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7"/></svg>',
+  flower: '<svg viewBox="0 0 24 24" width="22" height="22"><g fill="#ffc4d8"><circle cx="12" cy="6" r="4"/><circle cx="18" cy="11" r="4"/><circle cx="15.5" cy="18" r="4"/><circle cx="8.5" cy="18" r="4"/><circle cx="6" cy="11" r="4"/></g><circle cx="12" cy="12.5" r="3" fill="#ffd24a"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ffc24a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5" fill="#ffc24a"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>',
+  star: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.8-6.3 3.8 1.7-7L2 9.2l7.1-.6z" fill="#ffd24a"/></svg>',
+};
+const seasonConfig = getSeasonConfig();
+if (seasonActive()) {
+  const root = document.documentElement;
+  root.dataset.season = getSeason();
+  const look = seasonConfig.site;
+  if (look && look.accent) root.style.setProperty('--season-accent', look.accent);
+  if (look && BADGES[look.badge]) {
+    document.querySelectorAll('.brand').forEach((brand) => {
+      const badge = el('span', 'season-badge');
+      badge.setAttribute('aria-hidden', 'true');
+      badge.innerHTML = BADGES[look.badge]; // Egna, fasta SVG-strängar ovan.
+      brand.append(badge);
+    });
+  }
+  if (seasonConfig.banner) {
+    const banner = el('div', 'season-banner');
+    banner.setAttribute('role', 'status');
+    banner.append(el('span', '', seasonConfig.banner));
+    const close = el('button', 'season-banner-close', '\u00d7');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close greeting');
+    close.addEventListener('click', () => banner.remove());
+    banner.append(close);
+    document.body.append(banner);
+    setTimeout(() => banner.remove(), 9000);
+  }
+}
