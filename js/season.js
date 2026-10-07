@@ -28,6 +28,10 @@
 //                kind: 'leaf' | 'flake' | 'petal' | 'spark' (se js/seasonfx.js).
 //   props      – { pumpkins: { count, minGap, colors }, lampPumpkins, cobwebs, shardColor, pulpColor, seedColor }.
 //   banner     – kort hälsning som visas en stund på webbplatsen.
+//   foliage    – { leafLitter, groundLeaves, fallingLeaves, litterAlt, soilAlpha }: löv under träden (trees.js), lövtäcket och
+//                fallande löv (leaves.js). Gånger-tal 0..1 (0 = inga löv; litterAlt = färgen på snö-/frostklumparna som ersätter dem).
+//                Kronornas och lövens färger sätts med palette.leaves / palette.fallenLeaves.
+//   modules    – { winter | 'spring-summer' | autumn: true }: säsongens extra filer (js/season-*.js), se hook-API i seasonfx.js.
 //   site       – { accent, badge }: accentfärg och liten dekor i sidhuvudet (badge: 'pumpkin' | 'snowflake' | 'flower' | 'sun' | 'star').
 
 export const RULES = [
@@ -35,7 +39,12 @@ export const RULES = [
   {
     name: 'winter', base: true, from: [12, 1], to: [2, 29],
     config: {
-      palette: { background: '#2c3656', sun: '#d6e4ff', skyLight: '#c4d6ff', groundLight: '#a9b8e0', ground: '#a8b09a', groundDark: '#8d9a88', groundDry: '#c4c8b4' },
+      palette: { background: '#2c3656', sun: '#d6e4ff', skyLight: '#c4d6ff', groundLight: '#a9b8e0', ground: '#a8b09a', groundDark: '#8d9a88', groundDry: '#c4c8b4',
+        // Kronor och löv: frostiga, snötyngda kronor och bleka "löv" i markens textur (inga röda och orange).
+        leaves: ['#e4edf5', '#cfdceb', '#b9cbe0'], fallenLeaves: ['#dfe7f0', '#cdd8e6', '#eef3f8', '#b9c8da', '#e3ebf4'],
+      },
+      foliage: { leafLitter: 0, groundLeaves: 0, fallingLeaves: 0, litterAlt: '#eef3f8', soilAlpha: 0.25 }, // Inga lövhögar eller löv: frost i stället.
+      modules: { winter: true },
       light: { hemi: 1.0, sun: 0.85 },
       fog: { nearMul: 0.85, farMul: 0.9 },
       particles: { drift: { snow: { kind: 'flake', count: 160, colors: ['#ffffff', '#e6efff'], fall: 1.1, sway: 0.7, size: 0.12 } } },
@@ -45,7 +54,12 @@ export const RULES = [
   {
     name: 'spring', base: true, from: [3, 1], to: [5, 31],
     config: {
-      palette: { background: '#443f70', sun: '#ffd0a0', skyLight: '#c4c0ff', ground: '#8fae58', groundDark: '#76964a', groundDry: '#b3b66e' },
+      palette: { background: '#443f70', sun: '#ffd0a0', skyLight: '#c4c0ff', ground: '#8fae58', groundDark: '#76964a', groundDry: '#b3b66e',
+        // Friskt ljusgrönt med blommor (rosa) i kronorna; kronblad i stället för höstlöv.
+        leaves: ['#9fd46a', '#b8e07a', '#f4a6c0', '#ffc8d8'], fallenLeaves: ['#f6b8cc', '#ffd9e4', '#b8e07a', '#fff0f4', '#9fd46a'],
+      },
+      foliage: { leafLitter: 0.35, groundLeaves: 0.3, fallingLeaves: 0.5, litterAlt: '#ffd9e4', soilAlpha: 0.8 },
+      modules: { 'spring-summer': true },
       light: { hemi: 1.1, sun: 0.95 },
       particles: { drift: { petals: { kind: 'petal', count: 90, colors: ['#ffc4d8', '#ffe0ea', '#fff0f4'], fall: 0.8, sway: 0.9, size: 0.22 } } },
       site: { accent: '#ff9ec0', badge: 'flower' },
@@ -54,13 +68,18 @@ export const RULES = [
   {
     name: 'summer', base: true, from: [6, 1], to: [8, 31],
     config: {
-      palette: { background: '#5a5698', sun: '#ffd89a', skyLight: '#d4d4ff', groundLight: '#ffb070', ground: '#a6ae52', groundDark: '#87954a', groundDry: '#c4bb6a' },
+      palette: { background: '#5a5698', sun: '#ffd89a', skyLight: '#d4d4ff', groundLight: '#ffb070', ground: '#a6ae52', groundDark: '#87954a', groundDry: '#c4bb6a',
+        // Djupt, fullt grönt.
+        leaves: ['#2f7a24', '#3f8f2a', '#4fa030'], fallenLeaves: ['#8cb83a', '#a8c842', '#c8d44a'],
+      },
+      foliage: { leafLitter: 0.2, groundLeaves: 0.15, fallingLeaves: 0.1, litterAlt: '#9ccc4a', soilAlpha: 0.7 },
+      modules: { 'spring-summer': true },
       light: { hemi: 1.18, sun: 1.12 },
       fog: { nearMul: 1.1, farMul: 1.15 },
       site: { accent: '#ffc24a', badge: 'sun' },
     },
   },
-  { name: 'autumn', base: true, from: [9, 1], to: [11, 30], config: {} },
+  { name: 'autumn', base: true, from: [9, 1], to: [11, 30], config: { modules: { autumn: true } } },
 
   // --- Veckonivå: Halloween växer över oktober (vecka 1 lite, vecka 4 fullt) och lever kvar till 1 november. ---
   {

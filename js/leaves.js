@@ -16,7 +16,10 @@ import * as THREE from 'three';
 import { scene, PALETTE, WORLDS, BILLBOARD_FACING } from './core.js';
 import { car } from './car.js';
 import { distanceToRoad, ROAD_WIDTH } from './roads.js';
+import { getSeasonConfig } from './season.js';
 
+// Säsong (season.js): foliage.fallingLeaves / foliage.groundLeaves är gånger-tal på antalen (0 = inga löv).
+const foliage = getSeasonConfig().foliage || {};
 const LEAF_COUNT = 260;   // Antal löv. ÄNDRA för tätare/glesare (allt är ett enda ritanrop, så det är billigt).
 const LEAF_AREA = 24;     // Lådans halva bredd runt bilen, i enheter.
 const LEAF_TOP = 16;      // Hur högt upp löven börjar.
@@ -48,6 +51,7 @@ scene.add(fallingLeaves);
 const GROUND_LEAF_COUNT = 1000; // ÄNDRA för tätare/glesare lövtäcke.
 export const groundLeaves = new THREE.InstancedMesh(leafParticleGeometry, fallingLeafMaterial, GROUND_LEAF_COUNT);
 groundLeaves.frustumCulled = false;
+groundLeaves.count = Math.round(GROUND_LEAF_COUNT * (foliage.groundLeaves === undefined ? 1 : foliage.groundLeaves)); // Färre (eller inga) marklöv utanför hösten.
 scene.add(groundLeaves);
 
 // --- Lövens fysik ---
@@ -207,6 +211,7 @@ export function setWeather(world) {
   const isHome = world === WORLDS.hub;
   weatherDirection = isHome ? -1 : 1;
   fallingLeaves.material = isHome ? fallingLeafMaterial : moteMaterial;
+  fallingLeaves.count = isHome ? Math.round(LEAF_COUNT * (foliage.fallingLeaves === undefined ? 1 : foliage.fallingLeaves)) : LEAF_COUNT; // Gnistorna i de andra världarna påverkas inte.
   groundLeaves.visible = isHome; // Lövtäcket finns bara hemma.
   const color = new THREE.Color();
   for (let i = 0; i < LEAF_COUNT; i++) {

@@ -4,25 +4,25 @@
 // virvlar bakom bilen, lera och blöta löv vid vägkanterna, svamp vid trädrötter och stenar,
 // flyttfåglar i V-formation, skördeprylar vid stugan och en varmare sol. Allt byggs procedurellt.
 // ============================================================================
-// Importeras av main.js när regeln 'autumn' gäller (hasRule). Under Halloween (regeln 'halloween') gör
+// Hämtas av seasonfx.js (hook-API) när configen har modules.autumn. Under Halloween (regeln 'halloween') gör
 // den ingenting, om inte configen säger det: config.autumn = { duringHalloween: true } i en regel i
 // season.js. Utanför hösten laddas filen aldrig. Rör inte Halloween-koden (seasonfx.js) och inte
 // trädkronornas färg eller lövhögarna (de ligger i season.js / leaves.js).
 // Allt som kan justeras ligger i AUTUMN nedan (och kan skrivas över med config.autumn).
 import * as THREE from 'three';
-import { WORLDS, BILLBOARD_FACING, DRIVE_RADIUS, HUB_X, HUB_Z, currentWorld, worldGroup, keyLight } from './core.js';
+import { BILLBOARD_FACING, DRIVE_RADIUS, HUB_X, HUB_Z, currentWorld, keyLight } from './core.js';
 import { PROJECTS } from './projects.js';
-import { ROAD_WIDTH, distanceToRoad } from './roads.js';
-import { HOME_X, HOME_Z, CABIN_X, CABIN_Z, hubPoint } from './home.js';
 import { PORTALS } from './portals.js';
+import { ROAD_WIDTH, distanceToRoad } from './roads.js';
+import { HOME_X, HOME_Z, CABIN_X, CABIN_Z, hubPoint, teaCupSpots } from './home.js';
 import { distanceToWater } from './hubprops.js';
-import { addObstacles } from './collision.js';
+import { addObstacles, overlapsObstacle } from './collision.js';
 import { markMoving } from './optimize.js';
 import { wind } from './leaves.js';
 import { car, speed } from './car.js';
 import { getSeasonState } from './season.js';
+import { hub, hubGroup, seededRandom, canvasTexture, addUpdater, spotOk } from './seasonkit.js';
 
-const hub = WORLDS.hub;
 
 // --- Inställningar (ÄNDRA HÄR) ---
 const AUTUMN = {
@@ -46,30 +46,7 @@ const AUTUMN = {
 
 const LEAF_COLORS = ['#c8501a', '#d88a22', '#e0b030', '#9a3a1a', '#8a6a2a', '#b8651e'];
 
-// Samma slumptal varje gång (mulberry32), så att allt hamnar på samma ställen vid varje besök.
-function seededRandom(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function canvasTexture(size, draw) {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  draw(canvas.getContext('2d'), size);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
-const hubGroup = () => worldGroup(hub);
-const updaters = []; // Funktioner (delta, bilens plats) som körs varje bild.
-let built = false;
+let active = false;
 
 // Ett löv: en ruta med spetsiga ändar (samma form som löven i seasonfx.js).
 function leafGeometry() {
@@ -140,7 +117,7 @@ function buildFogBanks() {
   const hour = new Date().getHours();
   const morning = hour < 9 ? 1 : Math.max(0.55, 1 - ((hour - 9) / 3) * 0.45);
   let time = 0;
-  updaters.push((delta, at) => {
+  addUpdater((delta, at) => {
     time += delta;
     const thin = 0.35 + 0.65 * Math.exp(-time / AUTUMN.fogLifetime);
     const strength = AUTUMN.fogOpacity * morning * thin;
@@ -186,7 +163,7 @@ function buildTreeLeaves(ctx) {
     leaf.z = tree.z + Math.sin(angle) * reach;
     leaf.y = startHigh ? Math.random() * 6.5 : 5 + Math.random() * 2.2;
   };
-  updaters.push((delta, at) => {
+  addUpdater((delta, at) => {
     mesh.visible = currentWorld === hub;
     if (!mesh.visible) return;
     time += delta;
@@ -234,7 +211,7 @@ function buildSwirl() {
   let emit = 0;
   let cursor = 0;
   let time = 0;
-  updaters.push((delta, at) => {
+  addUpdater((delta, at) => {
     mesh.visible = currentWorld === hub;
     if (!mesh.visible) return;
     time += delta;
@@ -365,11 +342,11 @@ function buildRoadLitter(ctx) {
       spots.push({ x, z, yaw: Math.atan2(dx, dz) + (random() - 0.5) * 0.5, size: sizeMin + random() * (sizeMax - sizeMin), shade: 0.8 + random() * 0.2 });
     }
     if (!spots.length) return;
-    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     const mesh = new THREE.InstancedMesh(plane, material, spots.length);
     spots.forEach((spot, i) => {
       quaternion.setFromAxisAngle(up, spot.yaw);
-      matrix.compose(new THREE.Vector3(spot.x, 0.07 + seedY, spot.z), quaternion, new THREE.Vector3(spot.size * 1.3, 1, spot.size));
+      matrix.compose(new THREE.Vector3(spot.x, 0.1 + seedY, spot.z), quaternion, new THREE.Vector3(spot.size * 1.3, 1, spot.size));
       mesh.setMatrixAt(i, matrix);
       mesh.setColorAt(i, new THREE.Color(spot.shade, spot.shade, spot.shade));
     });
@@ -381,7 +358,7 @@ function buildRoadLitter(ctx) {
     hubGroup().add(mesh);
   };
   place(mudTexture, AUTUMN.mudPatches, 1.2, 2.6, 0);
-  place(leavesTexture, AUTUMN.wetLeafPatches, 1.6, 2.8, 0.005);
+  place(leavesTexture, AUTUMN.wetLeafPatches, 1.6, 2.8, 0.015);
 }
 
 // ============================================================================
@@ -397,7 +374,7 @@ function buildMushrooms(ctx) {
       const reach = reachMin + random() * (reachMax - reachMin);
       const x = cx + Math.cos(angle) * reach;
       const z = cz + Math.sin(angle) * reach;
-      if (onRoad(x, z, roads, 0.8) || distanceToWater(x, z) < 1.5 || !insideWorld(x, z)) continue;
+      if (onRoad(x, z, roads, 0.8) || distanceToWater(x, z) < 1.5 || !insideWorld(x, z) || overlapsObstacle(x, z, 0.25)) continue;
       if (Math.hypot(x - HOME_X, z - HOME_Z) < 7) continue;
       spots.push({ x, z, s: 1 + random() * 0.8, yaw: random() * 6.3 });
     }
@@ -478,7 +455,7 @@ function buildGeese() {
   let wait = AUTUMN.geeseFirstAfter;
   let flight = null;
   let time = 0;
-  updaters.push((delta, at) => {
+  addUpdater((delta, at) => {
     time += delta;
     if (!flight) {
       wait -= delta;
@@ -521,7 +498,25 @@ function buildGeese() {
 // ============================================================================
 // Skördeprylar vid stugan: höbalar och några små pumpor (vanliga, inte Halloween-pumporna: de krossas inte)
 // ============================================================================
-function buildHarvest() {
+// Hem-gruppens lokala plats -> världen (hem-gruppen står på HOME_X/HOME_Z och är vriden BILLBOARD_FACING).
+function homeToWorld(lx, lz) {
+  const a = BILLBOARD_FACING;
+  return { x: HOME_X + Math.cos(a) * lx + Math.sin(a) * lz, z: HOME_Z - Math.sin(a) * lx + Math.cos(a) * lz };
+}
+// Är platsen fri från hinder (fasta och mjuka), tekoppar och vägar?
+function harvestSpotFree(ctx, lx, lz) {
+  const w = homeToWorld(lx, lz);
+  if (overlapsObstacle(w.x, w.z, 2.2)) return false;
+  if (teaCupSpots.some((cup) => Math.hypot(w.x - cup.x, w.z - cup.z) < 2.6)) return false;
+  return !onRoad(w.x, w.z, ctx.roads, 1.5);
+}
+
+function buildHarvest(ctx) {
+  // Första lediga plats vid stugan (hörnet till höger om dörren, sedan några alternativ). Ingen plats = inga skördeprylar.
+  const candidates = [[CABIN_X + 4.0, CABIN_Z + 2.4], [CABIN_X + 4.4, CABIN_Z + 4.2], [CABIN_X + 5.5, CABIN_Z + 2.0], [CABIN_X + 4.0, CABIN_Z + 6]];
+  const centre = candidates.find(([lx, lz]) => harvestSpotFree(ctx, lx, lz));
+  if (!centre) return;
+  const [cx, cz] = centre;
   const group = new THREE.Group();
   const baleMaterial = new THREE.MeshLambertMaterial({ color: '#d6b45a' });
   const strapMaterial = new THREE.MeshLambertMaterial({ color: '#8a6a2a' });
@@ -540,9 +535,9 @@ function buildHarvest() {
     group.add(bale);
   };
   // Två bredvid varandra och en ovanpå.
-  addBale(CABIN_X + 4.0, 0.55, CABIN_Z + 1.6, 0.1);
-  addBale(CABIN_X + 4.0, 0.55, CABIN_Z + 2.7, -0.08);
-  addBale(CABIN_X + 4.02, 1.5, CABIN_Z + 2.15, 0.05);
+  addBale(cx, 0.55, cz - 0.55, 0.1);
+  addBale(cx, 0.55, cz + 0.55, -0.08);
+  addBale(cx + 0.02, 1.5, cz, 0.05);
   // Små pumpor (ribbad kula, som Halloween-pumpan men mindre och i höstfärger).
   const pumpkinGeometry = new THREE.SphereGeometry(0.5, 14, 10);
   const position = pumpkinGeometry.attributes.position;
@@ -556,25 +551,21 @@ function buildHarvest() {
   const stemGeometry = new THREE.CylinderGeometry(0.05, 0.08, 0.17, 6).translate(0, 0.44, 0);
   const stemMaterial = new THREE.MeshLambertMaterial({ color: '#5d6b2a' });
   const colors = ['#d9822b', '#e3a04a', '#c8cf9a', '#b8561e', '#dd9a3a'];
-  [[5.1, 1.9, 0.8], [5.5, 2.6, 0.65], [5.0, 3.2, 0.5], [4.4, 3.5, 0.7], [5.6, 1.3, 0.55]].forEach(([dx, dz, s], i) => {
+  [[1.1, -0.25, 0.8], [1.5, 0.45, 0.65], [1.0, 1.05, 0.5], [0.4, 1.4, 0.7], [1.6, -0.85, 0.55]].forEach(([dx, dz, s], i) => {
     const body = new THREE.Mesh(pumpkinGeometry, new THREE.MeshLambertMaterial({ color: colors[i % colors.length] }));
     const stem = new THREE.Mesh(stemGeometry, stemMaterial);
     for (const part of [body, stem]) {
       part.scale.setScalar(s);
-      part.position.set(CABIN_X + dx, 0.41 * s - 0.02, CABIN_Z + dz);
+      part.position.set(cx + dx, 0.41 * s - 0.02, cz + dz);
       part.rotation.y = i * 1.3;
       group.add(part);
     }
   });
-  worldGroup(hub).add(group);
-  // Hindret ligger i hem-gruppens led (vriden BILLBOARD_FACING), räknat till världen för hand.
-  const a = BILLBOARD_FACING;
-  const lx = CABIN_X + 4.0;
-  const lz = CABIN_Z + 2.15;
-  addObstacles([{ x: HOME_X + Math.cos(a) * lx + Math.sin(a) * lz, z: HOME_Z - Math.sin(a) * lx + Math.cos(a) * lz, radius: 1.2 }]);
-  // Själva gruppen sitter i hem-gruppens led: lägg den i homeGroup-vridningen.
-  group.position.set(HOME_X, 0, HOME_Z);
+  hubGroup().add(group);
+  group.position.set(HOME_X, 0, HOME_Z); // Gruppen sitter i hem-gruppens led.
   group.rotation.y = BILLBOARD_FACING;
+  const w = homeToWorld(cx, cz);
+  addObstacles([{ x: w.x, z: w.z, radius: 1.3 }, { x: homeToWorld(cx + 1.2, cz + 0.3).x, z: homeToWorld(cx + 1.2, cz + 0.3).z, radius: 1.0 }]);
 }
 
 // ============================================================================
@@ -584,32 +575,26 @@ function wanted() {
   const state = getSeasonState();
   if (!state.names.includes('autumn')) return false;
   const own = state.config.autumn || {};
-  if (own.duringHalloween !== undefined) AUTUMN.duringHalloween = own.duringHalloween;
-  if (state.names.includes('halloween') && !AUTUMN.duringHalloween) return false; // Halloween har sitt eget utseende.
   Object.assign(AUTUMN, own);
+  if (state.names.includes('halloween') && !AUTUMN.duringHalloween) return false; // Halloween har sitt eget utseende.
   return true;
 }
 
-// ctx = { roads, lamps, signposts, trees } (det hub.buildHubRoads/buildHubTrees lämnar).
-// Körs före hub.buildHubCollision (höbalarna lägger ett hinder).
-export function buildAutumn(ctx) {
-  if (built || !wanted()) return;
-  built = true;
-  buildWarmSun();
-  if (AUTUMN.fogBanks > 0) buildFogBanks();
-  if (ctx.trees && ctx.trees.length) {
-    buildTreeLeaves(ctx);
-    buildMushrooms(ctx);
-  }
-  buildSwirl();
-  if (ctx.roads && ctx.roads.length) buildRoadLitter(ctx);
-  buildGeese();
-  if (AUTUMN.harvest) buildHarvest();
-}
-
-// Körs en gång per bild (main.js). at = bilens plats { x, z } (annars bilen själv).
-export function updateAutumn(delta, at) {
-  if (!built) return;
-  const where = at || car.position;
-  for (const update of updaters) update(delta, where);
-}
+// Hook-API (seasonfx.js): build körs efter buildHubCollision, så mjuka hinder och prydnad finns att undvika.
+export default {
+  name: 'autumn',
+  build(ctx) {
+    if (active || !wanted()) return;
+    active = true;
+    buildWarmSun();
+    if (AUTUMN.fogBanks > 0) buildFogBanks();
+    if (ctx.trees && ctx.trees.length) {
+      buildTreeLeaves(ctx);
+      buildMushrooms(ctx);
+    }
+    buildSwirl();
+    if (ctx.roads && ctx.roads.length) buildRoadLitter(ctx);
+    buildGeese();
+    if (AUTUMN.harvest) buildHarvest(ctx);
+  },
+};

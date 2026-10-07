@@ -30,7 +30,7 @@ import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
 // Projektlistan fungerar direkt, även under laddningen (den behöver bara projektdatan).
 import { setWorldJumper } from './project-list.js';
 import { startFromCode } from './ui.js';
-import { seasonActive, hasRule } from './season.js';
+import { seasonActive } from './season.js';
 
 // ---------------------------------------------------------------------------
 // 1. LADDNINGSSCENEN – börjar rulla direkt
@@ -72,13 +72,11 @@ await step(0.65, 'Growing grass');
 hub.buildHubGrass(roadsAndLamps);
 hub.buildHubGrounding(roadsAndLamps);
 // Säsongen (season.js): pumpor, snö, kronblad m.m. Hämtas bara när någon regel ändrar något, så utan säsong händer inget här.
-// Före buildHubCollision: lyktornas knock() lindas in och pumporna lägger egna hinder.
+// Steg 1 före buildHubCollision (lyktornas knock lindas in); steg 2 efter den; steg 3 efter optimizeWorld.
 const seasonFx = seasonActive() ? await import('./seasonfx.js') : null;
-if (seasonFx) seasonFx.buildSeasonFx(roadsAndLamps);
-// Höstens egna tillägg (season-autumn.js): dimma, lövvirvlar, svamp, gäss m.m. Gör inget under Halloween om inte configen säger det.
-const autumnFx = hasRule('autumn') ? await import('./season-autumn.js') : null;
-if (autumnFx) autumnFx.buildAutumn(roadsAndLamps);
+if (seasonFx) await seasonFx.prepareSeasonFx(roadsAndLamps); // Steg 1 (hook-API i seasonfx.js).
 hub.buildHubCollision(roadsAndLamps); // Fasta saker bilen krockar med (collision.js).
+if (seasonFx) seasonFx.buildSeasonFx(roadsAndLamps); // Steg 2: efter alla hinder, så att pumpor m.m. kan undvika dem.
 // OBS: portals.travel läses som portals.travel varje gång (inte "const { travel } = ..."),
 // för då skulle vi bara få värdet det hade just nu – och det ändras när en resa startar.
 const portals = await import('./portals.js');
@@ -112,6 +110,7 @@ await step(0.7, 'Tidying up the town');
 // inställningar påverkar hur grafikkortets program ser ut.
 perf.applySavedQuality();
 optimizeWorld(WORLDS.hub);
+if (seasonFx) seasonFx.afterOptimizeSeasonFx(); // Steg 3: t.ex. snö på de färdiga materialen.
 setShadows(car); // Bilen kastar och tar emot skuggor.
 
 await step(0.75, 'Warming up the shaders');
@@ -287,7 +286,6 @@ function gameFrame(time) {
   updateLamps(delta);
   updateKnockables(delta); // Lyktor, skyltar och träd som bilen kört över.
   if (seasonFx) seasonFx.updateSeasonFx(delta, car.position); // Säsongens partiklar och sken.
-  if (autumnFx) autumnFx.updateAutumn(delta, car.position); // Höstens tillägg.
   updateCaveThemes(); // Grottornas rörliga prylar (bara i hemvärlden).
   perf.updateQuality(rawDelta);
   const afterGame = performance.now();

@@ -7,49 +7,19 @@
 // nyckel finns i configen (props, caveTint, pondMist, particles), så utan säsong händer ingenting alls.
 // Körs före hub.buildHubCollision, eftersom lyktornas knock() lindas in här innan kollisionen hämtar den.
 import * as THREE from 'three';
-import {
-  WORLDS, BILLBOARD_FACING, CAMERA_PITCH, DRIVE_RADIUS, HUB_X, HUB_Z,
-  currentWorld, worldGroup, makeGlowMaterial,
-} from './core.js';
-import { PROJECTS } from './projects.js';
-import { ROAD_WIDTH, distanceToRoad } from './roads.js';
-import { HOME_X, HOME_Z, CABIN_X, CABIN_Z, CABIN_SIZE, GARAGE_DEPTH, homeGroup, hubPoint } from './home.js';
+import { WORLDS, BILLBOARD_FACING, CAMERA_PITCH, currentWorld, makeGlowMaterial } from './core.js';
+import { CABIN_X, CABIN_Z, CABIN_SIZE, GARAGE_DEPTH, homeGroup, hubPoint } from './home.js';
 import { PORTALS } from './portals.js';
-import { hubPropObstacles, hubGrassFree, distanceToWater } from './hubprops.js';
-import { addObstacles } from './collision.js';
-import { addAnimation, knockableObject } from './knockables.js';
+import { addObstacles, overlapsObstacle } from './collision.js';
+import { knockableObject } from './knockables.js';
 import { markMoving } from './optimize.js';
 import { getSeasonState, rampFactor } from './season.js';
+import {
+  hub, hubGroup, seededRandom, canvasTexture, updaters, spotOk, smashThing, shardGroup, blobTexture,
+} from './seasonkit.js';
 
-const hub = WORLDS.hub;
 const DRIFT_AREA = 26;  // Halva sidan på lådan runt bilen där partiklarna finns.
 const DRIFT_TOP = 14;   // Hur högt upp de börjar.
-const SHARD_GRAVITY = 16;
-
-// Samma slumptal varje gång (mulberry32), så att pumporna hamnar på samma ställen vid varje besök.
-function seededRandom(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// --- Gemensamt: en skylt-textur ritad i en canvas ---
-function canvasTexture(size, draw) {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  draw(canvas.getContext('2d'), size);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
-const hubGroup = () => worldGroup(hub);
-const updaters = []; // Funktioner (delta, car, time) som körs varje bild.
 
 // ============================================================================
 // Drivande partiklar: snö, kronblad, löv, gnistor. En InstancedMesh per sort (ett ritanrop var).
@@ -143,124 +113,31 @@ const pumpkinMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff', emissi
 const stemMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 const STEM_COLOR = new THREE.Color('#5d6b2a');
 
-// Ligger platsen fri från vägar, hus, grottor, skyltar, träd, vatten och andra föremål?
-function pumpkinSpotOk(x, z, ctx, placed, minGap) {
-  if (Math.hypot(x - HUB_X, z - HUB_Z) > DRIVE_RADIUS - 6) return false;
-  if (Math.hypot(x - HOME_X, z - HOME_Z) < 13) return false;                                       // Garaget och stugan.
-  if (ctx.roads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + 1.7)) return false; // Vägar, infarter, gångväg.
-  if (PORTALS.some((portal) => portal.world === hub && portal.style === 'cave' && (Math.hypot(x - portal.center.x, z - portal.center.z) < 14 || Math.hypot(x - portal.door.x, z - portal.door.z) < 9))) return false; // Grottorna.
-  if (PROJECTS.some((project) => project.world === hub && Math.hypot(x - project.x, z - project.z) < 8)) return false; // Skyltarna och deras fickor.
-  if (ctx.lamps.some((lamp) => Math.hypot(x - lamp.at.x, z - lamp.at.z) < 2.5)) return false;
-  if (ctx.signposts.some((sign) => Math.hypot(x - sign.at.x, z - sign.at.z) < 3.5)) return false;
-  if (hubPropObstacles.some((prop) => Math.hypot(x - prop.x, z - prop.z) < prop.radius + 1.8)) return false;
-  if (hubGrassFree.some((spot) => Math.hypot(x - spot.x, z - spot.z) < spot.radius + 1)) return false;
-  if (distanceToWater(x, z) < 2.5) return false;
-  if (ctx.trees.some((tree) => Math.hypot(x - tree.x, z - tree.z) < 1.8 + 0.5 * tree.scale)) return false;
-  return !placed.some((other) => Math.hypot(x - other.x, z - other.z) < minGap);
-}
-
-// Skärvor, kärnor och en fläck när en pumpa krossas (samma sätt som tekopparna i home.js).
-const shardGroup = new THREE.Group();
-markMoving(shardGroup); // Får inte slås ihop: bitarna flyger.
 const shardGeometry = new THREE.BoxGeometry(0.34, 0.09, 0.24);
 const seedGeometry = new THREE.BoxGeometry(0.1, 0.03, 0.05);
-let splatTexture = null;
 
 function smashPumpkin(pumpkin, props, dirX, dirZ, strength) {
-  const { x, z, s } = pumpkin;
   pumpkin.hide();
-  const materials = {
-    shell: new THREE.MeshLambertMaterial({ color: pumpkin.color, side: THREE.DoubleSide }),
-    pulp: new THREE.MeshLambertMaterial({ color: props.pulpColor || '#f4b04a' }),
-    seed: new THREE.MeshLambertMaterial({ color: props.seedColor || '#f5ecc8' }),
-    stem: new THREE.MeshLambertMaterial({ color: STEM_COLOR }),
-  };
-  const pieces = [];
+  const shell = new THREE.MeshLambertMaterial({ color: pumpkin.color, side: THREE.DoubleSide });
+  const pulp = new THREE.MeshLambertMaterial({ color: props.pulpColor || '#f4b04a' });
+  const seed = new THREE.MeshLambertMaterial({ color: props.seedColor || '#f5ecc8' });
+  const stem = new THREE.MeshLambertMaterial({ color: STEM_COLOR });
   const parts = [
-    ...Array.from({ length: 6 }, () => ['shell', shardGeometry, 0.7 + Math.random() * 0.5]),
-    ...Array.from({ length: 4 }, () => ['pulp', shardGeometry, 0.4 + Math.random() * 0.3]),
-    ...Array.from({ length: 6 }, () => ['seed', seedGeometry, 1]),
-    ['stem', stemGeometry, 0.8],
+    ...Array.from({ length: 6 }, () => ({ geometry: shardGeometry, material: shell, size: 0.7 + Math.random() * 0.5 })),
+    ...Array.from({ length: 4 }, () => ({ geometry: shardGeometry, material: pulp, size: 0.4 + Math.random() * 0.3 })),
+    ...Array.from({ length: 6 }, () => ({ geometry: seedGeometry, material: seed, size: 1, resting: 0.03 })),
+    { geometry: stemGeometry, material: stem, size: 0.8, resting: 0.06 },
   ];
-  for (const [name, geometry, size] of parts) {
-    const mesh = new THREE.Mesh(geometry, materials[name]);
-    mesh.scale.setScalar(size * s);
-    mesh.position.set(x + (Math.random() - 0.5) * 0.4, 0.2 + Math.random() * 0.4 * s, z + (Math.random() - 0.5) * 0.4);
-    mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
-    const spread = 2 + 4 * strength;
-    const angle = Math.random() * Math.PI * 2;
-    pieces.push({
-      mesh, resting: name === 'seed' ? 0.03 : name === 'stem' ? 0.06 : 0.05,
-      vx: dirX * spread * (0.5 + Math.random()) + Math.cos(angle) * 1.8,
-      vz: dirZ * spread * (0.5 + Math.random()) + Math.sin(angle) * 1.8,
-      vy: 3 + Math.random() * 3.5 * (0.5 + strength),
-      spinX: (Math.random() - 0.5) * 16, spinZ: (Math.random() - 0.5) * 16, landed: false,
-    });
-    shardGroup.add(mesh);
-  }
-  // Fläcken av mos på marken: växer fram och blir liggande.
-  if (!splatTexture) {
-    splatTexture = canvasTexture(128, (pen, n) => {
-      pen.fillStyle = '#e8801e';
-      pen.beginPath();
-      for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.12) {
-        const r = n * (0.3 + 0.1 * Math.sin(a * 5 + 1) + 0.07 * Math.sin(a * 11));
-        pen[a === 0 ? 'moveTo' : 'lineTo'](n / 2 + Math.cos(a) * r, n / 2 + Math.sin(a) * r);
-      }
-      pen.fill();
-      pen.fillStyle = '#f4b04a';
-      pen.beginPath();
-      pen.arc(n / 2, n / 2, n * 0.16, 0, Math.PI * 2);
-      pen.fill();
-    });
-  }
-  const splat = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
-    new THREE.MeshBasicMaterial({ map: splatTexture, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
-  );
-  splat.position.set(x, 0.06, z);
-  splat.rotation.y = Math.random() * 6;
-  splat.userData.noShadow = true;
-  shardGroup.add(splat);
-  let time = 0;
-  addAnimation((delta) => {
-    time += delta;
-    let moving = false;
-    for (const piece of pieces) {
-      if (piece.landed) continue;
-      const { mesh } = piece;
-      piece.vy -= SHARD_GRAVITY * delta;
-      mesh.position.x += piece.vx * delta;
-      mesh.position.y += piece.vy * delta;
-      mesh.position.z += piece.vz * delta;
-      mesh.rotation.x += piece.spinX * delta;
-      mesh.rotation.z += piece.spinZ * delta;
-      if (mesh.position.y <= piece.resting) {
-        mesh.position.y = piece.resting;
-        if (piece.vy < -2.5) { // Studsar en gång.
-          piece.vy *= -0.3; piece.vx *= 0.5; piece.vz *= 0.5; piece.spinX *= 0.4; piece.spinZ *= 0.4;
-        } else {
-          piece.landed = true;
-          mesh.rotation.x = (Math.random() - 0.5) * 0.4;
-          mesh.rotation.z = (Math.random() - 0.5) * 0.4;
-        }
-      } else {
-        moving = true;
-      }
-    }
-    const grow = Math.min(1, time / 0.5);
-    splat.material.opacity = 0.9 * grow;
-    splat.scale.setScalar(s * 2.1 * (0.35 + 0.65 * (1 - Math.pow(1 - grow, 3))));
-    return !moving && time > 0.6;
-  });
+  smashThing({ x: pumpkin.x, z: pumpkin.z, s: pumpkin.s, dirX, dirZ, strength, parts, splat: { texture: blobTexture('#e8801e', '#f4b04a', 5), size: 2.1, opacity: 0.9 } });
 }
+
 
 function buildPumpkins(ctx, config, factor) {
   const props = config.props;
   const setup = props.pumpkins;
   const count = Math.max(3, Math.round(setup.count * factor));
   const random = seededRandom(1031);
-  const placed = [];
+  let placed = [];
   // Hälften nära träd (där löven ligger), resten ute på gräset.
   for (let attempt = 0; attempt < count * 60 && placed.length < count; attempt++) {
     let x;
@@ -276,9 +153,13 @@ function buildPumpkins(ctx, config, factor) {
       x = spot.x;
       z = spot.z;
     }
-    if (!pumpkinSpotOk(x, z, ctx, placed, setup.minGap)) continue;
-    placed.push({ x, z, s: 0.7 + random() * 0.65, yaw: random() * 6.3, color: new THREE.Color(setup.colors[Math.floor(random() * setup.colors.length)]) });
+    const s = 0.7 + random() * 0.65;
+    const footprint = 0.45 + 0.25 * s; // Pumpans riktiga radie (samma som hindret).
+    if (!spotOk(x, z, ctx, placed, setup.minGap, 1.7, footprint + 0.5)) continue;
+    placed.push({ x, z, s, yaw: random() * 6.3, color: new THREE.Color(setup.colors[Math.floor(random() * setup.colors.length)]) });
   }
+  // Sista kontrollen mot alla hinder med riktig radie (lyktor, skyltar, prydnad ...).
+  placed = placed.filter((pumpkin) => !overlapsObstacle(pumpkin.x, pumpkin.z, 0.45 + 0.25 * pumpkin.s + 0.3));
   if (!placed.length) return;
   const bodies = new THREE.InstancedMesh(pumpkinGeometry, pumpkinMaterial, placed.length);
   const stems = new THREE.InstancedMesh(stemGeometry, stemMaterial, placed.length);
@@ -314,7 +195,7 @@ function buildPumpkins(ctx, config, factor) {
   stems.instanceColor.needsUpdate = true;
   bodies.frustumCulled = false;
   stems.frustumCulled = false;
-  hubGroup().add(bodies, stems, shardGroup);
+  hubGroup().add(bodies, stems);
   addObstacles(obstacles);
 }
 
@@ -358,6 +239,8 @@ function buildLampPumpkins(ctx, config, factor) {
   const towardZ = Math.cos(BILLBOARD_FACING);
   const pumpkinColor = new THREE.MeshLambertMaterial({ color: '#e8731a', emissive: '#3a1100' });
   const stemColor = new THREE.MeshLambertMaterial({ color: STEM_COLOR });
+  const HANG = 0.66; // Pumpans mitt från stolpens mitt: pumpans radie (0.48) + stolpen + lite luft.
+  const bracketGeometry = new THREE.CylinderGeometry(0.03, 0.03, HANG, 6).rotateX(Math.PI / 2);
   for (let n = 0; n < wanted; n++) {
     const lamp = lamps[Math.floor(((n + 0.5) * lamps.length) / wanted)];
     // En grupp med foten i stolpens fot, så att den kan välta med stolpen (knockableObject).
@@ -366,26 +249,25 @@ function buildLampPumpkins(ctx, config, factor) {
     markMoving(group);
     const body = new THREE.Mesh(pumpkinGeometry, pumpkinColor);
     body.scale.setScalar(0.95);
-    body.position.set(towardX * 0.3, 2.3, towardZ * 0.3);
+    body.position.set(towardX * HANG, 2.3, towardZ * HANG);
     const stem = new THREE.Mesh(stemGeometry, stemColor);
     stem.scale.setScalar(0.95);
     stem.position.copy(body.position);
     const face = new THREE.Mesh(faceGeometry, faceMaterial);
-    face.position.set(towardX * 0.3, 2.3, towardZ * 0.3).addScaledVector(new THREE.Vector3(towardX, 0, towardZ), 0.4);
+    face.position.set(towardX * HANG, 2.3, towardZ * HANG).addScaledVector(new THREE.Vector3(towardX, 0, towardZ), 0.4);
     face.rotation.set(-CAMERA_PITCH, BILLBOARD_FACING, 0, 'YXZ');
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     glow.position.copy(face.position);
     glow.rotation.copy(face.rotation);
     glow.userData.noShadow = true;
     face.userData.noShadow = true;
-    group.add(body, stem, face, glow);
+    const bracket = new THREE.Mesh(bracketGeometry, stemColor); // Fäste från stolpen, så att pumpan hänger bredvid den.
+    bracket.position.set(towardX * HANG * 0.5, 2.3, towardZ * HANG * 0.5);
+    bracket.rotation.y = BILLBOARD_FACING;
+    group.add(body, stem, bracket, face, glow);
     hubGroup().add(group);
     const fall = knockableObject(group);
-    const original = lamp.knock;
-    lamp.knock = (dirX, dirZ, strength) => { // Pumpan följer med när lyktan välter.
-      if (original) original(dirX, dirZ, strength);
-      fall(dirX, dirZ);
-    };
+    lamp.onKnock = (dirX, dirZ) => fall(dirX, dirZ); // Pumpan följer med när lyktan välter (se prepareSeasonFx).
   }
   let time = 0;
   updaters.push((delta) => { // Levande sken: ett lugnt flimmer.
@@ -573,8 +455,50 @@ function buildBats(ctx, config, factor) {
 }
 
 // ============================================================================
-// Ingången
+// Hook-API för säsongsmoduler
 // ============================================================================
+// Varje säsongs extra saker ligger i en EGEN fil som seasonfx.js bara hämtar när den gällande configen ber om det:
+//   config.modules = { winter: true }          -> js/season-winter.js
+//   config.modules = { 'spring-summer': true } -> js/season-spring-summer.js
+//   config.modules = { autumn: true }          -> js/season-autumn.js
+// (modules slås ihop mellan regler som övriga nycklar, så flera kan vara på samtidigt.) En modulfil exporterar
+// som default (eller anropar registerSeasonModule själv) ett objekt, alla fält valfria:
+//   { name,
+//     prepare(ctx, config)       - före buildHubCollision (t.ex. haka på lamp.onKnock),
+//     build(ctx, config)         - efter buildHubCollision: lägg ut saker, addObstacles, addUpdater ...,
+//     afterOptimize(config)      - efter optimizeWorld(hub): byt skuggare på färdiga material (snö på det som vetter uppåt),
+//     update(delta, car, config) - varje bild (car = bilens position) }
+// ctx = { roads, lamps, signposts, trees }. Gemensamma verktyg (platsprov, krossa-animation, uppdateringslista,
+// slumptal, texturer) finns i js/seasonkit.js. Halloween ligger kvar här i seasonfx.js.
+const MODULE_FILES = {
+  winter: () => import('./season-winter.js'),
+  'spring-summer': () => import('./season-spring-summer.js'),
+  autumn: () => import('./season-autumn.js'),
+};
+const modules = [];
+export function registerSeasonModule(module) {
+  if (module && !modules.includes(module)) modules.push(module);
+}
+
+// Steg 1, före hub.buildHubCollision: hämtar modulerna, lindar in lyktornas knock och låter modulerna förbereda sig.
+export async function prepareSeasonFx(ctx) {
+  const config = getSeasonState().config;
+  hubGroup().add(shardGroup);
+  for (const lamp of ctx.lamps) { // collision.js hämtar lamp.knock när hindren byggs: andra moduler hakar på lamp.onKnock.
+    const original = lamp.knock;
+    lamp.knock = (dirX, dirZ, strength) => {
+      if (original) original(dirX, dirZ, strength);
+      if (lamp.onKnock) lamp.onKnock(dirX, dirZ, strength);
+    };
+  }
+  for (const name of Object.keys(config.modules || {})) {
+    if (!config.modules[name] || !MODULE_FILES[name]) continue;
+    registerSeasonModule((await MODULE_FILES[name]()).default);
+  }
+  for (const module of modules) if (module.prepare) module.prepare(ctx, config);
+}
+
+// Steg 2, efter hub.buildHubCollision (alla hinder finns, så platsprov kan titta på dem).
 // ctx = { roads, lamps, signposts, trees } (det hub.buildHubRoads/buildHubTrees lämnar).
 export function buildSeasonFx(ctx) {
   const state = getSeasonState();
@@ -588,9 +512,18 @@ export function buildSeasonFx(ctx) {
   if (config.props && config.props.cobwebs && factor >= 0.5) buildCobwebs();
   if (config.caveTint) buildCaveTint(config, factor);
   if (config.pondMist) buildPondMist(config, factor);
+  for (const module of modules) if (module.build) module.build(ctx, config);
+}
+
+// Steg 3, efter optimizeWorld(hub) och före prepareWorld.
+export function afterOptimizeSeasonFx() {
+  const config = getSeasonState().config;
+  for (const module of modules) if (module.afterOptimize) module.afterOptimize(config);
 }
 
 // Körs en gång per bild (main.js).
 export function updateSeasonFx(delta, carPosition) {
   for (const update of updaters) update(delta, carPosition);
+  const config = getSeasonState().config;
+  for (const module of modules) if (module.update) module.update(delta, carPosition, config);
 }
