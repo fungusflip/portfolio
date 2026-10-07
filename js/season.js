@@ -31,6 +31,9 @@
 //   foliage    – { leafLitter, groundLeaves, fallingLeaves, litterAlt, soilAlpha }: löv under träden (trees.js), lövtäcket och
 //                fallande löv (leaves.js). Gånger-tal 0..1 (0 = inga löv; litterAlt = färgen på snö-/frostklumparna som ersätter dem).
 //                Kronornas och lövens färger sätts med palette.leaves / palette.fallenLeaves.
+//   winter     – { snowmen, drifts, ice, aurora, lights }: vinterns extra saker (js/season-winter.js): antal snögubbar och drivor, is på dammen,
+//                norrskenets styrka (0..1) och julbelysning (true).
+//   tracks     – { life, grass, road }: däckspårens livslängd (gånger-tal) och färger [färg, alfa] (tracks.js).
 //   modules    – { winter | 'spring-summer' | autumn: true }: säsongens extra filer (js/season-*.js), se hook-API i seasonfx.js.
 //   site       – { accent, badge }: accentfärg och liten dekor i sidhuvudet (badge: 'pumpkin' | 'snowflake' | 'flower' | 'sun' | 'star').
 
@@ -39,12 +42,15 @@ export const RULES = [
   {
     name: 'winter', base: true, from: [12, 1], to: [2, 29],
     config: {
-      palette: { background: '#2c3656', sun: '#d6e4ff', skyLight: '#c4d6ff', groundLight: '#a9b8e0', ground: '#a8b09a', groundDark: '#8d9a88', groundDry: '#c4c8b4',
+      palette: { background: '#2c3656', sun: '#d6e4ff', skyLight: '#c4d6ff', groundLight: '#a9b8e0', ground: '#c3cfe0', groundDark: '#a9b9d2', groundDry: '#dbe4f1', grassRoot: '#8fa2bd', grassTip: '#eef3fa', grassTipAutumn: '#d3e1f2',
+        gravel: '#aeb5c2', gravelLight: '#dbe2ee', gravelDark: '#8991a3', tireDust: '#f2f6ff', // Snö på marken och vägarna.
         // Kronor och löv: frostiga, snötyngda kronor och bleka "löv" i markens textur (inga röda och orange).
         leaves: ['#e4edf5', '#cfdceb', '#b9cbe0'], fallenLeaves: ['#dfe7f0', '#cdd8e6', '#eef3f8', '#b9c8da', '#e3ebf4'],
       },
       foliage: { leafLitter: 0, groundLeaves: 0, fallingLeaves: 0, litterAlt: '#eef3f8', soilAlpha: 0.25 }, // Inga lövhögar eller löv: frost i stället.
       modules: { winter: true },
+      winter: { snowmen: 7, drifts: 130, ice: true, aurora: 0.3 }, // js/season-winter.js
+      tracks: { life: 3, grass: { normal: ['#5c6a82', 0.6], heavy: ['#463f42', 0.8] }, road: { normal: ['#79849a', 0.4], heavy: ['#3d4352', 0.55] } }, // Däckspår blir kvar i snön (tracks.js).
       light: { hemi: 1.0, sun: 0.85 },
       fog: { nearMul: 0.85, farMul: 0.9 },
       particles: { drift: { snow: { kind: 'flake', count: 160, colors: ['#ffffff', '#e6efff'], fall: 1.1, sway: 0.7, size: 0.12 } } },
@@ -139,10 +145,21 @@ export const RULES = [
       site: { accent: '#ffd24a', badge: 'flower' },
     },
   },
+  { name: 'christmas', from: [12, 1], to: [12, 26], demo: [12, 18], config: { winter: { lights: true } } }, // Julbelysning 1-26 december.
+  {
+    // Vinternatt: solståndet, mörk himmel och starkt norrsken.
+    name: 'winter-night', from: [12, 21], to: [12, 21], demo: [12, 21],
+    config: {
+      palette: { background: '#0b1230', sun: '#9fb8ff', skyLight: '#6f86d0' },
+      light: { hemi: 0.75, sun: 0.5 },
+      winter: { aurora: 1 },
+    },
+  },
   {
     name: 'christmas-eve', from: [12, 24], to: [12, 24], demo: [12, 24],
     config: {
       palette: { warmLamp: '#ffd9a0' },
+      winter: { lights: true },
       particles: { drift: { sparkle: { kind: 'spark', count: 40, colors: ['#ffe9a8', '#ffffff'], fall: 0.3, sway: 0.5, size: 0.09 } } },
       banner: 'Merry Christmas Eve',
       site: { accent: '#ff7a6a', badge: 'star' },

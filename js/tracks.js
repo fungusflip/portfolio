@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { scene, WORLDS, currentWorld } from './core.js';
 import { shared, getSurface } from './magic.js';
 import { HOME_X, HOME_Z, GARAGE_Z } from './home.js';
+import { getSeasonConfig } from './season.js';
 
 // --- Inställningar (ändra här) ---
 const MAX_QUADS = 1600;       // Ringbuffertens storlek: så många bitar spår finns som mest (äldst skrivs över).
@@ -38,6 +39,16 @@ const SURFACES = {
   prog:   { normal: [color('#0a1d12'), 0.14], heavy: [color('#040a07'), 0.28], wide: 1 },
   art:    { normal: [color('#c4b192'), 0.12], heavy: [color('#4a3b30'), 0.24], wide: 1 },
 };
+
+// Säsong (season.js, nyckeln tracks): { life: gånger-tal på livslängden, grass/road: { normal: [färg, alfa], heavy: [färg, alfa] } }.
+const trackTheme = getSeasonConfig().tracks;
+if (trackTheme) {
+  for (const name of ['grass', 'road']) {
+    const set = trackTheme[name];
+    if (set) SURFACES[name] = { ...SURFACES[name], normal: [color(set.normal[0]), set.normal[1]], heavy: [color(set.heavy[0]), set.heavy[1]] };
+  }
+}
+const LIFE_MUL = trackTheme && trackTheme.life ? trackTheme.life : 1;
 
 function surfaceNow(x, z) {
   if (currentWorld === WORLDS.techart) return SURFACES.techart;
@@ -135,7 +146,7 @@ const quadCorners = new Array(8).fill(0); // Återanvänds (inga nya listor per 
 const QUAD_ACROSS = [-1, 1, -1, 1];
 function writeQuad(wheel, bLx, bLz, bRx, bRz, along, surface, heavy, alpha) {
   const set = heavy ? surface.heavy : surface.normal;
-  const life = heavy ? LIFE_HEAVY : LIFE_NORMAL;
+  const life = (heavy ? LIFE_HEAVY : LIFE_NORMAL) * LIFE_MUL;
   const now = shared.uTime.value;
   const v = next * 4;
   next = (next + 1) % MAX_QUADS;
