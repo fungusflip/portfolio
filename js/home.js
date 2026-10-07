@@ -453,6 +453,7 @@ const GROUND_CUPS = [
   [9.1, 1.2, 0.55, 0.9, 'hot'],    // Full och varm, intill stugans högra vägg.
   [10.5, -1.6, 0.45, 0, 'cold'],   // Tom. Flyttad utåt för vedboden.
   [1.4, -3.3, 0.5, 0.85, 'cold'],  // Bakom garaget: full men kall (bortglömd).
+  [6.2, 5.9, 0.5, 0.6, 'warm'],    // Framför stugan, bredvid gångvägen: en ny, halvfull och ljummen.
 ];
 // Gångvägen från stugdörren (samma kurva som i hub.js): kopparna på marken håller sig borta från den.
 const FOOTPATH_CURVE = [[DOOR_X_LOCAL, CABIN_FRONT + 0.3], [DOOR_X_LOCAL, CABIN_FRONT + 2.4], [DOOR_X_LOCAL - 1.4, 5.7], [2.7, 5.5]];
@@ -510,6 +511,54 @@ function addTeaCup(parent, x, y, z, size, fill, heat, yaw) {
   // Ångan börjar strax ovanför teets yta, utspridd över hela ytan.
   if (heat === 'hot') steamSpots.push({ cup, height: 0.16 + fill * CUP_HEIGHT + 0.15, size });
   return cup;
+}
+// Dekaler under kopparna på marken, så att de ser ut att stå IN i marken och inte bara ligga på den:
+// en mjuk mörk kontaktskugga, ett tryckt märke i gräset och en teglänta/ring där koppen stått.
+// Dekalerna är platta ytor strax över marken (y = 0.035: över vägarnas lager, under däckspåren på 0.06).
+function makeDecalTexture(draw) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 128;
+  draw(canvas.getContext('2d'), 128);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+const contactShadowTexture = makeDecalTexture((g, n) => {
+  const grad = g.createRadialGradient(n / 2, n / 2, n * 0.12, n / 2, n / 2, n / 2);
+  grad.addColorStop(0, 'rgba(8,14,4,0.75)');
+  grad.addColorStop(0.55, 'rgba(8,14,4,0.38)');
+  grad.addColorStop(1, 'rgba(8,14,4,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, n, n);
+});
+const teaStainTexture = makeDecalTexture((g, n) => {
+  // Ojämn brun ring (intorkat te) med en liten stänkdroppe vid sidan.
+  g.strokeStyle = 'rgba(96,74,32,0.55)';
+  g.lineWidth = n * 0.035;
+  g.beginPath();
+  for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.05) {
+    const r = n * (0.34 + 0.015 * Math.sin(a * 5) + 0.01 * Math.sin(a * 11));
+    g[a === 0 ? 'moveTo' : 'lineTo'](n / 2 + Math.cos(a) * r, n / 2 + Math.sin(a) * r);
+  }
+  g.stroke();
+  g.fillStyle = 'rgba(96,74,32,0.45)';
+  g.beginPath();
+  g.arc(n * 0.84, n * 0.58, n * 0.035, 0, Math.PI * 2);
+  g.fill();
+});
+function addCupDecal(texture, x, z, radius, rotation, opacity) {
+  const decal = new THREE.Mesh(
+    new THREE.PlaneGeometry(radius * 2, radius * 2).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+  );
+  decal.position.set(x, 0.035, z);
+  decal.rotation.y = rotation;
+  decal.renderOrder = 1;
+  homeGroup.add(decal);
+}
+for (const { x, z, size, yaw, fill, heat } of cupLayout.ground) {
+  addCupDecal(contactShadowTexture, x, z, 1.75 * size, 0, 1);                       // Kontaktskugga under tefatet.
+  if (fill < 0.6 || heat === 'cold') addCupDecal(teaStainTexture, x + 0.25 * size * Math.cos(yaw), z - 0.25 * size * Math.sin(yaw), 1.9 * size, yaw * 3.1, 0.8); // Gamla koppar har lämnat ett märke.
 }
 for (const { x, y, z, size, yaw, fill, heat } of cupLayout.ground) {
   const cup = addTeaCup(homeGroup, x, y, z, size, fill, heat, yaw);
