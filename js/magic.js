@@ -380,6 +380,10 @@ let surfaceSampler = () => 0;
 export function setSurfaceSampler(sampler) {
   surfaceSampler = sampler;
 }
+// Samma underlag för andra moduler (däckspåren i tracks.js): 0 gräs, 1 väg, 2 ficka.
+export function getSurface(x, z) {
+  return surfaceSampler(x, z);
+}
 
 function makePuffSystem(size, options) {
   const spawns = new Float32Array(size * 4).fill(-100); // x, y, z, födelsetid (-100 = aldrig född).

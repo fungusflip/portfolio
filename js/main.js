@@ -77,6 +77,7 @@ const portals = await import('./portals.js');
 const { fallingLeaves, fallingLeafMaterial, moteMaterial, updateLeaves, wind, setLeafTrees } = await import('./leaves.js');
 setLeafTrees(roadsAndLamps.trees, roadsAndLamps.roads); // Löven samlas under träden och faller från kronorna.
 const { updateMagic, setSurfaceSampler } = await import('./magic.js');
+const { updateTracks } = await import('./tracks.js'); // Däckspår i marken (samma underlag som puffarna).
 // Vad bilen kör på (för färgen på däckspuffarna): 0 = gräs (jord), 1 = väg (grus), 2 = parkeringsficka.
 const { distanceToRoad, ROAD_WIDTH, bayFrames } = await import('./roads.js');
 const hubBays = bayFrames(WORLDS.hub, roadsAndLamps.roads);
@@ -331,6 +332,7 @@ function gameFrame(time) {
   }
   updateLeaves(delta, target); // Löven hålls i en låda runt samma punkt.
   updateMagic(delta, car.position, wind, car.rotation.y, carModule.drifting || carModule.sliding || carModule.boosting); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
+  updateTracks(delta, car.position, car.rotation.y, carModule.speed, carModule.drifting || carModule.sliding || carModule.boosting); // Däckspår (tracks.js).
   nitroFill.style.setProperty('--nitro', carModule.nitro.toFixed(3)); // Nitromätaren i guiden.
   const afterLeaves = performance.now();
 
