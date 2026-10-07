@@ -12,7 +12,7 @@ File: `assets/cv/Filip_Renemark_CV_TA.html` (Swedish, A4). Open in a browser, ed
 - AI-tools bullet kept with the "about 4 days to max 4 hours" figure from the old CV.
 
 ## Open questions for Filip
-1. Mutation Protocol end: is 2026 right, which month? Keep or drop "lansering juni 2026" (on the UI/UX CV, not on the site CV)?
+1. Mutation Protocol end: is 2026 right, which month? DECIDED: drop "lansering juni 2026" (already absent here).
 2. Dates for Lemon Lagoon, Spite: Catharsis, VAT Fluid, AnGame, BioYield.
 3. Lemon Lagoon: what did the C++ packaging consist of? Which tech art parts?
 4. Skills I added from portfolio pages that are not on the old CV list: TOPs, Vellum, Niagara, Substance Designer, EmberGen. Keep?
