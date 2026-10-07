@@ -79,6 +79,15 @@ export const RULES = [
       site: { accent: '#ffc24a', badge: 'sun' },
     },
   },
+  // Regnig vår: en regnvecka i slutet av april (regn, våta vägar, mörkare himmel; js/season-spring-summer.js läser hasRule).
+  {
+    name: 'rainy-spring', from: [4, 20], to: [4, 26], demo: [4, 22],
+    config: {
+      palette: { background: '#3a4262', sun: '#aab8d8', skyLight: '#8f9cc4', groundLight: '#7f8cb0' },
+      light: { hemi: 0.85, sun: 0.55 },
+      fog: { nearMul: 0.7, farMul: 0.75 },
+    },
+  },
   { name: 'autumn', base: true, from: [9, 1], to: [11, 30], config: { modules: { autumn: true } } },
 
   // --- Veckonivå: Halloween växer över oktober (vecka 1 lite, vecka 4 fullt) och lever kvar till 1 november. ---

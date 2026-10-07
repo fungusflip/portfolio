@@ -15,6 +15,7 @@ export const SEASON_CHOICES = [
   ['Halloween night', 'halloween-night'],
   ['Winter', 'winter'],
   ['Spring', 'spring'],
+  ['Rainy spring', 'rainy-spring'],
   ['Summer', 'summer'],
   ['Autumn', 'autumn'],
   ['Christmas Eve', 'christmas-eve'],
