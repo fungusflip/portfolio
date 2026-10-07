@@ -978,3 +978,57 @@ body.loading .scroll-cue { opacity: 0.8; }
   .peek-item { transition: none; }
   .peek-item:hover, .peek-item:focus-visible { transform: none; }
 }
+
+/* Projektsidornas layout: en lugn textkolumn i mitten, medierna går ut bredare och får
+   samma stil (rundade hörn, skugga, bildtext under). Kommer sist så det vinner över äldre regler. */
+.panel-body > * { margin-left: auto; margin-right: auto; }
+.panel-body > p,
+.panel-body > ul,
+.panel-body > ol,
+.panel-body > h2,
+.panel-body > h3,
+.panel-body > details { max-width: 80ch; }
+.panel-body > p:first-child { font-size: 1.15em; line-height: 1.55; }   /* Inledningen lite större. */
+.panel-body > h2 {
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(155, 34, 38, 0.18);
+}
+.panel-body > h2:first-child { border-top: 0; margin-top: 8px; padding-top: 0; }
+.panel-body > video,
+.panel-body > img,
+.panel-body > figure {
+  width: min(100%, 1040px);
+  max-width: 100%;
+  margin-top: 22px;
+  margin-bottom: 22px;
+}
+.panel-body figure { margin-left: auto; margin-right: auto; }
+.panel-body figure > img,
+.panel-body figure > video {
+  width: 100%;
+  max-height: 70vh;
+  box-shadow: 0 6px 22px rgba(37, 50, 61, 0.22);
+  background: #14101a;
+}
+.panel-body > video,
+.panel-body > img {
+  box-shadow: 0 6px 22px rgba(37, 50, 61, 0.22);
+  background: #14101a;
+}
+.panel-body > video { max-height: 70vh; }
+/* Bildtext: centrerad och dämpad direkt under bilden. */
+.panel-body figcaption,
+.panel-body video + p,
+.panel-body img + p {
+  max-width: 80ch;
+  margin: -10px auto 22px;
+  text-align: center;
+  font-size: 15px;
+  opacity: 0.8;
+}
+.panel-body pre { max-width: 80ch; margin-left: auto; margin-right: auto; }
+@media (max-width: 600px) {
+  .panel-body > p:first-child { font-size: 1.05em; }
+  .panel-body > h2 { margin-top: 26px; padding-top: 14px; }
+}
