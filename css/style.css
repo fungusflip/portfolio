@@ -1373,3 +1373,38 @@ body.loading .scroll-cue { opacity: 0.8; }
   .panel-body > aside.callout { padding: 12px 14px; font-size: 15px; }
   .lightbox { padding: 8px; }
 }
+
+/* Större text i projektpanelen: allt här vinner över äldre storlekar ovan. Justera .panel för att skala allt. */
+.panel { font-size: 21px; line-height: 1.6; }
+.panel-body p, .panel-body li { font-size: 1em; }
+.panel-body > p:first-child { font-size: 1.2em; }
+.panel-body > h2 { font-size: 32px; }
+.panel-body h3 { font-size: 24px; }
+.panel-title { font-size: 40px; }
+.panel-category { font-size: 15px; }
+.toc button { font-size: 16px; padding: 7px 14px; }
+.toc-label { font-size: 13px; }
+.facts b { font-size: 13px; }
+.facts span { font-size: 20px; }
+.chips li { font-size: 17px; padding: 6px 14px; }
+.bd p, .bd ul, .bd ol { font-size: 19px; line-height: 1.6; }
+.bd h3 { font-size: 17px; }
+.panel-body figcaption,
+.panel-body figure > figcaption,
+.panel-body video + p,
+.panel-body img + p { font-size: 17px; opacity: 0.85; }
+.panel-body > aside.callout { font-size: 19px; }
+.panel-body code { font-size: 0.9em; }
+.panel-body pre { font-size: 16px; }
+@media (max-width: 600px) {
+  .panel { font-size: 18px; }
+  .panel-body > h2 { font-size: 26px; }
+  .panel-body h3 { font-size: 21px; }
+  .panel-title { font-size: 28px; }
+  .facts span { font-size: 17px; }
+  .chips li { font-size: 15px; }
+  .bd p, .bd ul, .bd ol { font-size: 17px; }
+  .panel-body figcaption, .panel-body figure > figcaption { font-size: 15px; }
+  .panel-body > aside.callout { font-size: 17px; }
+  .toc button { font-size: 14px; }
+}
