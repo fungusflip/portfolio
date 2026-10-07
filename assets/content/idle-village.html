@@ -1,33 +1,57 @@
+<div class="facts">
+ <div><b>Tools</b><span>Unity, C#, Firebase</span></div>
+ <div><b>Platform</b><span>Phones (iOS tested)</span></div>
+ <div><b>Status</b><span>Early MVP, started Aug 2025</span></div>
+</div>
 <p>An idle sim for phones in Unity/C#, early MVP (Aug 2025). Each villager has a personality (Soul based on the OCEAN model, Flame, Stone, traits, quirks) that a utility AI uses to choose what to do: relax, socialize or work.</p>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2025/08/ScreenRecording_08-15-2025_23-08-11_1.mov" controls muted loop playsinline preload="metadata"></video>
-  <figcaption>A summoned villager picks a need and walks to the right tile. Filmed on an iPhone 11, iOS 18.5.</figcaption>
-</figure>
 
-<h3>Village</h3>
-<p>The newer builds, from the Unity 6.3 editor in a phone-sized Game view. The village is an isometric tile map with a bell tower, houses and a four-button bar at the bottom.</p>
-<figure>
+<figure class="wide">
  <video src="assets/content-media/idle-village/village.mp4" controls muted loop playsinline preload="metadata"></video>
  <figcaption>The village in the latest build, with villager cards popping up over the map (June 2026).</figcaption>
 </figure>
 <!-- TODO Filip: what are these popup cards, and what do the four bottom-bar buttons do? -->
 
-<h3>Crafting</h3>
-<p>Buildings open a panel. In the Smithy you pick an item and a villager, then press Auto or Forge. There is also a hold-the-bar minigame. When you clear it, a line says crafting gets a 1.5x bonus.</p>
+<div class="breakdown">
+ <section class="bd bd-built"><h3>What works now</h3>
+  <ul>
+   <li>Anonymous login that remembers you</li>
+   <li>Summoning with random tiers, shown as a star card (1 to 5 stars)</li>
+   <li>Building panels (Smithy and others) where you pick an item and a villager</li>
+   <li>Crafting with a minigame bonus</li>
+   <li>Expeditions where a party fights enemies and collects drops</li>
+   <li>Utility AI picks a need and a target tile</li>
+   <li>2D NavMesh pathing over the Tilemap</li>
+   <li>Save state, mirrored to Firebase</li>
+  </ul></section>
+</div>
+
+<h2>Utility AI</h2>
 <figure>
- <video src="assets/content-media/idle-village/smithy-crafting.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Shop and Smithy panels, picking an item and a villager, and the minigame bonus (June 2026).</figcaption>
+ <video src="https://filip.renemark.se/wp-content/uploads/2025/08/ScreenRecording_08-15-2025_23-08-11_1.mov" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>A summoned villager picks a need and walks to the right tile. Filmed on an iPhone 11, iOS 18.5.</figcaption>
 </figure>
 
-<h3>Expedition</h3>
+<h2>Village</h2>
+<p>The newer builds, from the Unity 6.3 editor in a phone-sized Game view. The village is an isometric tile map with a bell tower, houses and a four-button bar at the bottom.</p>
+
+<h2>Crafting</h2>
+<p>Buildings open a panel. In the Smithy you pick an item and a villager, then press Auto or Forge. There is also a hold-the-bar minigame. When you clear it, a line says crafting gets a 1.5x bonus.</p>
+<div class="media-row">
+ <figure>
+  <video src="assets/content-media/idle-village/smithy-crafting.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Shop and Smithy panels, picking an item and a villager, and the minigame bonus (June 2026).</figcaption>
+ </figure>
+ <figure>
+  <video src="assets/content-media/idle-village/expedition.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>A party fighting slimes, then back in the village (June 2026).</figcaption>
+ </figure>
+</div>
+
+<h2>Expedition</h2>
 <p>You can send a party out. The screen shows &ldquo;Enemies: 1/7 | Party: 3/3&rdquo;, drops like &ldquo;3x Grass&rdquo; and a message when a slime is defeated. A Leave button takes you back.</p>
-<figure>
- <video src="assets/content-media/idle-village/expedition.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>A party fighting slimes, then back in the village (June 2026).</figcaption>
-</figure>
 <!-- TODO Filip: how does the fight work (automatic?) and how do drops feed into crafting? -->
 
-<h3>Summon</h3>
+<h2>Summon</h2>
 <p>The summon scene is a Lobby with a white pedestal and a Summon button. Pressing it plays blue sparks over the ring, then a card shows the new villager with up to five stars and three ability slots.</p>
 <figure>
  <video src="assets/content-media/idle-village/summon-cards.mp4" controls muted loop playsinline preload="metadata"></video>
@@ -35,26 +59,14 @@
 </figure>
 <!-- TODO Filip: what do the ability icons mean? Is the green background really a placeholder? -->
 
-<h3>Works now</h3>
-<ul>
- <li>Anonymous login that remembers you</li>
- <li>Summoning with random tiers, shown as a star card (1 to 5 stars)</li>
- <li>Building panels (Smithy and others) where you pick an item and a villager</li>
- <li>Crafting with a minigame bonus</li>
- <li>Expeditions where a party fights enemies and collects drops</li>
- <li>Utility AI picks a need and a target tile</li>
- <li>2D NavMesh pathing over the Tilemap</li>
- <li>Save state, mirrored to Firebase</li>
-</ul>
-
-<h3>Next</h3>
-<ul>
+<h2>Next</h2>
+<ul class="chips">
  <li>Economy</li>
  <li>Pity and banners for summoning</li>
  <li>Villagers that talk in their own style</li>
 </ul>
 <!-- TODO Filip: is the Next list still right? -->
 
-<h3>Log</h3>
+<h2>Log</h2>
 <p>10 Aug 2025: utility AI hooked to the personalities, first summon tiers.<br>15 Aug 2025: summon revamp, tile targets, on-device video.<br>By June 2026: summon cards, building panels, crafting minigame, expeditions.</p>
 <p><a href="https://docs.google.com/document/d/1sg9sw09azX95HqQNMAE3EebvAbjB2xtNvtVX-KCMqjY/edit?usp=sharing" target="_blank" rel="noopener">Full tech spec →</a></p>
