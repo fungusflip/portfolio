@@ -104,6 +104,10 @@ async function openPanel(project) {
   keys.clear(); // Släpp alla körtangenter så att bilen inte fortsätter själv.
   panelCategory.textContent = project.category || '';
   panelTitle.textContent = project.title;
+  closeLightbox();
+  videoObserver.disconnect(); // Byter man projekt direkt ska gamla videor och rullningslyssnare bort.
+  panelBody.onscroll = null;
+  panelBody.classList.remove('has-toc');
   panelBody.textContent = 'Loading…';
   panelBody.scrollTop = 0;
   panelLink.hidden = !project.url;
@@ -125,16 +129,204 @@ async function openPanel(project) {
   // Användaren kan ha stängt panelen eller bytt projekt medan filen hämtades.
   if (panelProject !== project) return;
   const html = contentCache.get(project.content);
-  // innerHTML tolkar texten som HTML. Filerna är våra egna, så det är säkert.
-  if (html) panelBody.innerHTML = html;
-  else panelBody.textContent = 'Could not load the text. Use the link below instead.';
+  // Filerna är våra egna, så det är säkert att tolka dem som HTML. Vi tolkar dem i en <template>
+  // (inget hämtas där) så att vi hinner sätta loading="lazy" innan webbläsaren börjar ladda bilderna.
+  if (html) {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    prepareContent(template.content);
+    panelBody.replaceChildren(template.content);
+    panelBody.scrollTop = 0;
+    buildToc();
+    watchVideos();
+  } else {
+    panelBody.textContent = 'Could not load the text. Use the link below instead.';
+  }
 }
+
+// ---------------------------------------------------------------------------
+// PROJEKTSIDORNAS HJÄLPARE – innehållsförteckning, bildvisare och videor.
+// ---------------------------------------------------------------------------
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+// Lat laddning: bilder utanför bild hämtas först när man scrollar dit, videor hämtar bara metadata.
+function prepareContent(root) {
+  for (const img of root.querySelectorAll('img')) {
+    img.loading = 'lazy';
+    img.decoding = 'async';
+  }
+  for (const video of root.querySelectorAll('video')) {
+    video.preload = 'metadata';
+    // Videor med kontroller kan inte öppnas med ett klick (klicket spelar/pausar), så de får en knapp.
+    const figure = video.closest('figure');
+    if (video.controls && figure) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'zoom-btn';
+      button.setAttribute('aria-label', 'Enlarge video');
+      button.textContent = '⛶';
+      figure.append(button);
+    }
+  }
+}
+
+// "On this page": en klistrig rad med knappar, byggd av sidans h2:or. Göms om det är färre än 3.
+function buildToc() {
+  const headings = [...panelBody.querySelectorAll(':scope > h2')];
+  if (headings.length < 3) return;
+  const toc = document.createElement('nav');
+  toc.className = 'toc';
+  toc.setAttribute('aria-label', 'On this page');
+  const label = document.createElement('span');
+  label.className = 'toc-label';
+  label.textContent = 'On this page';
+  toc.append(label);
+  const buttons = headings.map((heading) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = heading.textContent;
+    button.addEventListener('click', () => {
+      // Räknar ut var rubriken ligger inuti den rullande rutan (scrollIntoView kan rulla hela sidan).
+      const top = heading.getBoundingClientRect().top - panelBody.getBoundingClientRect().top
+        + panelBody.scrollTop - toc.offsetHeight - 6;
+      panelBody.scrollTo({ top, behavior: REDUCED_MOTION.matches ? 'auto' : 'smooth' });
+    });
+    toc.append(button);
+    return button;
+  });
+  panelBody.classList.add('has-toc');
+  headings[0].before(toc);
+
+  // Markerar den rubrik man läser just nu. Rör bara DOM:en när det faktiskt byter.
+  let current = -1;
+  let queued = false;
+  const update = () => {
+    queued = false;
+    const line = panelBody.getBoundingClientRect().top + toc.offsetHeight + 40;
+    let index = -1;
+    headings.forEach((heading, i) => { if (heading.getBoundingClientRect().top <= line) index = i; });
+    if (index === current) return;
+    current = index;
+    buttons.forEach((button, i) => button.classList.toggle('active', i === index));
+    if (index >= 0) { // Håll den aktiva knappen synlig när raden rullar i sidled (mobil).
+      toc.scrollTo({ left: buttons[index].offsetLeft - toc.clientWidth / 3, behavior: 'auto' });
+    }
+  };
+  panelBody.onscroll = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+  update();
+}
+
+// Videor som loopar och är ljudlösa (små "gif-klipp") spelar bara medan de syns. Annars pausas de.
+// Har man själv pausat en video lämnar vi den ifred.
+const videoObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    const video = entry.target;
+    if (entry.isIntersecting) {
+      if (!video.dataset.userPaused && !REDUCED_MOTION.matches && !(lightbox && !lightbox.hidden)) {
+        video.play().catch(() => {}); // Webbläsaren kan neka autoplay; då gör vi inget.
+      }
+    } else if (!video.paused) {
+      video.dataset.autoPause = '1';
+      video.pause();
+    }
+  }
+}, { threshold: 0.35 });
+
+function watchVideos() {
+  for (const video of panelBody.querySelectorAll('video')) {
+    if (!video.loop || !video.muted) continue;
+    video.addEventListener('pause', () => {
+      if (video.dataset.autoPause) delete video.dataset.autoPause;
+      else video.dataset.userPaused = '1';
+    });
+    video.addEventListener('play', () => { delete video.dataset.userPaused; });
+    videoObserver.observe(video);
+  }
+}
+
+// Bildvisaren: bild eller video i helskärm över panelen.
+let lightbox = null;
+let lightboxStage = null;
+let lightboxReturnFocus = null;
+
+function ensureLightbox() {
+  if (lightbox) return;
+  lightbox = document.createElement('div');
+  lightbox.className = 'lightbox';
+  lightbox.hidden = true;
+  lightbox.setAttribute('role', 'dialog');
+  lightbox.setAttribute('aria-modal', 'true');
+  lightboxStage = document.createElement('div');
+  lightboxStage.className = 'lightbox-stage';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'lightbox-close';
+  close.setAttribute('aria-label', 'Close');
+  close.textContent = '×';
+  lightbox.append(lightboxStage, close);
+  // Klick utanför mediet (eller på krysset) stänger. Klick på själva mediet gör inget (videons kontroller).
+  lightbox.addEventListener('click', (e) => { if (e.target !== lightboxStage.firstChild) closeLightbox(); });
+  document.body.append(lightbox);
+}
+
+function openLightbox(source) {
+  ensureLightbox();
+  lightboxReturnFocus = document.activeElement;
+  let media;
+  if (source.tagName === 'VIDEO') {
+    media = document.createElement('video');
+    media.src = source.currentSrc || source.src;
+    media.controls = true;
+    media.loop = source.loop;
+    media.muted = source.muted;
+    media.playsInline = true;
+    media.autoplay = true;
+    media.addEventListener('loadedmetadata', () => { media.currentTime = source.currentTime || 0; }, { once: true });
+    if (!source.paused) { source.dataset.autoPause = '1'; source.pause(); } // Originalet vilar under tiden.
+  } else {
+    media = document.createElement('img');
+    media.src = source.currentSrc || source.src;
+    media.alt = source.alt || '';
+  }
+  lightboxStage.replaceChildren(media);
+  lightbox.hidden = false;
+  lightbox.querySelector('.lightbox-close').focus({ preventScroll: true });
+}
+
+function closeLightbox() {
+  if (!lightbox || lightbox.hidden) return;
+  lightbox.hidden = true;
+  lightboxStage.replaceChildren(); // Stoppar videon och släpper minnet.
+  if (lightboxReturnFocus && document.contains(lightboxReturnFocus)) lightboxReturnFocus.focus({ preventScroll: true });
+  lightboxReturnFocus = null;
+  // Videor som syns i panelen får återuppta sitt spelande (observern ger ett nytt besked vid observe).
+  for (const video of panelBody.querySelectorAll('video')) {
+    if (video.loop && video.muted) { videoObserver.unobserve(video); videoObserver.observe(video); }
+  }
+}
+
+panelBody.addEventListener('click', (e) => {
+  const target = e.target;
+  if (target.closest('a')) return; // Bilder som är länkar ska följa länken.
+  if (target.classList.contains('zoom-btn')) {
+    const video = target.closest('figure').querySelector('video');
+    if (video) openLightbox(video);
+  } else if (target.tagName === 'IMG') {
+    openLightbox(target);
+  } else if (target.tagName === 'VIDEO' && !target.controls) {
+    openLightbox(target);
+  }
+});
 
 export function closePanel() {
   panelOpen = false;
   panelProject = null;
   panel.hidden = true;
   document.body.classList.remove('panel-open');
+  closeLightbox();
+  videoObserver.disconnect();
+  panelBody.onscroll = null;
+  panelBody.classList.remove('has-toc');
   panelBody.textContent = ''; // Släpper bilder och videor ur minnet.
   // Tangenter som hölls nedtryckta medan panelen var öppen ska inte styra bilen.
   keys.clear();
@@ -185,6 +377,16 @@ export function placeParkPrompt(spot) {
     promptAnchored = false; promptLeft = ''; promptTop = '';
   }
 }
+// Medan bildvisaren är öppen tar den Esc (och sväljer Enter/Tab) FÖRE alla andra lyssnare.
+// Capture-fasen på window körs först, så panelen och projektlistan märker aldrig tangenten.
+window.addEventListener('keydown', (e) => {
+  if (!lightbox || lightbox.hidden) return;
+  if (e.code === 'Escape') closeLightbox();
+  else if (e.code !== 'Enter' && e.code !== 'Tab') return; // Övriga tangenter (t.ex. mellanslag på en video) får passera.
+  e.preventDefault();
+  e.stopImmediatePropagation();
+}, true);
+
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && panelOpen) {
     closePanel();
