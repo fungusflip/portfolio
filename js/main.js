@@ -30,7 +30,7 @@ import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
 // Projektlistan fungerar direkt, även under laddningen (den behöver bara projektdatan).
 import { setWorldJumper } from './project-list.js';
 import { startFromCode } from './ui.js';
-import { seasonActive } from './season.js';
+import { seasonActive, hasRule } from './season.js';
 
 // ---------------------------------------------------------------------------
 // 1. LADDNINGSSCENEN – börjar rulla direkt
@@ -75,6 +75,9 @@ hub.buildHubGrounding(roadsAndLamps);
 // Före buildHubCollision: lyktornas knock() lindas in och pumporna lägger egna hinder.
 const seasonFx = seasonActive() ? await import('./seasonfx.js') : null;
 if (seasonFx) seasonFx.buildSeasonFx(roadsAndLamps);
+// Höstens egna tillägg (season-autumn.js): dimma, lövvirvlar, svamp, gäss m.m. Gör inget under Halloween om inte configen säger det.
+const autumnFx = hasRule('autumn') ? await import('./season-autumn.js') : null;
+if (autumnFx) autumnFx.buildAutumn(roadsAndLamps);
 hub.buildHubCollision(roadsAndLamps); // Fasta saker bilen krockar med (collision.js).
 // OBS: portals.travel läses som portals.travel varje gång (inte "const { travel } = ..."),
 // för då skulle vi bara få värdet det hade just nu – och det ändras när en resa startar.
@@ -284,6 +287,7 @@ function gameFrame(time) {
   updateLamps(delta);
   updateKnockables(delta); // Lyktor, skyltar och träd som bilen kört över.
   if (seasonFx) seasonFx.updateSeasonFx(delta, car.position); // Säsongens partiklar och sken.
+  if (autumnFx) autumnFx.updateAutumn(delta, car.position); // Höstens tillägg.
   updateCaveThemes(); // Grottornas rörliga prylar (bara i hemvärlden).
   perf.updateQuality(rawDelta);
   const afterGame = performance.now();
