@@ -13,6 +13,7 @@ import {
 } from './core.js';
 import { makeCarModel, WHEEL_RADIUS } from './car.js';
 import { makeTrees, placeTrees, randomTree } from './trees.js';
+import { getSeasonConfig } from './season.js';
 
 const loadingScene = new THREE.Scene();
 loadingScene.background = new THREE.Color(PALETTE.background);
@@ -90,14 +91,15 @@ loadingScene.add(trunks, crowns);
 
 // --- Fallande löv: en handfull, enkla ---
 const LEAF_COUNT = 40;
-const leafGeometry = new THREE.PlaneGeometry(0.3, 0.2);
+const noLeaves = (getSeasonConfig().foliage || {}).fallingLeaves === 0; // Vinter: snöflingor (runda) i stället för löv.
+const leafGeometry = noLeaves ? new THREE.CircleGeometry(0.09, 8) : new THREE.PlaneGeometry(0.3, 0.2);
 const leafMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
 const leaves = new THREE.InstancedMesh(leafGeometry, leafMaterial, LEAF_COUNT);
 leaves.frustumCulled = false;
 const leafData = [];
 for (let i = 0; i < LEAF_COUNT; i++) {
   leafData.push({ x: (Math.random() - 0.5) * 40, y: Math.random() * 12, z: (Math.random() - 0.5) * 40, spin: Math.random() * 6 });
-  leaves.setColorAt(i, new THREE.Color(PALETTE.fallenLeaves[i % PALETTE.fallenLeaves.length]));
+  leaves.setColorAt(i, new THREE.Color(noLeaves ? '#ffffff' : PALETTE.fallenLeaves[i % PALETTE.fallenLeaves.length]));
 }
 loadingScene.add(leaves);
 const leafHelper = new THREE.Object3D();
