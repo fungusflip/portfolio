@@ -31,6 +31,7 @@
 //   foliage    – { leafLitter, groundLeaves, fallingLeaves, litterAlt, soilAlpha }: löv under träden (trees.js), lövtäcket och
 //                fallande löv (leaves.js). Gånger-tal 0..1 (0 = inga löv; litterAlt = färgen på snö-/frostklumparna som ersätter dem).
 //                Kronornas och lövens färger sätts med palette.leaves / palette.fallenLeaves.
+//   (foliage.groundStyle: 'snow' = markens bild ritas som snötäcke med bara fläckar, utan lövformer; foliage.debris = två färger på skräpet när växter körs över.)
 //   winter     – { snowmen, drifts, ice, aurora, lights }: vinterns extra saker (js/season-winter.js): antal snögubbar och drivor, is på dammen,
 //                norrskenets styrka (0..1) och julbelysning (true).
 //   tracks     – { life, grass, road }: däckspårens livslängd (gånger-tal) och färger [färg, alfa] (tracks.js).
@@ -43,13 +44,13 @@ export const RULES = [
     name: 'winter', base: true, from: [12, 1], to: [2, 29],
     config: {
       palette: { background: '#2c3656', sun: '#d6e4ff', skyLight: '#c4d6ff', groundLight: '#a9b8e0', ground: '#c3cfe0', groundDark: '#a9b9d2', groundDry: '#dbe4f1', grassRoot: '#8fa2bd', grassTip: '#eef3fa', grassTipAutumn: '#d3e1f2',
-        gravel: '#aeb5c2', gravelLight: '#dbe2ee', gravelDark: '#8991a3', tireDust: '#f2f6ff', // Snö på marken och vägarna.
+        gravel: '#8d94a3', gravelLight: '#b6bdca', gravelDark: '#656b7a', tireDust: '#f2f6ff', // Snö på marken och vägarna.
         // Kronor och löv: frostiga, snötyngda kronor och bleka "löv" i markens textur (inga röda och orange).
         leaves: ['#e4edf5', '#cfdceb', '#b9cbe0'], fallenLeaves: ['#dfe7f0', '#cdd8e6', '#eef3f8', '#b9c8da', '#e3ebf4'],
       },
-      foliage: { leafLitter: 0, groundLeaves: 0, fallingLeaves: 0, litterAlt: '#eef3f8', soilAlpha: 0.25 }, // Inga lövhögar eller löv: frost i stället.
+      foliage: { leafLitter: 0, groundLeaves: 0, fallingLeaves: 0, litterAlt: '#eef3f8', soilAlpha: 0.25, groundStyle: 'snow', debris: ['#3b3a40', '#eef3f8'] }, // Inga löv: snöfläckar och frost i stället.
       modules: { winter: true },
-      winter: { snowmen: 7, drifts: 130, ice: true, aurora: 0.3 }, // js/season-winter.js
+      winter: { snowmen: 7, drifts: 130, ice: true, aurora: 0.3, patches: 150 }, // js/season-winter.js
       tracks: { life: 3, grass: { normal: ['#5c6a82', 0.6], heavy: ['#463f42', 0.8] }, road: { normal: ['#79849a', 0.4], heavy: ['#3d4352', 0.55] } }, // Däckspår blir kvar i snön (tracks.js).
       light: { hemi: 1.0, sun: 0.85 },
       fog: { nearMul: 0.85, farMul: 0.9 },

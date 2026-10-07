@@ -11,7 +11,7 @@ import { scene, camera, currentWorld, BILLBOARD_FACING } from './core.js';
 import { ROAD_WIDTH, distanceToRoad } from './roads.js';
 import { HOME_X, HOME_Z, CABIN_X, CABIN_Z, CABIN_SIZE, GARAGE_DEPTH, homeGroup, hubPoint } from './home.js';
 import { PORTALS } from './portals.js';
-import { PLAZA, streamSamples, ribbonGeometry } from './hubprops.js';
+import { PLAZA, streamSamples, ribbonGeometry, distanceToWater } from './hubprops.js';
 import { addObstacles } from './collision.js';
 import { markMoving } from './optimize.js';
 import {
@@ -107,6 +107,86 @@ function buildDrifts(ctx, max) {
   });
   mesh.instanceMatrix.needsUpdate = true;
   mesh.frustumCulled = false;
+  hubGroup().add(mesh);
+}
+
+// ============================================================================
+// Snöfläckar: små, ojämna, mjukkantade snölapar som ersätter lövhögarna. Under träden, utströdda på gräset och längs vägkanterna.
+// ============================================================================
+// Ligger platta på marken (en InstancedMesh, en bild), med djuptest (annars ritas de över skyltarna: genomskinliga föremål ritas sist).
+// Fläckarna hålls borta från vägar och vatten.
+function buildSnowPatches(ctx, max) {
+  const texture = canvasTexture(128, (pen, n) => {
+    const random = seededRandom(77);
+    const lobes = 4;
+    for (let layer = 0; layer < 5; layer++) { // Utåt: större och svagare = mjuk kant.
+      const grow = 1 + (4 - layer) * 0.07;
+      pen.fillStyle = `rgba(${layer === 4 ? '248, 251, 255' : '226, 236, 250'}, ${layer === 4 ? 0.95 : 0.2})`;
+      pen.beginPath();
+      for (let a = 0; a <= 6.4; a += 0.15) {
+        const r = n * 0.34 * grow * (0.78 + 0.14 * Math.sin(a * lobes + 1.3) + 0.08 * Math.sin(a * 9 + 0.4));
+        pen[a === 0 ? 'moveTo' : 'lineTo'](n / 2 + Math.cos(a) * r, n / 2 + Math.sin(a) * r);
+      }
+      pen.closePath();
+      pen.fill();
+    }
+    pen.fillStyle = 'rgba(150, 170, 205, 0.18)'; // Svaga skuggade fördjupningar.
+    for (let i = 0; i < 6; i++) {
+      pen.beginPath();
+      pen.ellipse(n * (0.3 + random() * 0.4), n * (0.3 + random() * 0.4), 4 + random() * 7, 2 + random() * 4, random() * 3, 0, 6.3);
+      pen.fill();
+    }
+  });
+  const random = seededRandom(515);
+  const spots = [];
+  const push = (x, z, size) => {
+    if (spots.length >= max) return;
+    if (ctx.roads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + 0.35 + size * 0.5)) return;
+    if (distanceToWater(x, z) < 1.5 + size * 0.5) return;
+    if (Math.hypot(x - HOME_X, z - HOME_Z) < 9) return; // Stugan och garaget har egna snötak och tomt.
+    spots.push({ x, z, size, yaw: random() * Math.PI * 2, squash: 0.55 + random() * 0.35, tint: random() });
+  };
+  for (const tree of ctx.trees) { // Under varje träd: en större fläck plus ibland en till.
+    const angle = random() * 6.28;
+    push(tree.x + Math.cos(angle) * tree.scale * 0.5, tree.z + Math.sin(angle) * tree.scale * 0.5, tree.scale * (1.7 + random() * 0.9));
+    if (random() < 0.45) push(tree.x - Math.cos(angle) * tree.scale * 1.1, tree.z - Math.sin(angle) * tree.scale * 1.1, tree.scale * (0.9 + random() * 0.7));
+  }
+  for (let attempt = 0; attempt < max * 4 && spots.length < max; attempt++) { // Utströdda på gräset.
+    const spot = hubPoint(-60 + random() * 120, -4 + random() * 66);
+    if (spotOk(spot.x, spot.z, ctx, [], 0, 0.5, 0)) push(spot.x, spot.z, 1.2 + random() * 2.2);
+  }
+  for (const road of ctx.roads) { // Längs vägkanterna, utanför drivorna.
+    const dx = road.to.x - road.from.x;
+    const dz = road.to.z - road.from.z;
+    const length = Math.hypot(dx, dz);
+    if (length < 4) continue;
+    const ux = dx / length;
+    const uz = dz / length;
+    const half = (road.width || ROAD_WIDTH) / 2;
+    for (let t = 2 + random() * 3; t < length - 1 && spots.length < max; t += 5 + random() * 6) {
+      const side = random() < 0.5 ? -1 : 1;
+      const offset = half + 1.1 + random() * 1.2;
+      push(road.from.x + ux * t - uz * offset * side, road.from.z + uz * t + ux * offset * side, 1 + random() * 1.4);
+    }
+  }
+  if (!spots.length) return;
+  const material = new THREE.MeshLambertMaterial({ map: texture, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), material, spots.length);
+  const dummy = new THREE.Object3D();
+  const color = new THREE.Color();
+  spots.forEach((spot, i) => {
+    dummy.position.set(spot.x, 0.026, spot.z);
+    dummy.rotation.set(0, spot.yaw, 0);
+    dummy.scale.set(spot.size * 1.5, 1, spot.size * 1.5 * spot.squash);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    mesh.setColorAt(i, color.set('#ffffff').lerp(new THREE.Color('#c9d8f0'), spot.tint * 0.6));
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -1; // Som jordfläckarna under träden (trees.js): med djuptest, så att skyltar och bil alltid ligger framför.
+  mesh.userData.noShadow = true;
   hubGroup().add(mesh);
 }
 
@@ -453,6 +533,7 @@ export default {
   build(ctx, config) {
     const setup = config.winter || {};
     if (setup.drifts) buildDrifts(ctx, setup.drifts);
+    if (setup.patches) buildSnowPatches(ctx, setup.patches);
     if (setup.ice) buildIce();
     if (setup.lights) buildXmasLights(ctx);
     if (setup.snowmen) buildSnowmen(ctx, setup.snowmen);

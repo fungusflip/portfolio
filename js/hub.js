@@ -21,6 +21,7 @@ import {
   PLAZA, ART_ROAD, GAZEBO, GAZEBO_ROAD_END, buildHubProps, plazaRoads, plazaVertex, distanceToWater,
   hubPropObstacles, hubPropShadows, hubGrassFree,
 } from './hubprops.js';
+import { getSeasonConfig } from './season.js';
 import { makeTrees, randomTree, leafColors } from './trees.js';
 import { makeGrass, addSaturation } from './magic.js';
 import { addContactShadows, scatterStones } from './grounding.js';
@@ -32,6 +33,63 @@ const hub = WORLDS.hub;
 const armToward = (right, down) => BILLBOARD_FACING + Math.atan2(right, down);
 const ARM_RIGHT = armToward(1, 0);
 let groundMap = null; // Markens kakelbild. Gräset läser av den för att ta markens färg (se buildHubGrass).
+
+// Vintermarken (foliage.groundStyle 'snow'): inga löv. Snötäcke med bara fläckar av frusen jord och gräs som tittar upp,
+// ljusa snöhögar och glitter. Allt ritas "runt hörnet" (tre gånger), så att kakelskarven inte syns.
+function paintSnowGround(pen) {
+  const T = TILE_PIXELS;
+  // En ojämn klutt (polygon med slumpad radie). soft = antal lager som tonar ut kanten.
+  const lump = (x, y, radius, rgb, alpha, soft = 4, squash = 0.75) => {
+    const phase = Math.random() * 6.28;
+    const lobes = 3 + Math.floor(Math.random() * 3);
+    const turn = Math.random() * 6.28;
+    for (const dx of [-T, 0, T]) {
+      for (const dy of [-T, 0, T]) {
+        if (x + dx < -radius * 1.6 || x + dx > T + radius * 1.6 || y + dy < -radius * 1.6 || y + dy > T + radius * 1.6) continue;
+        for (let layer = 0; layer < soft; layer++) {
+          const grow = 1 + (soft - 1 - layer) * 0.16;
+          pen.fillStyle = `rgba(${rgb}, ${alpha / soft * (layer === soft - 1 ? 1.6 : 1)})`;
+          pen.beginPath();
+          for (let a = 0; a <= 6.4; a += 0.2) {
+            const r = radius * grow * (0.72 + 0.2 * Math.sin(a * lobes + phase) + 0.1 * Math.sin(a * (lobes * 2 + 1) + phase * 2));
+            const px = Math.cos(a) * r;
+            const py = Math.sin(a) * r * squash;
+            const sx = px * Math.cos(turn) - py * Math.sin(turn);
+            const sy = px * Math.sin(turn) + py * Math.cos(turn);
+            if (a === 0) pen.moveTo(x + dx + sx, y + dy + sy); else pen.lineTo(x + dx + sx, y + dy + sy);
+          }
+          pen.closePath();
+          pen.fill();
+        }
+      }
+    }
+  };
+  // Frusen jord och gräs som tittar fram: tunnare snö på kullarna, tydligast i fläckar med hård kant.
+  for (let i = 0; i < 26; i++) {
+    const r = 18 + Math.random() * 40;
+    const x = Math.random() * T;
+    const y = Math.random() * T;
+    const earth = Math.random() < 0.45;
+    lump(x, y, r, earth ? '96, 88, 84' : '112, 128, 112', 0.5, 3);
+    lump(x, y, r * 0.62, earth ? '78, 70, 68' : '92, 108, 92', 0.4, 2); // Mörkare mitt.
+    lump(x, y, r * 1.25, '236, 242, 250', 0.35, 2); // Ljus snörand runt fläcken.
+  }
+  // Stora mjuka snövågor, ljusare och blåare, så att täcket inte är en platt färg.
+  for (let i = 0; i < 22; i++) lump(Math.random() * T, Math.random() * T, 40 + Math.random() * 60, i % 3 ? '244, 248, 255' : '170, 190, 222', 0.3, 4, 0.5);
+  // Små snöklumpar och skuggade gropar (ersätter "lövbruset": det som visar att marken rör sig när man kör).
+  for (let i = 0; i < 70; i++) {
+    const r = 4 + Math.random() * 9;
+    const x = Math.random() * T;
+    const y = Math.random() * T;
+    lump(x + 1.5, y + 2, r, '120, 138, 170', 0.35, 2, 0.7); // Skugga.
+    lump(x, y, r, '250, 252, 255', 0.9, 2, 0.7);
+  }
+  // Glitter.
+  for (let i = 0; i < 160; i++) {
+    pen.fillStyle = `rgba(255, 255, 255, ${0.5 + Math.random() * 0.5})`;
+    pen.fillRect(Math.random() * T, Math.random() * T, 1.5, 1.5);
+  }
+}
 
 // Delas upp i steg, så att laddningsmätaren kan röra sig mellan dem (se main.js).
 export function buildHubGround() {
@@ -71,28 +129,32 @@ export function buildHubGround() {
     pen.lineTo(x + (Math.random() - 0.5) * 4, y - 4 - Math.random() * 4);
     pen.stroke();
   }
-  // 70 små löv på slumpade platser. Det är "bruset" som gör att man ser att bilen rör sig.
-  for (let i = 0; i < 70; i++) {
-    const size = 7 + Math.random() * 9; // Lövets halva längd i pixlar.
-    // Håll lövet helt innanför bilden, annars klipps det av i skarven mellan kopiorna.
-    const x = size + Math.random() * (TILE_PIXELS - size * 2);
-    const y = size + Math.random() * (TILE_PIXELS - size * 2);
-    pen.fillStyle = PALETTE.fallenLeaves[i % PALETTE.fallenLeaves.length];
-    pen.save();                              // Spara pennans läge ...
-    pen.translate(x, y);                     // ... flytta "nollpunkten" till lövets mitt ...
-    pen.rotate(Math.random() * Math.PI * 2); // ... och vrid allt som ritas efter det.
-    pen.beginPath();                         // En spetsig oval: två bågar från spets till spets.
-    pen.moveTo(0, -size);
-    pen.quadraticCurveTo(size * 0.75, 0, 0, size);
-    pen.quadraticCurveTo(-size * 0.75, 0, 0, -size);
-    pen.fill();
-    pen.strokeStyle = 'rgba(80, 20, 10, 0.35)'; // Mittnerven.
-    pen.lineWidth = 1.5;
-    pen.beginPath();
-    pen.moveTo(0, -size * 0.8);
-    pen.lineTo(0, size * 1.2);
-    pen.stroke();
-    pen.restore();                           // ... och återställ pennan.
+  if (getSeasonConfig().foliage && getSeasonConfig().foliage.groundStyle === 'snow') {
+    paintSnowGround(pen);
+  } else {
+    // 70 små löv på slumpade platser. Det är "bruset" som gör att man ser att bilen rör sig.
+    for (let i = 0; i < 70; i++) {
+      const size = 7 + Math.random() * 9; // Lövets halva längd i pixlar.
+      // Håll lövet helt innanför bilden, annars klipps det av i skarven mellan kopiorna.
+      const x = size + Math.random() * (TILE_PIXELS - size * 2);
+      const y = size + Math.random() * (TILE_PIXELS - size * 2);
+      pen.fillStyle = PALETTE.fallenLeaves[i % PALETTE.fallenLeaves.length];
+      pen.save();                              // Spara pennans läge ...
+      pen.translate(x, y);                     // ... flytta "nollpunkten" till lövets mitt ...
+      pen.rotate(Math.random() * Math.PI * 2); // ... och vrid allt som ritas efter det.
+      pen.beginPath();                         // En spetsig oval: två bågar från spets till spets.
+      pen.moveTo(0, -size);
+      pen.quadraticCurveTo(size * 0.75, 0, 0, size);
+      pen.quadraticCurveTo(-size * 0.75, 0, 0, -size);
+      pen.fill();
+      pen.strokeStyle = 'rgba(80, 20, 10, 0.35)'; // Mittnerven.
+      pen.lineWidth = 1.5;
+      pen.beginPath();
+      pen.moveTo(0, -size * 0.8);
+      pen.lineTo(0, size * 1.2);
+      pen.stroke();
+      pen.restore();                           // ... och återställ pennan.
+    }
   }
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE),
