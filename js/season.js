@@ -31,7 +31,7 @@
 //   foliage    – { leafLitter, groundLeaves, fallingLeaves, litterAlt, soilAlpha }: löv under träden (trees.js), lövtäcket och
 //                fallande löv (leaves.js). Gånger-tal 0..1 (0 = inga löv; litterAlt = färgen på snö-/frostklumparna som ersätter dem).
 //                Kronornas och lövens färger sätts med palette.leaves / palette.fallenLeaves.
-//   (foliage.groundStyle: 'snow' = markens bild ritas som snötäcke med bara fläckar, utan lövformer; foliage.debris = två färger på skräpet när växter körs över.)
+//   (foliage.groundStyle: 'leaves' (höst) | 'petals' (vår) | 'meadow' (sommar) | 'snow'; foliage.fall: 'petals' = fallande kronblad i stället för löv. 'snow' = markens bild ritas som snötäcke med bara fläckar, utan lövformer; foliage.debris = två färger på skräpet när växter körs över.)
 //   winter     – { snowmen, drifts, ice, aurora, lights }: vinterns extra saker (js/season-winter.js): antal snögubbar och drivor, is på dammen,
 //                norrskenets styrka (0..1) och julbelysning (true).
 //   tracks     – { life, grass, road }: däckspårens livslängd (gånger-tal) och färger [färg, alfa] (tracks.js).
@@ -63,9 +63,9 @@ export const RULES = [
     config: {
       palette: { background: '#443f70', sun: '#ffd0a0', skyLight: '#c4c0ff', ground: '#8fae58', groundDark: '#76964a', groundDry: '#b3b66e',
         // Friskt ljusgrönt med blommor (rosa) i kronorna; kronblad i stället för höstlöv.
-        leaves: ['#6fcf5a', '#8adc62', '#f4a6c0', '#ffc8d8'], fallenLeaves: ['#f6b8cc', '#ffd9e4', '#b8e07a', '#fff0f4', '#9fd46a'],
+        leaves: ['#6fcf5a', '#8adc62', '#f4a6c0', '#ffc8d8'], fallenLeaves: ['#f6b8cc', '#ffd9e4', '#fff0f4', '#ffc4d8', '#ffffff'], // Kronblad, inga löv.
       },
-      foliage: { leafLitter: 0.35, groundLeaves: 0.3, fallingLeaves: 0.5, litterAlt: '#ffd9e4', soilAlpha: 0.8 },
+      foliage: { leafLitter: 0, groundLeaves: 0.35, fallingLeaves: 0.5, litterAlt: '#ffd9e4', soilAlpha: 0.8, groundStyle: 'petals', fall: 'petals', debris: ['#ffc4d8', '#8ad060'] }, // Blommor, klöver och kronblad i stället för löv.
       modules: { 'spring-summer': true },
       light: { hemi: 1.1, sun: 0.95 },
       particles: { drift: { petals: { kind: 'petal', count: 90, colors: ['#ffc4d8', '#ffe0ea', '#fff0f4'], fall: 0.8, sway: 0.9, size: 0.22 } } },
@@ -79,10 +79,11 @@ export const RULES = [
         // Djupt, fullt grönt.
         leaves: ['#2f7a24', '#3f8f2a', '#4fa030'], fallenLeaves: ['#8cb83a', '#a8c842', '#c8d44a'],
       },
-      foliage: { leafLitter: 0.2, groundLeaves: 0.15, fallingLeaves: 0.1, litterAlt: '#9ccc4a', soilAlpha: 0.7 },
+      foliage: { leafLitter: 0, groundLeaves: 0, fallingLeaves: 0, litterAlt: '#a8cc4a', soilAlpha: 0.7, groundStyle: 'meadow', debris: ['#f2d24a', '#8fbf45'] }, // Äng: inga löv. Pollen och fluff (particles.drift) i luften.
       modules: { 'spring-summer': true },
       light: { hemi: 1.18, sun: 1.12 },
       fog: { nearMul: 1.1, farMul: 1.15 },
+      particles: { drift: { fluff: { kind: 'flake', count: 26, colors: ['#fffbe0', '#fff1a8', '#ffffff'], fall: 0.12, sway: 1.1, size: 0.15 } } },
       site: { accent: '#ffc24a', badge: 'sun' },
     },
   },
@@ -104,6 +105,7 @@ export const RULES = [
       palette: {
         background: '#2a1838', sun: '#ff8a3a', skyLight: '#9a80c8', groundLight: '#ff7a3a', warmLamp: '#ff7a1a',
         ground: '#858a4a', groundDark: '#66703a', groundDry: '#9c9157',
+        fallenLeaves: ['#8a2a0a', '#b8410f', '#6a2a1a', '#d8741a', '#4a2a3a'], // Mörka, döda löv.
       },
       light: { hemi: 0.85, sun: 0.78 },
       fog: { nearMul: 0.78, farMul: 0.85 },

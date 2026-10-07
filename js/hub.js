@@ -91,6 +91,88 @@ function paintSnowGround(pen) {
   }
 }
 
+// Vår- och sommarmarken (foliage.groundStyle 'petals' | 'meadow'): inga löv. Grästuvor, klöver, småblommor och (på våren) kronblad.
+// Allt ritas helt innanför bilden (marginal), så att inget klipps i skarven mellan kopiorna.
+function paintMeadowGround(pen, spring) {
+  const T = TILE_PIXELS;
+  const at = (margin) => margin + Math.random() * (T - margin * 2);
+  // Grästuvor: en solfjäder av korta, lätt böjda strån, i mörkare och ljusare grönt (på sommaren även torrt gult).
+  const tuftColors = spring ? ['rgba(48,92,32,0.5)', 'rgba(122,180,70,0.5)', 'rgba(160,210,100,0.4)'] : ['rgba(54,84,26,0.5)', 'rgba(136,168,60,0.5)', 'rgba(214,196,110,0.5)', 'rgba(188,160,80,0.45)'];
+  for (let i = 0; i < (spring ? 110 : 150); i++) {
+    const x = at(14);
+    const y = at(14);
+    pen.strokeStyle = tuftColors[i % tuftColors.length];
+    pen.lineWidth = 1.4 + Math.random() * 0.8;
+    pen.lineCap = 'round';
+    const blades = 4 + Math.floor(Math.random() * 4);
+    for (let b = 0; b < blades; b++) {
+      const lean = (b - (blades - 1) / 2) * 0.28 + (Math.random() - 0.5) * 0.15;
+      const length = 6 + Math.random() * 8;
+      pen.beginPath();
+      pen.moveTo(x, y);
+      pen.quadraticCurveTo(x + Math.sin(lean) * length * 0.5, y - length * 0.6, x + Math.sin(lean) * length, y - Math.cos(lean) * length);
+      pen.stroke();
+    }
+  }
+  // Klöver: tre små runda blad (och ibland en vit blomma).
+  for (let i = 0; i < 46; i++) {
+    const x = at(12);
+    const y = at(12);
+    const r = 3 + Math.random() * 2;
+    pen.fillStyle = spring ? 'rgba(70,140,56,0.75)' : 'rgba(86,132,48,0.7)';
+    for (let k = 0; k < 3; k++) {
+      const a = Math.random() * 0.4 + k * 2.09;
+      pen.beginPath();
+      pen.arc(x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8, r, 0, 6.3);
+      pen.fill();
+    }
+    if (Math.random() < 0.3) { pen.fillStyle = 'rgba(255,255,255,0.9)'; pen.beginPath(); pen.arc(x, y - r * 1.6, r * 0.7, 0, 6.3); pen.fill(); }
+  }
+  // Småblommor: fem små kronblad runt en mitt. Våren pastell, sommaren starkare.
+  const flowerColors = spring ? ['#ffffff', '#ffd9e4', '#fff2a0', '#d4c0ff', '#ffc4d8'] : ['#ffe14a', '#ffffff', '#fff2a0', '#ff9ad0', '#9ac0ff'];
+  for (let i = 0; i < (spring ? 70 : 60); i++) {
+    const x = at(10);
+    const y = at(10);
+    const r = 2.2 + Math.random() * 2.2;
+    pen.fillStyle = flowerColors[i % flowerColors.length];
+    for (let k = 0; k < 5; k++) {
+      const a = k * 1.2566 + Math.random() * 0.2;
+      pen.beginPath();
+      pen.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, r * 0.75, 0, 6.3);
+      pen.fill();
+    }
+    pen.fillStyle = '#e8a010';
+    pen.beginPath();
+    pen.arc(x, y, r * 0.55, 0, 6.3);
+    pen.fill();
+  }
+  if (spring) { // Nedfallna kronblad: små ovala, rosa och vita, med en svag skugga.
+    const petalColors = ['#ffc4d8', '#ffe0ea', '#ffffff', '#ffb0c8', '#fff0f4'];
+    for (let i = 0; i < 90; i++) {
+      const x = at(8);
+      const y = at(8);
+      const w = 2.6 + Math.random() * 2.2;
+      pen.save();
+      pen.translate(x, y);
+      pen.rotate(Math.random() * 6.3);
+      pen.fillStyle = 'rgba(40, 60, 20, 0.18)';
+      pen.beginPath(); pen.ellipse(0.8, 1.2, w * 0.7, w * 1.1, 0, 0, 6.3); pen.fill();
+      pen.fillStyle = petalColors[i % petalColors.length];
+      pen.beginPath(); pen.ellipse(0, 0, w * 0.7, w * 1.1, 0, 0, 6.3); pen.fill();
+      pen.restore();
+    }
+  } else { // Sommar: maskrosfluff (vit boll av små frön).
+    for (let i = 0; i < 18; i++) {
+      const x = at(10);
+      const y = at(10);
+      pen.fillStyle = 'rgba(255,255,255,0.7)';
+      pen.beginPath(); pen.arc(x, y, 4.5, 0, 6.3); pen.fill();
+      pen.fillStyle = 'rgba(255,255,255,0.9)';
+      for (let k = 0; k < 7; k++) { const a = k * 0.9; pen.fillRect(x + Math.cos(a) * 3, y + Math.sin(a) * 3, 1.2, 1.2); }
+    }
+  }
+}
+
 // Delas upp i steg, så att laddningsmätaren kan röra sig mellan dem (se main.js).
 export function buildHubGround() {
   // --- Marken: gyllengul med röda och orange löv, ritad i en osynlig canvas ---
@@ -129,8 +211,11 @@ export function buildHubGround() {
     pen.lineTo(x + (Math.random() - 0.5) * 4, y - 4 - Math.random() * 4);
     pen.stroke();
   }
-  if (getSeasonConfig().foliage && getSeasonConfig().foliage.groundStyle === 'snow') {
+  const groundStyle = (getSeasonConfig().foliage || {}).groundStyle; // 'leaves' (höst, standard) | 'petals' | 'meadow' | 'snow'
+  if (groundStyle === 'snow') {
     paintSnowGround(pen);
+  } else if (groundStyle === 'petals' || groundStyle === 'meadow') {
+    paintMeadowGround(pen, groundStyle === 'petals');
   } else {
     // 70 små löv på slumpade platser. Det är "bruset" som gör att man ser att bilen rör sig.
     for (let i = 0; i < 70; i++) {

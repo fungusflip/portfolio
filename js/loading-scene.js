@@ -91,15 +91,22 @@ loadingScene.add(trunks, crowns);
 
 // --- Fallande löv: en handfull, enkla ---
 const LEAF_COUNT = 40;
-const noLeaves = (getSeasonConfig().foliage || {}).fallingLeaves === 0; // Vinter: snöflingor (runda) i stället för löv.
-const leafGeometry = noLeaves ? new THREE.CircleGeometry(0.09, 8) : new THREE.PlaneGeometry(0.3, 0.2);
+const loadingFoliage = getSeasonConfig().foliage || {};
+const fallStyle = loadingFoliage.groundStyle === 'snow' ? 'snow' : loadingFoliage.groundStyle === 'petals' ? 'petals' : loadingFoliage.groundStyle === 'meadow' ? 'pollen' : 'leaves';
+// Vinter: snöflingor. Vår: kronblad. Sommar: pollen och fluff. Höst: löv.
+const leafGeometry = fallStyle === 'snow' ? new THREE.CircleGeometry(0.09, 8)
+  : fallStyle === 'petals' ? new THREE.CircleGeometry(0.1, 8).scale(0.62, 1, 1)
+  : fallStyle === 'pollen' ? new THREE.CircleGeometry(0.05, 6)
+  : new THREE.PlaneGeometry(0.3, 0.2);
 const leafMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
-const leaves = new THREE.InstancedMesh(leafGeometry, leafMaterial, LEAF_COUNT);
+const leaves = new THREE.InstancedMesh(leafGeometry, leafMaterial, fallStyle === 'pollen' ? 24 : LEAF_COUNT);
 leaves.frustumCulled = false;
 const leafData = [];
-for (let i = 0; i < LEAF_COUNT; i++) {
+const pollenColors = ['#fff6c8', '#ffe98a', '#ffffff'];
+for (let i = 0; i < leaves.count; i++) {
   leafData.push({ x: (Math.random() - 0.5) * 40, y: Math.random() * 12, z: (Math.random() - 0.5) * 40, spin: Math.random() * 6 });
-  leaves.setColorAt(i, new THREE.Color(noLeaves ? '#ffffff' : PALETTE.fallenLeaves[i % PALETTE.fallenLeaves.length]));
+  const hex = fallStyle === 'snow' ? '#ffffff' : fallStyle === 'pollen' ? pollenColors[i % 3] : PALETTE.fallenLeaves[i % PALETTE.fallenLeaves.length];
+  leaves.setColorAt(i, new THREE.Color(hex));
 }
 loadingScene.add(leaves);
 const leafHelper = new THREE.Object3D();

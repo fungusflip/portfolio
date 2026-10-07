@@ -117,8 +117,11 @@ soilImage.height = SOIL_PIXELS;
   }
   // Lövbitar och mossa i jorden (små vridna rutor).
   // Utan löv (vinter): frusen jord, gräs och snöklumpar i stället för lövbitar.
+  const style = (getSeasonConfig().foliage || {}).groundStyle;
   const noLeaves = (getSeasonConfig().foliage || {}).leafLitter === 0;
-  const flecks = noLeaves ? ['#5a5258', '#3b2a18', PALETTE.grassRoot, '#f2f6fb', '#f2f6fb'] : [...PALETTE.fallenLeaves, PALETTE.grassRoot, PALETTE.grassRoot, '#3b2a18'];
+  const flecks = style === 'petals' ? ['#ffc4d8', '#ffffff', '#ffe0ea', PALETTE.grassRoot, '#3b2a18']
+    : style === 'meadow' ? ['#a8cc4a', '#6b9a38', '#e8d24a', PALETTE.grassRoot, '#3b2a18']
+    : noLeaves ? ['#5a5258', '#3b2a18', PALETTE.grassRoot, '#f2f6fb', '#f2f6fb'] : [...PALETTE.fallenLeaves, PALETTE.grassRoot, PALETTE.grassRoot, '#3b2a18'];
   for (let i = 0; i < 26; i++) {
     const angle = Math.random() * Math.PI * 2;
     const distance = 12 + Math.random() * 36;

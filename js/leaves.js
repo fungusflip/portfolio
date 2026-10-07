@@ -30,7 +30,8 @@ leafShape.moveTo(0, -0.22);
 leafShape.lineTo(0.14, 0);
 leafShape.lineTo(0, 0.22);
 leafShape.lineTo(-0.14, 0);
-const leafParticleGeometry = new THREE.ShapeGeometry(leafShape);
+// Våren: små ovala kronblad i stället för löv (foliage.fall = 'petals').
+const leafParticleGeometry = foliage.fall === 'petals' ? new THREE.CircleGeometry(0.1, 8).scale(0.62, 1, 1) : new THREE.ShapeGeometry(leafShape);
 // DoubleSide = båda sidorna syns, eftersom lövet snurrar.
 // MeshBasicMaterial = ingen belysning: löven får exakt sina färger (PALETTE.fallenLeaves).
 // Med belysning blev de orange löven mörka och rödaktiga i skymningsljuset, så allt såg rött ut.
