@@ -52,6 +52,16 @@ function grassSpotOk(x, z, ctx, roadMargin = 1.2) {
   if (distanceToWater(x, z) < 1.5) return false;
   return !ctx.trees.some((tree) => Math.hypot(x - tree.x, z - tree.z) < 1.1 * tree.scale);
 }
+// Remsor som läggs ovanpå vägarna överlappar varandra i korsningar och vid knäckar. Stencil (core.js: stencil: true) gör att varje
+// pixel bara får färg en gång, så skarvarna blir inte mörkare än resten av vägen. Alla remsor i samma lager delar värdet 1.
+function strokeOnce(material) {
+  material.stencilWrite = true;
+  material.stencilRef = 1;
+  material.stencilFunc = THREE.NotEqualStencilFunc;
+  material.stencilZPass = THREE.ReplaceStencilOp;
+  return material;
+}
+
 function randomGrassSpot(random, ctx, tries = 40) {
   for (let i = 0; i < tries; i++) {
     const spot = hubPoint(-55 + random() * 110, 3 + random() * 54);
@@ -117,24 +127,36 @@ const onRoad = (ctx, x, z) => ctx.roads.some((road) => distanceToRoad(x, z, road
 // ============================================================================
 // VÅR: vattenpuss, våta vägar, skvätt
 // ============================================================================
-function puddleTexture() {
+// Tre olika pölformer (slumpade klumpar, olika glimt av himlen), så att inte alla pölar är samma bild.
+function puddleTexture(seed) {
+  const random = seededRandom(seed);
+  const [f1, f2, f3] = [2 + Math.floor(random() * 3), 5 + Math.floor(random() * 4), 9 + Math.floor(random() * 4)];
+  const [a1, a2, a3] = [random() * 6, random() * 6, random() * 6];
   return canvasTexture(128, (pen, n) => {
     pen.beginPath();
     for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.1) {
-      const r = n * (0.4 + 0.05 * Math.sin(a * 3 + 1) + 0.03 * Math.sin(a * 7));
+      const r = n * (0.38 + 0.06 * Math.sin(a * f1 + a1) + 0.035 * Math.sin(a * f2 + a2) + 0.015 * Math.sin(a * f3 + a3));
       pen[a === 0 ? 'moveTo' : 'lineTo'](n / 2 + Math.cos(a) * r, n / 2 + Math.sin(a) * r);
     }
-    const g = pen.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n * 0.45);
-    g.addColorStop(0, 'rgba(150,180,215,0.95)');
-    g.addColorStop(0.8, 'rgba(95,120,155,0.9)');
-    g.addColorStop(1, 'rgba(70,90,120,0.55)');
+    const g = pen.createRadialGradient(n * 0.45, n * 0.45, 0, n / 2, n / 2, n * 0.46);
+    g.addColorStop(0, 'rgba(165,195,225,0.92)');
+    g.addColorStop(0.7, 'rgba(100,126,160,0.88)');
+    g.addColorStop(1, 'rgba(62,80,108,0.45)');
     pen.fillStyle = g;
     pen.fill();
-    pen.strokeStyle = 'rgba(255,255,255,0.4)'; // Ett ljust streck: himlen som speglar sig.
-    pen.lineWidth = 3;
+    pen.lineCap = 'round';
+    pen.strokeStyle = 'rgba(255,255,255,0.38)'; // Ljusa streck: himlen och lyktorna som speglar sig.
+    pen.lineWidth = 2.5 + random() * 2;
     pen.beginPath();
-    pen.moveTo(n * 0.3, n * 0.42);
-    pen.lineTo(n * 0.55, n * 0.36);
+    const sx = n * (0.28 + random() * 0.12);
+    const sy = n * (0.36 + random() * 0.1);
+    pen.moveTo(sx, sy);
+    pen.lineTo(sx + n * (0.2 + random() * 0.15), sy - n * (0.03 + random() * 0.05));
+    pen.stroke();
+    pen.lineWidth = 1.6;
+    pen.beginPath();
+    pen.moveTo(sx + n * 0.1, sy + n * 0.12);
+    pen.lineTo(sx + n * 0.24, sy + n * 0.1);
     pen.stroke();
   });
 }
@@ -143,12 +165,11 @@ function buildPuddles(ctx, rainy) {
   const random = seededRandom(404);
   const roads = ctx.roads.filter((road) => Math.hypot(road.to.x - road.from.x, road.to.z - road.from.z) > 8);
   const count = rainy ? 26 : 14;
-  const texture = puddleTexture();
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: rainy ? 0.95 : 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
+  const materials = [11, 29, 47].map((seed) => new THREE.MeshBasicMaterial({ map: puddleTexture(seed), transparent: true, opacity: rainy ? 0.95 : 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
   const haloMaterial = new THREE.MeshBasicMaterial({ map: softTexture(), color: '#000000', transparent: true, opacity: rainy ? 0.35 : 0.28, depthWrite: false });
   const geometry = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   const puddles = [];
-  for (let i = 0; i < count && roads.length; i++) {
+  for (let attempt = 0; attempt < count * 8 && puddles.length < count && roads.length; attempt++) {
     const road = roads[Math.floor(random() * roads.length)];
     const dx = road.to.x - road.from.x;
     const dz = road.to.z - road.from.z;
@@ -158,14 +179,16 @@ function buildPuddles(ctx, rainy) {
     const x = road.from.x + dx * t + (-dz / length) * side;
     const z = road.from.z + dz * t + (dx / length) * side;
     if (Math.hypot(x - HOME_X, z - HOME_Z) < 6 || puddles.some((p) => Math.hypot(p.x - x, p.z - z) < 4)) continue;
-    const radius = 0.9 + random() * 0.9;
-    const puddle = new THREE.Mesh(geometry, material);
-    puddle.scale.set(radius * 2.2, 1, radius * 1.6);
-    puddle.rotation.y = Math.atan2(dx, dz) + (random() - 0.5) * 0.4;
+    if (distanceToWater(x, z) < 4.5) continue; // Inte på broarna.
+    const radius = 0.7 + random() * 1.1;
+    const long = 1.5 + random() * 1.1; // Långsmala pölar, ibland nästan runda.
+    const puddle = new THREE.Mesh(geometry, materials[puddles.length % materials.length]);
+    puddle.scale.set(radius * long, 1, radius * (3.3 - long) * 0.6 + 0.3);
+    puddle.rotation.y = Math.atan2(dx, dz) + (random() - 0.5) * 0.9;
     puddle.position.set(x, 0.05, z);
     puddle.renderOrder = -4;
     const halo = new THREE.Mesh(geometry, haloMaterial); // Våt, mörk kant runt vattnet.
-    halo.scale.set(radius * 4.2, 1, radius * 3.4);
+    halo.scale.set(puddle.scale.x * 1.9, 1, puddle.scale.z * 1.9);
     halo.rotation.y = puddle.rotation.y;
     halo.position.set(x, 0.045, z);
     halo.renderOrder = -4.1;
@@ -202,7 +225,7 @@ function buildPuddles(ctx, rainy) {
 
 // Hela vägnätet mörkare och blankt när det regnar.
 function buildWetRoads(ctx) {
-  const material = new THREE.MeshBasicMaterial({ color: '#0a1020', transparent: true, opacity: 0.24, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 });
+  const material = strokeOnce(new THREE.MeshBasicMaterial({ color: '#0a1020', transparent: true, opacity: 0.24, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }));
   ctx.roads.forEach((road) => {
     const width = (road.width || ROAD_WIDTH) - 0.3;
     const dx = road.to.x - road.from.x;
@@ -561,7 +584,7 @@ function buildButterflies(ctx, summer) {
 // ============================================================================
 function buildDust(ctx) {
   // Ett ljust dammlager på vägarna (mycket svagt) ...
-  const material = new THREE.MeshBasicMaterial({ color: '#e8d4a0', transparent: true, opacity: 0.1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 });
+  const material = strokeOnce(new THREE.MeshBasicMaterial({ color: '#e8d4a0', transparent: true, opacity: 0.1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }));
   ctx.roads.forEach((road) => {
     const width = (road.width || ROAD_WIDTH) - 0.3;
     const dx = road.to.x - road.from.x;

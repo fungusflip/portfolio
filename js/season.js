@@ -62,7 +62,7 @@ export const RULES = [
     config: {
       palette: { background: '#443f70', sun: '#ffd0a0', skyLight: '#c4c0ff', ground: '#8fae58', groundDark: '#76964a', groundDry: '#b3b66e',
         // Friskt ljusgrönt med blommor (rosa) i kronorna; kronblad i stället för höstlöv.
-        leaves: ['#9fd46a', '#b8e07a', '#f4a6c0', '#ffc8d8'], fallenLeaves: ['#f6b8cc', '#ffd9e4', '#b8e07a', '#fff0f4', '#9fd46a'],
+        leaves: ['#6fcf5a', '#8adc62', '#f4a6c0', '#ffc8d8'], fallenLeaves: ['#f6b8cc', '#ffd9e4', '#b8e07a', '#fff0f4', '#9fd46a'],
       },
       foliage: { leafLitter: 0.35, groundLeaves: 0.3, fallingLeaves: 0.5, litterAlt: '#ffd9e4', soilAlpha: 0.8 },
       modules: { 'spring-summer': true },
@@ -107,14 +107,14 @@ export const RULES = [
       light: { hemi: 0.85, sun: 0.78 },
       fog: { nearMul: 0.78, farMul: 0.85 },
       lamp: { flickerMul: 3, faultyEvery: 3 },
-      caveTint: { color: '#6fe39a', strength: 0.5 },
-      pondMist: { count: 7, color: '#c4b6e0', opacity: 0.2 },
+      caveTint: { color: '#6fe39a', strength: 0.85 },
+      pondMist: { count: 9, color: '#c4b6e0', opacity: 0.36 },
       particles: {
         drift: { dark: { kind: 'leaf', count: 70, colors: ['#e8661a', '#c4410f', '#f0a030', '#7a3a1a', '#5a2a4a'], fall: 0.5, sway: 1.2, size: 0.4 } },
         bats: { trees: 5, perTree: 2, color: '#120a1a' },
       },
       props: {
-        pumpkins: { count: 26, minGap: 4.5, colors: ['#e8731a', '#dd5f12', '#f08a24', '#cf5410'] },
+        pumpkins: { count: 26, minGap: 4.5, colors: ['#e8731a', '#dd5f12', '#f08a24', '#cf5410', '#e8731a', '#c9a45a', '#f2e6c0', '#7f9a3c'] },
         lampPumpkins: 4, cobwebs: true,
         shardColor: '#e8731a', pulpColor: '#f4b04a', seedColor: '#f5ecc8',
       },
@@ -129,8 +129,8 @@ export const RULES = [
       palette: { background: '#170c22', sun: '#ff7a2a', skyLight: '#7a62a8' },
       light: { hemi: 0.7, sun: 0.6 },
       lamp: { flickerMul: 5, faultyEvery: 2 },
-      caveTint: { color: '#6fe39a', strength: 0.9 },
-      pondMist: { count: 10, color: '#b8a8d8', opacity: 0.28 },
+      caveTint: { color: '#6fe39a', strength: 1.1 },
+      pondMist: { count: 12, color: '#b8a8d8', opacity: 0.42 },
       particles: { drift: { embers: { kind: 'spark', count: 50, colors: ['#ff9a2a', '#ffcf5a'], fall: -0.6, sway: 0.6, size: 0.1 } } },
       banner: 'Happy Halloween',
     },

@@ -153,7 +153,7 @@ function buildPumpkins(ctx, config, factor) {
       x = spot.x;
       z = spot.z;
     }
-    const s = 0.7 + random() * 0.65;
+    const s = random() < 0.12 ? 1.5 + random() * 0.5 : 0.75 + random() * 0.75; // Några få jättepumpor.
     const footprint = 0.45 + 0.25 * s; // Pumpans riktiga radie (samma som hindret).
     if (!spotOk(x, z, ctx, placed, setup.minGap, 1.7, footprint + 0.5)) continue;
     placed.push({ x, z, s, yaw: random() * 6.3, color: new THREE.Color(setup.colors[Math.floor(random() * setup.colors.length)]) });
@@ -233,13 +233,13 @@ function buildLampPumpkins(ctx, config, factor) {
   const faceMaterial = new THREE.MeshBasicMaterial({ map: faceTexture(), transparent: true, depthWrite: false });
   const glowMaterial = makeGlowMaterial(0.8);
   glowMaterial.color.set('#ff9a2a');
-  const faceGeometry = new THREE.PlaneGeometry(0.62, 0.62);
-  const glowGeometry = new THREE.PlaneGeometry(2.2, 2.2);
+  const faceGeometry = new THREE.PlaneGeometry(0.95, 0.95);
+  const glowGeometry = new THREE.PlaneGeometry(2.8, 2.8);
   const towardX = Math.sin(BILLBOARD_FACING);
   const towardZ = Math.cos(BILLBOARD_FACING);
   const pumpkinColor = new THREE.MeshLambertMaterial({ color: '#e8731a', emissive: '#3a1100' });
   const stemColor = new THREE.MeshLambertMaterial({ color: STEM_COLOR });
-  const HANG = 0.66; // Pumpans mitt från stolpens mitt: pumpans radie (0.48) + stolpen + lite luft.
+  const HANG = 0.82; // Pumpans mitt från stolpens mitt: pumpans radie (0.6) + stolpen + lite luft.
   const bracketGeometry = new THREE.CylinderGeometry(0.03, 0.03, HANG, 6).rotateX(Math.PI / 2);
   for (let n = 0; n < wanted; n++) {
     const lamp = lamps[Math.floor(((n + 0.5) * lamps.length) / wanted)];
@@ -248,13 +248,13 @@ function buildLampPumpkins(ctx, config, factor) {
     group.position.set(lamp.at.x, 0, lamp.at.z);
     markMoving(group);
     const body = new THREE.Mesh(pumpkinGeometry, pumpkinColor);
-    body.scale.setScalar(0.95);
+    body.scale.setScalar(1.2);
     body.position.set(towardX * HANG, 2.3, towardZ * HANG);
     const stem = new THREE.Mesh(stemGeometry, stemColor);
-    stem.scale.setScalar(0.95);
+    stem.scale.setScalar(1.2);
     stem.position.copy(body.position);
     const face = new THREE.Mesh(faceGeometry, faceMaterial);
-    face.position.set(towardX * HANG, 2.3, towardZ * HANG).addScaledVector(new THREE.Vector3(towardX, 0, towardZ), 0.4);
+    face.position.set(towardX * HANG, 2.3, towardZ * HANG).addScaledVector(new THREE.Vector3(towardX, 0, towardZ), 0.5);
     face.rotation.set(-CAMERA_PITCH, BILLBOARD_FACING, 0, 'YXZ');
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     glow.position.copy(face.position);
@@ -282,44 +282,56 @@ function buildLampPumpkins(ctx, config, factor) {
 // Spindelnät i hörnen på stugan och garaget
 // ============================================================================
 function buildCobwebs() {
-  const texture = canvasTexture(128, (pen, n) => {
-    pen.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-    pen.lineWidth = 1.6;
-    const rays = [0.05, 0.3, 0.55, 0.8, 1.05, 1.3, 1.5].map((a) => a * 1.0);
-    for (const angle of rays) { // Trådar ut från hörnet uppe till vänster.
+  // Ett nät i hörnet uppe till vänster: ojämna trådar och hängande bågar, tjockare nära hörnet. 256 px och grova linjer,
+  // annars försvinner de tunna trådarna när nätet ritas bara ett tiotal pixlar brett.
+  const texture = canvasTexture(256, (pen, n) => {
+    const random = seededRandom(5150);
+    pen.lineCap = 'round';
+    const rays = [0.04, 0.26, 0.5, 0.74, 0.98, 1.22, 1.46].map((a) => a + (random() - 0.5) * 0.08);
+    pen.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    pen.lineWidth = 3.4;
+    for (const angle of rays) { // Trådar ut från hörnet. En del är kortare, så att kanten blir trasig.
+      const reach = n * (0.8 + random() * 0.3);
       pen.beginPath();
-      pen.moveTo(1, 1);
-      pen.lineTo(1 + Math.cos(angle) * n * 1.05, 1 + Math.sin(angle) * n * 1.05);
+      pen.moveTo(2, 2);
+      pen.lineTo(2 + Math.cos(angle) * reach, 2 + Math.sin(angle) * reach);
       pen.stroke();
     }
-    for (let ring = 1; ring <= 5; ring++) { // Hängande bågar mellan trådarna.
+    pen.lineWidth = 2.2;
+    for (let ring = 1; ring <= 6; ring++) { // Hängande bågar mellan trådarna.
+      pen.globalAlpha = 1 - ring * 0.07;
       pen.beginPath();
       rays.forEach((angle, i) => {
-        const r = ring * n * 0.19 * (1 - 0.1 * Math.sin(i * 2));
-        const px = 1 + Math.cos(angle) * r;
-        const py = 1 + Math.sin(angle) * r;
+        const r = ring * n * 0.15 * (1 - 0.1 * Math.sin(i * 2 + ring));
+        const px = 2 + Math.cos(angle) * r;
+        const py = 2 + Math.sin(angle) * r;
         if (i === 0) pen.moveTo(px, py);
-        else pen.quadraticCurveTo(1 + Math.cos((angle + rays[i - 1]) / 2) * r * 0.82, 1 + Math.sin((angle + rays[i - 1]) / 2) * r * 0.82, px, py);
+        else pen.quadraticCurveTo(2 + Math.cos((angle + rays[i - 1]) / 2) * r * 0.8, 2 + Math.sin((angle + rays[i - 1]) / 2) * r * 0.8, px, py);
       });
       pen.stroke();
     }
+    pen.globalAlpha = 1;
+    pen.fillStyle = 'rgba(255, 255, 255, 0.45)'; // Några daggdroppar.
+    for (let i = 0; i < 6; i++) { pen.beginPath(); pen.arc(n * (0.1 + random() * 0.5), n * (0.1 + random() * 0.5), 2.4 + random() * 2, 0, Math.PI * 2); pen.fill(); }
   });
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide });
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
   const geometry = new THREE.PlaneGeometry(1, 1);
-  // [hörnets x, hörnets y, väggens z, storlek, spegelvänd]: i hemgruppens led (home.js).
-  const cabinFront = CABIN_Z + CABIN_SIZE / 2 + 0.12;
-  const garageFront = GARAGE_DEPTH / 2 + 0.12;
+  // [hörnets x, hörnets y, väggens z, storlek, spegelvänd]: i hemgruppens led (home.js). Taken skjuter ut över väggarna (stugans
+  // takfot 0.45, garagets ca 0.4) och döljer allt under dem sett uppifrån, så näten hänger i luften just utanför takkanten.
+  const cabinFront = CABIN_Z + CABIN_SIZE / 2 + 0.6;
+  const garageFront = GARAGE_DEPTH / 2 + 0.55;
   const webs = [
-    [CABIN_X - CABIN_SIZE / 2 + 0.05, 3.7, cabinFront, 1.0, false],
-    [CABIN_X + CABIN_SIZE / 2 - 0.05, 3.7, cabinFront, 0.8, true],
-    [-2.75, 2.5, garageFront, 0.9, false],
-    [2.75, 2.5, garageFront, 0.9, true],
+    [CABIN_X - CABIN_SIZE / 2 - 0.15, 3.75, cabinFront, 1.9, false],
+    [CABIN_X + CABIN_SIZE / 2 + 0.15, 3.75, cabinFront, 1.5, true],
+    [-2.9, 2.55, garageFront, 1.5, false],
+    [2.9, 2.55, garageFront, 1.3, true],
   ];
   for (const [x, y, z, size, mirror] of webs) {
     const web = new THREE.Mesh(geometry, material);
     web.scale.set(mirror ? -size : size, size, 1);
     web.position.set(x + (mirror ? -size / 2 : size / 2), y - size / 2, z);
     web.userData.noShadow = true;
+    web.renderOrder = 3;
     homeGroup.add(web);
   }
 }
@@ -350,8 +362,8 @@ function buildCaveTint(config, factor) {
   updaters.push((delta) => {
     time += delta;
     const pulse = amount * (0.7 + 0.3 * Math.sin(time * 1.3));
-    haloMaterial.color.copy(tint).multiplyScalar(pulse * 0.55);
-    poolMaterial.color.copy(tint).multiplyScalar(pulse * 0.7);
+    haloMaterial.color.copy(tint).multiplyScalar(pulse * 0.9);
+    poolMaterial.color.copy(tint).multiplyScalar(pulse * 1.0);
   });
 }
 

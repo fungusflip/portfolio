@@ -63,7 +63,7 @@ try {
 }
 export const USE_ANTIALIAS = !NO_ANTIALIAS && !isWeakGpu() && !loweredLastVisit;
 // { canvas } är kortform för { canvas: canvas }: "rita i just den här canvasen".
-export const renderer = new THREE.WebGLRenderer({ canvas, antialias: USE_ANTIALIAS });
+export const renderer = new THREE.WebGLRenderer({ canvas, antialias: USE_ANTIALIAS, stencil: true }); // stencil: säsongernas vägremsor (våt/dammig) ritas bara en gång per pixel, utan mörka skarvar i korsningar.
 
 // devicePixelRatio = hur många riktiga pixlar skärmen har per "CSS-pixel"
 // (2 på en retina-skärm). Math.min(..., 1) sätter ett tak på 1: på en
