@@ -18,8 +18,8 @@ const STEP = 0.45;            // Så långt hjulet rullar mellan två bitar (min
 const MIN_SPEED = 1.2;        // Under den här farten (enheter/s) lämnas inga spår.
 const LIFE_NORMAL = 9;        // Sekunder tills ett vanligt spår är borta.
 const LIFE_HEAVY = 16;        // ...och ett skid/drift-spår.
-const BRAKE_DECEL = 10;       // Fartminskning (enheter/s²) som räknas som hård bromsning. Att släppa gasen ger ca 6.
-const SLIP_ANGLE = 0.3;       // Radianer mellan nosen och rörelseriktningen som räknas som skid.
+const BRAKE_DECEL = 14;       // Fartminskning (enheter/s²) som räknas som hård bromsning. Att släppa gasen ger ca 6.
+const SLIP_ANGLE = 0.4;       // Radianer mellan nosen och rörelseriktningen som räknas som skid.
 const HALF_WIDTH = 0.13;      // Halva spårbredden, vanlig körning.
 const HALF_WIDTH_HEAVY = 0.18; // ...och vid skid (gräs: gånger 1.3, jorden rivs upp bredare).
 const HEIGHT = 0.06;          // Höjd över marken (ovanför vägarnas lager, som ligger på 0.012+).
@@ -32,11 +32,11 @@ const GARAGE_HALF_DEPTH = 1.9;
 const color = (hex) => new THREE.Color(hex);
 const SURFACES = {
   grass:  { normal: [color('#34431a'), 0.42], heavy: [color('#4a3120'), 0.7], wide: 1.3 }, // Nedtryckt gräs / uppriven jord.
-  road:   { normal: [color('#d9c9b4'), 0.2],  heavy: [color('#2a2420'), 0.55], wide: 1 },  // Dammstreck / gummi på grus.
-  bay:    { normal: [color('#403a36'), 0.14], heavy: [color('#151413'), 0.7], wide: 1 },   // Asfalt i fickorna.
-  techart: { normal: [color('#1a2638'), 0.3], heavy: [color('#0a1018'), 0.55], wide: 1 },
-  prog:   { normal: [color('#0a1d12'), 0.35], heavy: [color('#040a07'), 0.6], wide: 1 },
-  art:    { normal: [color('#c4b192'), 0.3],  heavy: [color('#4a3b30'), 0.5], wide: 1 },
+  road:   { normal: [color('#d9c9b4'), 0.08], heavy: [color('#2a2420'), 0.24], wide: 1 },  // Dammstreck / gummi på grus.
+  bay:    { normal: [color('#403a36'), 0.06], heavy: [color('#151413'), 0.3], wide: 1 },   // Asfalt i fickorna.
+  techart: { normal: [color('#1a2638'), 0.12], heavy: [color('#0a1018'), 0.26], wide: 1 },
+  prog:   { normal: [color('#0a1d12'), 0.14], heavy: [color('#040a07'), 0.28], wide: 1 },
+  art:    { normal: [color('#c4b192'), 0.12], heavy: [color('#4a3b30'), 0.24], wide: 1 },
 };
 
 function surfaceNow(x, z) {
