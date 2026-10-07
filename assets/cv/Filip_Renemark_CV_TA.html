@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filip Renemark – CV, Technical Artist</title>
+<!--
+  Teknisk-artist-version av CV:t. Redigera texten direkt här och skriv ut till PDF
+  (Ctrl+P, A4, marginaler "Ingen", slå på "Bakgrundsgrafik"). Kommentarerna som
+  börjar med TODO Filip är frågor till dig och syns inte i utskriften.
+  Fakta kommer bara från det gamla CV:t och portfoliosidorna.
+-->
+<style>
+  @page { size: A4; margin: 0; }
+  :root { --ink: #1f2933; --dim: #4b5563; --accent: #1f6b3a; --rule: #1f6b3a; }
+  * { box-sizing: border-box; }
+  html { background: #e5e7eb; }
+  body { margin: 0; color: var(--ink); font: 10pt/1.38 "Segoe UI", Arial, Helvetica, sans-serif; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 16mm 12mm; background: #fff; }
+  h1 { margin: 0; font-size: 26pt; line-height: 1.1; color: var(--accent); }
+  .tagline { margin: 2pt 0 4pt; font-size: 12pt; font-weight: 600; }
+  .contact { margin: 0; color: var(--dim); font-size: 9pt; }
+  .contact a, a { color: inherit; text-decoration: none; }
+  h2 { margin: 11pt 0 5pt; padding-bottom: 2pt; border-bottom: 1.5px solid var(--rule); font-size: 10pt; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+  p { margin: 0 0 4pt; }
+  .job { margin: 0 0 7pt; break-inside: avoid; }
+  .job-head { display: flex; justify-content: space-between; gap: 10pt; align-items: baseline; }
+  .job-head b { font-size: 10.5pt; }
+  .job-head .when { flex: none; color: var(--dim); font-size: 9pt; }
+  .job-sub { color: var(--dim); font-size: 9pt; font-style: italic; margin: 0 0 1pt; }
+  ul { margin: 2pt 0 0; padding-left: 14pt; }
+  li { margin: 0 0 1.5pt; }
+  .skills { display: grid; grid-template-columns: 30mm 1fr; gap: 2pt 8pt; font-size: 9.5pt; }
+  .skills b { color: var(--dim); font-weight: 600; }
+  .foot { margin-top: 8pt; color: var(--dim); font-size: 8.5pt; font-style: italic; }
+  @media print {
+    html { background: none; }
+    .page { margin: 0; padding: 13mm 15mm 10mm; min-height: 0; box-shadow: none; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+<h1>Filip Renemark</h1>
+<p class="tagline">Technical Artist &ndash; procedurella verktyg, shaders och rigg</p>
+<p class="contact">Bro, Upplands-Bro &middot; 070-357 55 88 &middot; <a href="mailto:filip@renemark.se">filip@renemark.se</a> &middot; <a href="https://filip.renemark.se">filip.renemark.se</a> &middot; LinkedIn: filip-renemarka83397228 &middot; GitHub: fungusflip</p>
+<!-- TODO Filip: telefonnumret och adressen står kvar från det gamla CV:t. Vill du ha dem med? -->
+
+<h2>Profil</h2>
+<p>Technical Artist som bygger procedurella verktyg i Houdini (HDA:er), shaders och material samt VFX, och som riggar och animerar i Cascadeur. Jag har levererat arbete i Unreal och Unity, och jag har paketerat en spelbuild med C++. Jag vill jobba i ett stabilt, långsiktigt team och göra verktyg som gör att artister och regissörer kan iterera själva.</p>
+<!-- TODO Filip: godkänn eller skriv om profilen. Jag har tagit "stabilt, långsiktigt team" och "iterera själva" från ditt gamla CV och Mutation Protocol-texten. UI/UX-meningen är borttagen. -->
+
+<h2>Arbetslivserfarenhet</h2>
+
+<div class="job">
+  <div class="job-head"><b>Frilansande Technical Artist / Programmerare &mdash; Eget företag</b><span class="when">Aug 2024 &ndash; pågående</span></div>
+  <ul>
+    <li>Använder AI-verktyg (bl.a. Claude, MCP och open source image generation) för att implementera demos och on-hit VFX. Från cirka 4 dagars arbete ner till max 4 timmar.</li>
+    <li>Skapar shaders och demos för att snabbt visa visuella koncept för kund.</li>
+    <li>Hjälper medarbetare med tekniska buggar i Unreal (ca 4&ndash;6 gånger i veckan) och ger feedback på teamets kreativa arbete (1&ndash;2 gånger i veckan).</li>
+  </ul>
+</div>
+
+<div class="job">
+  <div class="job-head"><b>Mutation Protocol &mdash; VR Cyberpunk Battle Royale</b><span class="when">Frilans, aug 2025 &ndash; 2026</span></div>
+  <p class="job-sub">Utvecklingen avslutades när finansieringen tog slut.</p>
+  <!-- TODO Filip: slutår 2026 stämmer med CV:t på sajten. Vilken månad? "lansering juni 2026" stod på det gamla UI/UX-CV:t men är borttaget på sajt-CV:t, ska det med? -->
+  <ul>
+    <li>Byggde ett procedurellt vapensystem i Houdini. Regissören kunde ändra vapendesignen med parametrar utan att jag behövde göra om rigg och animation. Det gav betydligt snabbare iteration.</li>
+    <li>Procedurella karaktärer från en bas, där delar läggs till och tas bort med parametrar. Texturparametrar på HDA:n, FBX-export och retargeting till alla varianter.</li>
+    <li>Houdini-verktyg som passar och draperar kläder på valfri karaktär utan manuell retopologi (designer: Elina Kans).</li>
+    <li>Rigging och animation i Cascadeur samt VFX-integration.</li>
+  </ul>
+</div>
+
+<div class="job">
+  <div class="job-head"><b>Camilla &mdash; Sci-Fi-prototyp</b><span class="when">Frilans, 2025</span></div>
+  <ul>
+    <li>Byggde ett Houdini-HDA som genererar robotkaraktärer med automatisk rigging, plus ett stiliserat shaderbibliotek och VFX. En ny karaktär tog cirka 1 vecka i stället för cirka 4.</li>
+    <li>Modulär korridor med egna material, ljus och VFX.</li>
+  </ul>
+</div>
+
+<div class="job">
+  <div class="job-head"><b>ALRPG &mdash; Action RPG-prototyp</b><span class="when">Frilans, 2025</span></div>
+  <ul>
+    <li>Terrain-verktyg i Houdini för att placera farms i olika storlekar med anchor joints, så att de snabbt blir redo i engine.</li>
+    <li>Gräs-shader där grödornas tillväxt styrs av vertex shadern, och vatten-shader som visar att plantorna vattnas.</li>
+  </ul>
+</div>
+
+<div class="job">
+  <div class="job-head"><b>Lemon Lagoon &mdash; Comfy Jam: Summer</b><span class="when">Game jam</span></div>
+  <ul>
+    <li>All animation i Cascadeur, rigging, tech art och implementation i Unreal Engine. Paketerade den släppta builden, vilket krävde en del C++.</li>
+  </ul>
+  <!-- TODO Filip: årtal/månad för Comfy Jam: Summer? Vad bestod C++-paketeringen av? Vilka tech art-delar (shaders, VFX, verktyg)? -->
+</div>
+
+<div class="job">
+  <div class="job-head"><b>Helpdesk Support &mdash; Webhelp</b><span class="when">Dec 2021 &ndash; Aug 2022</span></div>
+  <ul><li>Kundnära teknisk support och problemlösning på distans.</li></ul>
+</div>
+
+<div class="job">
+  <div class="job-head"><b>Webbutvecklare &mdash; SeoDev AB</b><span class="when">Jun 2018 &ndash; Jul 2018</span></div>
+  <ul><li>Utveckling och underhåll av webbplatser i team.</li></ul>
+</div>
+
+<h2>Egna projekt och teamprojekt</h2>
+<div class="job">
+  <ul>
+    <li><b>AnGame</b> (Unreal Engine 5.8, pågående): bow-combat-roguelite. Gräs och träd scatteras från Houdini-meshar. Runtime Virtual Texture gör att gräset tar upp markens färg. Ett vindsystem (Material Parameter Collection) styr både träd och gräs. Målad look med 6x6 Kuwahara och Sobel-linjer, plus en dag/natt-färggradering. Bytte anti-aliasing till SMAA för att få bort att de avlägsna träden kröp.</li>
+    <li><b>BioYield</b> (Unreal Engine 5.8, pågående): förstapersonsskjutare där jag övar tech art: Niagara-VFX, ZibraVDB-explosion, material, post-process och UI.</li>
+    <li><b>VAT Fluid Pipeline</b>: vätskesimulering i Houdini, bakad till en Vertex Animation Texture och spelad i Unreal.</li>
+    <li><b>Spite: Catharsis</b>: sex veckors teamprojekt i egen DX11-motor. VFX, shaders (HLSL), verktyg och animationsskript (Houdini, Maya Python, Substance Designer, EmberGen).</li>
+  </ul>
+  <!-- TODO Filip: årtal för Spite: Catharsis, VAT Fluid och AnGame/BioYield-start? Ska Idle Village (Unity/C#, tidig MVP aug 2025) med, eller håller vi CV:t till Technical Artist? -->
+</div>
+
+<h2>Utbildning</h2>
+<div class="job-head"><b>Technical Art (Högre Yrkesutbildning) &mdash; The Game Assembly</b><span class="when">Aug 2024 &ndash; Dec 2025</span></div>
+<div class="job-head"><b>Spelprogrammering (Högre Yrkesutbildning) &mdash; Forsbergs Skola</b><span class="when">Aug 2023 &ndash; Okt 2025</span></div>
+
+<h2>Kompetenser</h2>
+<div class="skills">
+  <b>Procedurellt</b><span>Houdini (HDA, TOPs, Vellum, VEX), Substance Designer</span>
+  <b>Shaders och material</b><span>HLSL, GLSL, Shader Graph, Unreal-material, post-process</span>
+  <b>VFX</b><span>Niagara, Houdini, EmberGen</span>
+  <b>Rigg och animation</b><span>Cascadeur, Maya</span>
+  <b>Engines</b><span>Unreal Engine, Unity, Godot</span>
+  <b>Kod</b><span>C++, C#, Python, VEX</span>
+  <b>Versionshantering</b><span>Git, Perforce</span>
+</div>
+<!-- TODO Filip: "Vellum", "TOPs", "Niagara", "Substance Designer" och "EmberGen" kommer från portfoliosidorna, inte från CV:ts kompetenslista. Ta bort det du inte vill stå för. -->
+
+<h2>Språk</h2>
+<p>Svenska (flytande) &middot; Engelska (flytande)</p>
+
+<p class="foot">Portfolio: filip.renemark.se &middot; Referenser lämnas på begäran.</p>
+
+</main>
+</body>
+</html>
