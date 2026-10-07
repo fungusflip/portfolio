@@ -1,16 +1,26 @@
+<div class="facts">
+ <div><b>Tools</b><span>Unity Shader Graph</span></div>
+</div>
+
 <p>A water shader in Unity Shader Graph. This is the project that got me into shaders.</p>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2024/07/6efbaa073686e2aedddc7132a7bc379c.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-<p>Final version: scrolling UVs, plus screen position for fake reflections.</p>
 
-<h3>Foam</h3>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/8eb04fda31546079945be87b501c34ba.gif" loading="lazy"></figure>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/027b10baf97da5917ee6c34e897e5f70.gif" loading="lazy"></figure>
+<figure class="wide"><video src="https://filip.renemark.se/wp-content/uploads/2024/07/6efbaa073686e2aedddc7132a7bc379c.mp4" controls muted loop playsinline preload="metadata"></video><figcaption>Final version: scrolling UVs, plus screen position for fake reflections.</figcaption></figure>
+
+<ul class="chips"><li>Scrolling UVs</li><li>Screen-position fake reflections</li><li>Depth-buffer foam</li><li>View-space depth color</li><li>Two blended normal maps</li></ul>
+
+<h2>Foam</h2>
 <p>The shader compares the water’s depth with the depth buffer and lerps in foam where they’re close. It’s cheap and looks right.</p>
+<div class="media-row">
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/8eb04fda31546079945be87b501c34ba.gif" loading="lazy"></figure>
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/027b10baf97da5917ee6c34e897e5f70.gif" loading="lazy"></figure>
+</div>
 
-<h3>Depth color</h3>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/d28556441599b1ee0cd708f52467b79d.gif" loading="lazy"></figure>
-<figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/a327155c598e7ffd26c16b22ebab4a50.gif" loading="lazy"></figure>
+<h2>Depth color</h2>
 <p>Light fades the deeper it goes. View-space depth and an absorption value blend the surface color toward the deep color.</p>
+<div class="media-row">
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/d28556441599b1ee0cd708f52467b79d.gif" loading="lazy"></figure>
+ <figure><img src="https://filip.renemark.se/wp-content/uploads/2024/07/a327155c598e7ffd26c16b22ebab4a50.gif" loading="lazy"></figure>
+</div>
 
-<h3>Surface</h3>
+<h2>Surface</h2>
 <p>Two normal maps blended together, plus noise to break up the foam.</p>
