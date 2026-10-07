@@ -113,8 +113,8 @@ function buildDrifts(ctx, max) {
 // ============================================================================
 // Snöfläckar: små, ojämna, mjukkantade snölapar som ersätter lövhögarna. Under träden, utströdda på gräset och längs vägkanterna.
 // ============================================================================
-// Ligger platta på marken (en InstancedMesh, en bild): ritas efter marken men före vägarna (som vattnet), så att ingen fläck kan
-// hamna över en väg eller bilen. Fläckarna hålls borta från vägar och vatten.
+// Ligger platta på marken (en InstancedMesh, en bild), med djuptest (annars ritas de över skyltarna: genomskinliga föremål ritas sist).
+// Fläckarna hålls borta från vägar och vatten.
 function buildSnowPatches(ctx, max) {
   const texture = canvasTexture(128, (pen, n) => {
     const random = seededRandom(77);
@@ -170,7 +170,7 @@ function buildSnowPatches(ctx, max) {
     }
   }
   if (!spots.length) return;
-  const material = new THREE.MeshLambertMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false });
+  const material = new THREE.MeshLambertMaterial({ map: texture, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), material, spots.length);
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
@@ -185,7 +185,7 @@ function buildSnowPatches(ctx, max) {
   mesh.instanceMatrix.needsUpdate = true;
   mesh.instanceColor.needsUpdate = true;
   mesh.frustumCulled = false;
-  mesh.renderOrder = -9.5;
+  mesh.renderOrder = -1; // Som jordfläckarna under träden (trees.js): med djuptest, så att skyltar och bil alltid ligger framför.
   mesh.userData.noShadow = true;
   hubGroup().add(mesh);
 }
