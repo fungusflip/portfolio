@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PALETTE } from './core.js';
 import { addSway, addSaturation } from './magic.js';
+import { getSeasonConfig } from './season.js';
 
 // --- Stammen: breddar ut sig nertill och går över i rotknölar, så att trädet växer UR marken ---
 // Stammen är en sjusidig cylinder med fem ringar. De nedersta ringarna blir bredare (rotfoten),
@@ -143,6 +144,12 @@ const soilGeometry = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2); // Rad
 const litterGeometry = new THREE.IcosahedronGeometry(1, 0);
 const litterMaterial = new THREE.MeshLambertMaterial({ color: '#ffffff', flatShading: true });
 const LITTER_PER_TREE = 8;
+// Säsong (season.js, nyckeln foliage): leafLitter = andel av småbitarna som är löv (0 = inga löv, snö/frost i stället,
+// i färgen litterAlt), soilAlpha = hur tydlig den mörka jordfläcken under trädet är.
+const foliage = getSeasonConfig().foliage || {};
+const LEAF_SHARE = foliage.leafLitter === undefined ? 1 : foliage.leafLitter;
+const LITTER_ALT = new THREE.Color(foliage.litterAlt || '#eef3f8');
+if (foliage.soilAlpha !== undefined) soilMaterial.opacity = foliage.soilAlpha;
 const stoneLight = new THREE.Color(PALETTE.gravelLight);
 const stoneDark = new THREE.Color(PALETTE.gravelDark);
 const mossColor = new THREE.Color(PALETTE.grassRoot);
@@ -181,6 +188,10 @@ function makeTreeBases(trees) {
         width = 0.1 + Math.random() * 0.08;
         height = width * 0.7;
         color.copy(mossColor).multiplyScalar(0.7 + Math.random() * 0.6);
+      } else if (Math.random() >= LEAF_SHARE) { // Inga löv denna säsong: en liten snö- eller frostklump.
+        width = 0.1 + Math.random() * 0.08;
+        height = width * 0.45;
+        color.copy(LITTER_ALT).multiplyScalar(0.88 + Math.random() * 0.12);
       } else { // Fallet löv: platt.
         width = 0.11 + Math.random() * 0.05;
         height = 0.025;
