@@ -167,15 +167,22 @@ parkPrompt.addEventListener('click', () => {
 });
 
 // Flyttar uppmaningen till en punkt på skärmen (i pixlar), eller tillbaka till nere i mitten (null).
+// Anropas varje bild: rör bara DOM:en när något faktiskt ändrats.
+let promptAnchored = false;
+let promptLeft = '';
+let promptTop = '';
 export function placeParkPrompt(spot) {
   if (spot) {
-    parkPrompt.classList.add('anchored');
-    parkPrompt.style.left = `${spot.x}px`;
-    parkPrompt.style.top = `${spot.y}px`;
-  } else {
+    const left = `${spot.x}px`;
+    const top = `${spot.y}px`;
+    if (!promptAnchored) { parkPrompt.classList.add('anchored'); promptAnchored = true; }
+    if (left !== promptLeft) { parkPrompt.style.left = left; promptLeft = left; }
+    if (top !== promptTop) { parkPrompt.style.top = top; promptTop = top; }
+  } else if (promptAnchored || promptLeft || promptTop) {
     parkPrompt.classList.remove('anchored');
     parkPrompt.style.left = '';
     parkPrompt.style.top = '';
+    promptAnchored = false; promptLeft = ''; promptTop = '';
   }
 }
 window.addEventListener('keydown', (e) => {

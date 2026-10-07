@@ -256,6 +256,7 @@ const CAMERA_ARM_ANGLE = Math.atan2(cameraOffset.x, cameraOffset.z); // Åt vilk
 const PROMPT_DISTANCE = 3; // Var uppmaningen sitter: så långt framför skylten (fickan är 6 bort).
 const promptPoint = new THREE.Vector3();
 let focusZoom = 1;
+let lastNitroText = '';
 function gameFrame(time) {
   // Webbplatsen ligger ovanpå och spelet syns inte: rita inget (sparar grafikkortet).
   // Klockan går ändå, så att första bilden efteråt inte får ett jättehopp.
@@ -333,7 +334,8 @@ function gameFrame(time) {
   updateLeaves(delta, target); // Löven hålls i en låda runt samma punkt.
   updateMagic(delta, car.position, wind, car.rotation.y, carModule.drifting || carModule.sliding || carModule.boosting); // Gräset, eldflugorna, träden och gnistspåret (magic.js).
   updateTracks(delta, car.position, car.rotation.y, carModule.speed, carModule.drifting || carModule.sliding || carModule.boosting); // Däckspår (tracks.js).
-  nitroFill.style.setProperty('--nitro', carModule.nitro.toFixed(3)); // Nitromätaren i guiden.
+  const nitroText = carModule.nitro.toFixed(3); // Nitromätaren i guiden (skrivs bara när värdet ändrats).
+  if (nitroText !== lastNitroText) { nitroFill.style.setProperty('--nitro', nitroText); lastNitroText = nitroText; }
   const afterLeaves = performance.now();
 
   // Solen (och rutan där skuggor räknas ut) följer med bilen.
