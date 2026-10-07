@@ -5,7 +5,7 @@
 //      blommande träd (rosa kronblad som faller), mossfläckar, fjärilar, ibland en regnbåge. Regnig vår: regn,
 //      ringar i vattnet och mörka, våta vägar.
 // SOMMAR: damm på vägarna och dammoln bakom bilen, ljusare blommor, fjärilar, trollsländor vid dammen,
-//      eldflugor och lite varmluft som dallrar.
+//      glittrande pollen i solen.
 // Utanför de säsongerna gör filen ingenting alls (buildSpringSummer återvänder direkt).
 // Allt byggs procedurellt med begränsade antal. Inget ändrar trädens färger eller lövhögar (det sköter season.js).
 // Hämtas av seasonfx.js via hook-API:t (config.modules['spring-summer'], se season.js).
@@ -766,8 +766,8 @@ function buildSpringSummer(ctx) {
       buildFlowers(ctx, true);
       buildButterflies(ctx, true);
       buildDragonflies(ctx);
-      state.updaters.push(makeGlowSwarm({ count: 70, size: 0.55, color: '#d8ff5a', rise: 0.05, height: [0.4, 3], blink: 2.2, spread: 0.9 })); // Eldflugor.
-      state.updaters.push(makeGlowSwarm({ count: 14, size: 3.2, color: '#4a4232', rise: 0.5, height: [0.5, 4.5], blink: 0.7, spread: 0.3 })); // Varmluft (svag, dallrande).
+      // Pollen och ljusa dammkorn som glittrar i solen (inte eldflugor: det är mitt på dagen, och additivt ljus syns inte mot ljus mark).
+      state.updaters.push(makeGlowSwarm({ count: 60, size: 0.3, color: '#fff2c0', rise: 0.04, height: [0.5, 4], blink: 0.9, spread: 0.7 }));
     }
   } catch (error) {
     console.warn('[season-spring-summer]', error); // Ett fel här ska aldrig stoppa spelet.

@@ -289,7 +289,7 @@ function buildCobwebs() {
     pen.lineCap = 'round';
     const rays = [0.04, 0.26, 0.5, 0.74, 0.98, 1.22, 1.46].map((a) => a + (random() - 0.5) * 0.08);
     pen.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-    pen.lineWidth = 3.4;
+    pen.lineWidth = 5;
     for (const angle of rays) { // Trådar ut från hörnet. En del är kortare, så att kanten blir trasig.
       const reach = n * (0.8 + random() * 0.3);
       pen.beginPath();
@@ -297,7 +297,7 @@ function buildCobwebs() {
       pen.lineTo(2 + Math.cos(angle) * reach, 2 + Math.sin(angle) * reach);
       pen.stroke();
     }
-    pen.lineWidth = 2.2;
+    pen.lineWidth = 3.4;
     for (let ring = 1; ring <= 6; ring++) { // Hängande bågar mellan trådarna.
       pen.globalAlpha = 1 - ring * 0.07;
       pen.beginPath();
@@ -321,10 +321,10 @@ function buildCobwebs() {
   const cabinFront = CABIN_Z + CABIN_SIZE / 2 + 0.6;
   const garageFront = GARAGE_DEPTH / 2 + 0.55;
   const webs = [
-    [CABIN_X - CABIN_SIZE / 2 - 0.15, 3.75, cabinFront, 1.9, false],
-    [CABIN_X + CABIN_SIZE / 2 + 0.15, 3.75, cabinFront, 1.5, true],
-    [-2.9, 2.55, garageFront, 1.5, false],
-    [2.9, 2.55, garageFront, 1.3, true],
+    [CABIN_X - CABIN_SIZE / 2 - 0.15, 3.75, cabinFront, 2.7, false],
+    [CABIN_X + CABIN_SIZE / 2 + 0.15, 3.75, cabinFront, 2.2, true],
+    [-2.9, 2.55, garageFront, 2.1, false],
+    [2.9, 2.55, garageFront, 1.8, true],
   ];
   for (const [x, y, z, size, mirror] of webs) {
     const web = new THREE.Mesh(geometry, material);

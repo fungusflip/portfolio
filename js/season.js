@@ -246,12 +246,13 @@ export function getSeasonState(search, now) {
   if (forced === 'off' || forced === 'default') {
     rules = [];
   } else if (forced && RULES.some((rule) => rule.name === forced)) {
-    // En enda regel för sig, med sin årstid (om den har någon). Veckodagskravet hoppas över.
+    // Den valda regeln på sitt demo-datum, tillsammans med allt annat som gäller då. Veckodagskravet hoppas över.
     const rule = RULES.find((r) => r.name === forced);
     const [month, day] = rule.demo || rule.from;
     date = new Date(date.getFullYear(), month - 1, day);
-    const season = rule.base ? null : RULES.find((r) => r.base && inRange(r, date));
-    rules = [season, rule].filter(Boolean);
+    // Allt som gäller det datumet (så att t.ex. halloween-night får Halloween-pumporna som den har den 31 oktober). Dagar med veckodagskrav
+    // (midsommar) hoppas över om de inte är den som valts.
+    rules = rule.base ? [rule] : RULES.filter((r) => r === rule || (r.weekday === undefined && inRange(r, date)));
   } else {
     rules = RULES.filter((rule) => inRange(rule, date));
   }
