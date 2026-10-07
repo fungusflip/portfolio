@@ -22,6 +22,11 @@ export function updateKnockables(delta) {
   }
 }
 
+// Lägger till en egen animation: update(delta) → true när den är klar (t.ex. skärvor som flyger).
+export function addAnimation(update) {
+  running.push({ update });
+}
+
 // Fallkurvan 0–1: långsam start, snabb slut, lite studs på slutet.
 function fallCurve(u) {
   if (u >= 1) return 1;

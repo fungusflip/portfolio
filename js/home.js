@@ -14,6 +14,7 @@ import { ROAD_DISTANCE } from './roads.js';
 import { setParkedAt, leaveParking } from './ui.js';
 import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
+import { addAnimation } from './knockables.js';
 import { makeSmoke, makeMatchaMaterial } from './magic.js';
 import { computeHomeCups } from './teacups.js';
 
@@ -554,16 +555,111 @@ function addCupDecal(texture, x, z, radius, rotation, opacity) {
   decal.position.set(x, 0.035, z);
   decal.rotation.y = rotation;
   decal.renderOrder = 1;
+  markMoving(decal); // Tonas/växer när koppen krossas: får inte slås ihop eller frysas.
   homeGroup.add(decal);
+  return decal;
 }
+const teaPuddleTexture = makeDecalTexture((g, n) => {
+  // Utspillt te: en ojämn fläck, mörkast i mitten.
+  const grad = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n * 0.45);
+  grad.addColorStop(0, 'rgba(70,92,28,0.85)');
+  grad.addColorStop(0.7, 'rgba(84,100,36,0.7)');
+  grad.addColorStop(1, 'rgba(84,100,36,0)');
+  g.fillStyle = grad;
+  g.beginPath();
+  for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.1) {
+    const r = n * (0.34 + 0.07 * Math.sin(a * 3 + 1) + 0.05 * Math.sin(a * 7));
+    g[a === 0 ? 'moveTo' : 'lineTo'](n / 2 + Math.cos(a) * r, n / 2 + Math.sin(a) * r);
+  }
+  g.fill();
+});
+const cupShadows = [];
 for (const { x, z, size, yaw, fill, heat } of cupLayout.ground) {
-  addCupDecal(contactShadowTexture, x, z, 1.75 * size, 0, 1);                       // Kontaktskugga under tefatet.
+  cupShadows.push(addCupDecal(contactShadowTexture, x, z, 1.75 * size, 0, 1));      // Kontaktskugga under tefatet.
   if (fill < 0.6 || heat === 'cold') addCupDecal(teaStainTexture, x + 0.25 * size * Math.cos(yaw), z - 0.25 * size * Math.sin(yaw), 1.9 * size, yaw * 3.1, 0.8); // Gamla koppar har lämnat ett märke.
 }
-for (const { x, y, z, size, yaw, fill, heat } of cupLayout.ground) {
+
+// --- Krossade koppar ---
+// Kör bilen över en kopp på marken går den sönder: koppen försvinner, skärvor (tefat, kopp, handtag) flyger iväg
+// och blir liggande, skuggan under tonas bort och är koppen fylld rinner teet ut i en växande fläck. Ångan upphör.
+// Koppen på bordet krossas inte (den gungar bara).
+const SHARD_GRAVITY = 16;      // Enheter/s² nedåt.
+const SHARD_COUNT = 9;         // Skärvor per kopp (3 tefat, 5 kopp, 1 handtag).
+const shardGroup = new THREE.Group(); // Alla skärvor bor här så att de kan flyttas fritt (markMoving).
+markMoving(shardGroup);
+homeGroup.add(shardGroup);
+const shardGeometry = new THREE.BoxGeometry(0.5, 0.07, 0.34);
+function smashCup(entry, dirX, dirZ, strength) {
+  const { cup, x, z, size, fill, shadow, steam } = entry;
+  cup.visible = false;
+  if (steam) steam.visible = false;
+  // Färdriktningen i hemgruppens led (omvänd placed, som brevlådan i hub.js).
+  const cos = Math.cos(BILLBOARD_FACING);
+  const sin = Math.sin(BILLBOARD_FACING);
+  const hx = cos * dirX - sin * dirZ;
+  const hz = sin * dirX + cos * dirZ;
+  const pieces = [];
+  for (let i = 0; i < SHARD_COUNT; i++) {
+    const handle = i === SHARD_COUNT - 1;
+    const saucer = i < 3;
+    const mesh = new THREE.Mesh(handle ? cupHandleGeometry : shardGeometry, cupMaterial);
+    const scale = size * (handle ? 0.7 : saucer ? 1.15 : 0.7 + Math.random() * 0.35);
+    mesh.scale.set(scale, scale * (saucer ? 1 : 1.4), scale);
+    mesh.position.set(x + (Math.random() - 0.5) * 0.4 * size, 0.15 + Math.random() * 0.5 * size, z + (Math.random() - 0.5) * 0.4 * size);
+    mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+    const spread = 2 + 4 * strength;
+    const angle = Math.random() * Math.PI * 2;
+    pieces.push({
+      mesh, resting: handle ? 0.1 * scale : 0.045 * scale + 0.035,
+      vx: hx * spread * (0.5 + Math.random()) + Math.cos(angle) * 1.6,
+      vz: hz * spread * (0.5 + Math.random()) + Math.sin(angle) * 1.6,
+      vy: 3 + Math.random() * 3.5 * (0.5 + strength),
+      spinX: (Math.random() - 0.5) * 16, spinZ: (Math.random() - 0.5) * 16, landed: false,
+    });
+    shardGroup.add(mesh);
+  }
+  const puddle = fill > 0 ? addCupDecal(teaPuddleTexture, x, z, 1.9 * size * (0.6 + fill * 0.5), Math.random() * 6, 0) : null;
+  let time = 0;
+  addAnimation((delta) => {
+    time += delta;
+    let moving = false;
+    for (const piece of pieces) {
+      const { mesh } = piece;
+      if (piece.landed) continue;
+      piece.vy -= SHARD_GRAVITY * delta;
+      mesh.position.x += piece.vx * delta;
+      mesh.position.y += piece.vy * delta;
+      mesh.position.z += piece.vz * delta;
+      mesh.rotation.x += piece.spinX * delta;
+      mesh.rotation.z += piece.spinZ * delta;
+      if (mesh.position.y <= piece.resting) {
+        mesh.position.y = piece.resting;
+        if (piece.vy < -2.5) { // Studsar en gång.
+          piece.vy *= -0.3; piece.vx *= 0.5; piece.vz *= 0.5; piece.spinX *= 0.4; piece.spinZ *= 0.4;
+        } else {
+          piece.landed = true; // Blir liggande, ungefär platt.
+          mesh.rotation.x = (Math.random() - 0.5) * 0.4;
+          mesh.rotation.z = (Math.random() - 0.5) * 0.4;
+        }
+      } else {
+        moving = true;
+      }
+    }
+    shadow.material.opacity = Math.max(0, 1 - time / 0.4);
+    if (puddle) {
+      const grow = Math.min(1, time / 0.9);
+      puddle.material.opacity = 0.9 * grow;
+      puddle.scale.setScalar(0.35 + 0.65 * (1 - Math.pow(1 - grow, 3)));
+    }
+    return !moving && time > 0.9;
+  });
+}
+for (const [i, { x, y, z, size, yaw, fill, heat }] of cupLayout.ground.entries()) {
   const cup = addTeaCup(homeGroup, x, y, z, size, fill, heat, yaw);
-  markMoving(cup); // Gungar till vid körning över: får inte slås ihop.
-  teaCups.push({ cup, x, z, radius: 1.3 * size });
+  markMoving(cup); // Får inte slås ihop (den göms när den krossas).
+  const entry = { cup, x, z, size, fill, shadow: cupShadows[i], steam: null, radius: 1.3 * size };
+  entry.smash = (dirX, dirZ, strength) => smashCup(entry, dirX, dirZ, strength);
+  teaCups.push(entry);
 }
 for (const { x, y, z, size, yaw, fill, heat } of cupLayout.up) addTeaCup(homeGroup, x, y, z, size, fill, heat, yaw);
 // Ett litet runt bord till vänster om verandan, under fönstret, med två koppar. Bordet är en mjuk prydnad
@@ -661,9 +757,12 @@ worldGroup(WORLDS.hub).add(makeSmoke(chimney.localToWorld(new THREE.Vector3(0, 1
 // Ånga ur de varma kopparna. Inte som skorstensröken: små, tunna slingor utspridda över
 // teytan, som lever kort (speed 0.5), stiger lite (rise 2.2) och bleknar nästan direkt (fade 2.5).
 for (const { cup, height, size } of steamSpots) {
-  worldGroup(WORLDS.hub).add(makeSmoke(cup.localToWorld(new THREE.Vector3(0, height, 0)), {
+  const steam = makeSmoke(cup.localToWorld(new THREE.Vector3(0, height, 0)), {
     color: PALETTE.steam, scale: size * 0.8, spread: CUP_TOP * size * 0.8, opacity: 0.3, speed: 0.5, rise: 2.2, fade: 2.5,
-  }));
+  });
+  worldGroup(WORLDS.hub).add(steam);
+  const entry = teaCups.find((e) => e.cup === cup);
+  if (entry) entry.steam = steam; // Ångan göms när koppen krossas.
 }
 export const home = {
   padX: homePadWorld.x,

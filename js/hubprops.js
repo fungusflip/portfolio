@@ -17,6 +17,7 @@ import { hubPoint } from './home.js';
 import { ROAD_WIDTH, addStoneInstances, distanceToRoad } from './roads.js';
 import { shared } from './magic.js';
 import { markMoving } from './optimize.js';
+import { addAnimation, knockableObject } from './knockables.js';
 
 // --- Layouten (right, down). ÄNDRA HÄR för att flytta torget, bäcken och paviljongen. ---
 export const PLAZA = { right: 0, down: 38, radius: 11, width: 4.4 }; // Torgets ring: radien är till vägens mitt.
@@ -104,8 +105,60 @@ export function distanceToWater(x, z) {
 
 function addObstacle(right, down, radius, shadow = 0, soft = false) {
   const spot = hubPoint(right, down);
-  hubPropObstacles.push(soft ? { x: spot.x, z: spot.z, radius, soft: true } : { x: spot.x, z: spot.z, radius });
+  const entry = soft ? { x: spot.x, z: spot.z, radius, soft: true } : { x: spot.x, z: spot.z, radius };
+  hubPropObstacles.push(entry);
   if (shadow) hubPropShadows.push({ x: spot.x, z: spot.z, radius: shadow });
+  return entry; // Byggaren kan lägga till kind / onHit / once (se hub.js) så att något händer när bilen kör över.
+}
+
+// --- Skräp som flyger när bilen kör över något (löv, jordklumpar) ---
+// Små plana bitar som flyger iväg i färdriktningen, faller, ligger kvar en stund och tonas bort.
+// Bor i en egen grupp (markMoving) som är vriden som hubprops-gruppen, så att koordinaterna är "right, down".
+let debrisGroup = null;
+const debrisGeometry = new THREE.PlaneGeometry(1, 1);
+const DEBRIS_GRAVITY = 14;
+function burst(x, y, z, color, count, size, dirX, dirZ, strength) {
+  if (!debrisGroup) return;
+  // Färdriktningen i gruppens led (gruppen är vriden BILLBOARD_FACING).
+  const cos = Math.cos(BILLBOARD_FACING);
+  const sin = Math.sin(BILLBOARD_FACING);
+  const hx = cos * dirX - sin * dirZ;
+  const hz = sin * dirX + cos * dirZ;
+  const bits = [];
+  for (let i = 0; i < count; i++) {
+    const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, depthWrite: false });
+    const mesh = new THREE.Mesh(debrisGeometry, material);
+    const s = size * (0.6 + Math.random() * 0.8);
+    mesh.scale.set(s, s, s);
+    mesh.position.set(x + (Math.random() - 0.5) * 0.6, y + Math.random() * 0.3, z + (Math.random() - 0.5) * 0.6);
+    mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+    debrisGroup.add(mesh);
+    bits.push({
+      mesh, material,
+      vx: hx * (1.5 + 3 * strength) * Math.random() + (Math.random() - 0.5) * 2.2,
+      vz: hz * (1.5 + 3 * strength) * Math.random() + (Math.random() - 0.5) * 2.2,
+      vy: 2.5 + Math.random() * 3.5, spin: (Math.random() - 0.5) * 12, landed: false,
+    });
+  }
+  let time = 0;
+  addAnimation((delta) => {
+    time += delta;
+    for (const bit of bits) {
+      if (!bit.landed) {
+        bit.vy -= DEBRIS_GRAVITY * delta;
+        bit.mesh.position.x += bit.vx * delta;
+        bit.mesh.position.y += bit.vy * delta;
+        bit.mesh.position.z += bit.vz * delta;
+        bit.mesh.rotation.x += bit.spin * delta;
+        bit.mesh.rotation.y += bit.spin * 0.7 * delta;
+        if (bit.mesh.position.y <= 0.05) { bit.mesh.position.y = 0.05; bit.landed = true; bit.mesh.rotation.x = -Math.PI / 2; }
+      }
+      bit.material.opacity = Math.min(1, Math.max(0, (2.4 - time) / 0.9)); // Ligger kvar ca 1,5 s, tonar sedan bort.
+    }
+    if (time < 2.4) return false;
+    for (const bit of bits) { debrisGroup.remove(bit.mesh); bit.material.dispose(); }
+    return true;
+  });
 }
 function addGrassFree(right, down, radius) {
   const spot = hubPoint(right, down);
@@ -290,8 +343,8 @@ function scatterIn(cx, cz, a, b, rotation, count, place, margin) {
   }
 }
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
-function tuft(x, z, h, color, y = 0) { tuftItems.push({ x, y, z, h, color }); }
-function flower(x, z, h, color, y = 0) { flowerItems.push({ x, y, z, h, color }); }
+function tuft(x, z, h, color, y = 0) { const item = { x, y, z, h, color }; tuftItems.push(item); return item; }
+function flower(x, z, h, color, y = 0) { const item = { x, y, z, h, color }; flowerItems.push(item); return item; }
 
 // Ornamentgräsbädd: höga tuvor med ljusa vippor i mitten, lägre ut mot kanten.
 function bed(cx, cz, a, b, rotation, count) {
@@ -369,6 +422,23 @@ function buildPlants(local) {
     instanced(headGeometry, sway, flowerItems, (item) => item.color),
   ];
   for (const mesh of meshes) if (mesh) local.add(mesh);
+  plantMeshes.tuft = meshes[0];
+  plantMeshes.stem = meshes[1];
+  plantMeshes.head = meshes[2];
+}
+// De instansierade växterna (sätts i buildPlants). hidePlant tar bort en planterad tuva/blomma ur bilden.
+const plantMeshes = { tuft: null, stem: null, head: null };
+const zeroMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
+function hidePlant(item) {
+  const hide = (mesh, list) => {
+    const index = list.indexOf(item);
+    if (!mesh || index < 0) return;
+    mesh.setMatrixAt(index, zeroMatrix);
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+  hide(plantMeshes.tuft, tuftItems);
+  hide(plantMeshes.stem, flowerItems);
+  hide(plantMeshes.head, flowerItems);
 }
 
 // --- Fontänen mitt på torget: en låg, rund bassäng med strålar som pulserar och droppar som flyger ---
@@ -732,13 +802,25 @@ function buildPlanters(local, planters) {
     part(planter, planterGeometry, concreteMaterial, 0, 0.3, 0);
     part(planter, soilGeometry, soilMaterial, 0, 0.6, 0);
     local.add(planter);
+    markMoving(planter); // Välter när bilen kör över: får inte slås ihop eller frysas.
+    const plants = [];
     for (let i = 0; i < 7; i++) {
       const x = right + Math.cos(angle) * (Math.random() - 0.5) * 1.3 + Math.sin(angle) * (Math.random() - 0.5) * 0.4;
       const z = down - Math.sin(angle) * (Math.random() - 0.5) * 1.3 + Math.cos(angle) * (Math.random() - 0.5) * 0.4;
-      if (i < 5) tuft(x, z, 0.6 + Math.random() * 0.5, Math.random() < 0.4 ? pick(PLUME_COLORS) : pick(GRASS_COLORS), 0.6);
-      else flower(x, z, 0.55 + Math.random() * 0.3, pick(FLOWER_COLORS), 0.6);
+      if (i < 5) plants.push(tuft(x, z, 0.6 + Math.random() * 0.5, Math.random() < 0.4 ? pick(PLUME_COLORS) : pick(GRASS_COLORS), 0.6));
+      else plants.push(flower(x, z, 0.55 + Math.random() * 0.3, pick(FLOWER_COLORS), 0.6));
     }
-    addObstacle(right, down, 0.5, 0, true);
+    // Körs bilen över krukan välter den, växterna flyger bort som löv och jord yr.
+    const topple = knockableObject(planter);
+    const obstacle = addObstacle(right, down, 0.5, 0, true);
+    obstacle.kind = 'planter';
+    obstacle.once = true;
+    obstacle.onHit = (dirX, dirZ, strength) => {
+      topple(dirX, dirZ);
+      for (const item of plants) hidePlant(item);
+      burst(right, 0.7, down, '#4a3a2c', 10, 0.18, dirX, dirZ, strength);
+      burst(right, 0.7, down, '#6b8a35', 10, 0.22, dirX, dirZ, strength);
+    };
   }
 }
 // Pollare: låga stolpar med ett varmt sken i toppen, runt torgets ytterkant.
@@ -765,14 +847,15 @@ const shrubGeometry = new THREE.IcosahedronGeometry(1, 0);
 const SHRUB_COLORS = ['#5b7a2f', '#6b8a35', '#7d8f45', '#a8602a', '#c78b2a'].map((hex) => new THREE.Color(hex));
 function buildShrubs(local, clusters) {
   const blobs = [];
+  const bushes = []; // { right, down, first, count } per buske: vilka blobbar som hör ihop.
   for (const [right, down] of clusters) {
     const count = 3 + Math.floor(Math.random() * 2);
+    bushes.push({ right, down, first: blobs.length, count });
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2 + Math.random();
       const reach = i === 0 ? 0 : 0.55 + Math.random() * 0.3;
       blobs.push({ x: right + Math.cos(angle) * reach, z: down + Math.sin(angle) * reach, s: 0.45 + Math.random() * 0.35, color: pick(SHRUB_COLORS) });
     }
-    addObstacle(right, down, 0.5, 0, true);
   }
   const mesh = new THREE.InstancedMesh(shrubGeometry, flat('#ffffff'), blobs.length);
   const matrix = new THREE.Matrix4();
@@ -786,7 +869,36 @@ function buildShrubs(local, clusters) {
     matrix.compose(spot, quaternion, scale);
     mesh.setMatrixAt(i, matrix);
     mesh.setColorAt(i, blob.color);
+    blob.quaternion = quaternion.clone();
   });
+  // Körs bilen över busken trycks den ihop och fjädrar tillbaka (en studsande sinuskurva), och löv yr upp. Kan träffas igen.
+  for (const bush of bushes) {
+    let squash = null;
+    const obstacle = addObstacle(bush.right, bush.down, 0.5, 0, true);
+    obstacle.kind = 'bush';
+    obstacle.onHit = (dirX, dirZ, strength) => {
+      if (squash) return;
+      burst(bush.right, 0.5, bush.down, '#6b8a35', 7, 0.2, dirX, dirZ, strength);
+      burst(bush.right, 0.5, bush.down, '#c78b2a', 4, 0.2, dirX, dirZ, strength);
+      let time = 0;
+      squash = true;
+      addAnimation((delta) => {
+        time += delta;
+        const u = Math.min(1, time / 0.9);
+        const k = 1 - 0.55 * strength * Math.pow(1 - u, 2) * Math.cos(u * Math.PI * 3); // 1 = oskadd, <1 = hoptryckt.
+        for (let i = bush.first; i < bush.first + bush.count; i++) {
+          const blob = blobs[i];
+          scale.set(blob.s * 1.2 / Math.sqrt(k), blob.s * 0.8 * k, blob.s * 1.1 / Math.sqrt(k));
+          spot.set(blob.x, blob.s * 0.5 * k, blob.z);
+          matrix.compose(spot, blob.quaternion, scale);
+          mesh.setMatrixAt(i, matrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+        if (u >= 1) squash = null;
+        return u >= 1;
+      });
+    };
+  }
   mesh.instanceMatrix.needsUpdate = true;
   mesh.instanceColor.needsUpdate = true;
   mesh.frustumCulled = false;
@@ -841,6 +953,12 @@ export function buildHubProps(roads = []) {
   local.position.set(base.x, 0, base.z);
   local.rotation.y = BILLBOARD_FACING;
   worldGroup(WORLDS.hub).add(local);
+  // Skräpet (löv, jord) bor i en egen grupp på samma plats och med samma vridning, som inte slås ihop.
+  debrisGroup = new THREE.Group();
+  debrisGroup.position.copy(local.position);
+  debrisGroup.rotation.y = BILLBOARD_FACING;
+  markMoving(debrisGroup);
+  worldGroup(WORLDS.hub).add(debrisGroup);
 
   buildPlazaPaving(local);
   buildFountain(local);

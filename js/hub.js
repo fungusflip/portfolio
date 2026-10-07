@@ -362,7 +362,7 @@ export function buildHubGrounding({ roads, lamps, signposts, trees = [] }) {
 }
 
 // Slag av hubprops-föremål som alltid är mjuka (hubprops.js kan sätta entry.kind eller entry.soft).
-const SOFT_PROP_KINDS = new Set(['hedge', 'rock', 'lily', 'decor', 'flower', 'bush', 'cup']);
+const SOFT_PROP_KINDS = new Set(['hedge', 'rock', 'lily', 'decor', 'flower', 'bush', 'cup', 'planter']);
 // Låga saker som hubprops ännu inte märkt: häckarna (radie exakt 0.85) och stenklungorna (enstaka
 // cirkel 1.1-1.6 långt från dammen och utan grannar; kiosk, tehus, pelare och damm har grannar eller andra mått).
 function isLowProp(prop) {
@@ -458,14 +458,17 @@ export function buildHubCollision({ roads = [], lamps, signposts, trees = [] }) 
     const sin = Math.sin(BILLBOARD_FACING);
     knockMailbox(cos * dirX - sin * dirZ, sin * dirX + cos * dirZ, strength); // Värld → hemgruppens led (omvänd placed).
   }, true);
-  // Tekopparna är mjuka: koppen gungar till på sin tefat.
-  for (const entry of teaCups) soft(homePoint(entry.x, entry.z), entry.radius, 'teacup', wobbler(entry.cup), false);
+  // Tekopparna är mjuka: koppar på marken krossas (entry.smash, home.js) och ligger kvar; bordet gungar bara till.
+  for (const entry of teaCups) {
+    if (entry.smash) soft(homePoint(entry.x, entry.z), entry.radius, 'teacup', entry.smash, true);
+    else soft(homePoint(entry.x, entry.z), entry.radius, 'teacup', wobbler(entry.cup), false);
+  }
 
   // Allt som level design lagt till (fontän, pelare, damm, bro, kiosk, tehus, häckar, stenar): hubprops.js.
   // Mjukt: entry.soft === true, entry.kind i SOFT_PROP_KINDS, en liten prydnad (radie <= 0.55) eller en
   // låg sak som hubprops inte märkt (isLowProp). entry.soft === false tvingar fast.
   for (const prop of hubPropObstacles) {
-    if (isSoftProp(prop)) add(prop, prop.radius, { soft: true, kind: prop.kind || 'decor' });
+    if (isSoftProp(prop)) add(prop, prop.radius, { soft: true, kind: prop.kind || 'decor', onHit: prop.onHit, once: prop.once });
     else add(prop, prop.radius);
   }
 
