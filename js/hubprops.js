@@ -17,6 +17,7 @@ import { hubPoint } from './home.js';
 import { ROAD_WIDTH, addStoneInstances, distanceToRoad } from './roads.js';
 import { shared } from './magic.js';
 import { markMoving } from './optimize.js';
+import { getSeasonConfig } from './season.js';
 import { addAnimation, knockableObject } from './knockables.js';
 
 // --- Layouten (right, down). ÄNDRA HÄR för att flytta torget, bäcken och paviljongen. ---
@@ -115,6 +116,7 @@ function addObstacle(right, down, radius, shadow = 0, soft = false) {
 // Små plana bitar som flyger iväg i färdriktningen, faller, ligger kvar en stund och tonas bort.
 // Bor i en egen grupp (markMoving) som är vriden som hubprops-gruppen, så att koordinaterna är "right, down".
 let debrisGroup = null;
+const debrisColors = (getSeasonConfig().foliage || {}).debris || []; // Vinter: snö och jord i stället för gröna och orange löv.
 const debrisGeometry = new THREE.PlaneGeometry(1, 1);
 const DEBRIS_GRAVITY = 14;
 function burst(x, y, z, color, count, size, dirX, dirZ, strength) {
@@ -819,7 +821,7 @@ function buildPlanters(local, planters) {
       topple(dirX, dirZ);
       for (const item of plants) hidePlant(item);
       burst(right, 0.7, down, '#4a3a2c', 10, 0.18, dirX, dirZ, strength);
-      burst(right, 0.7, down, '#6b8a35', 10, 0.22, dirX, dirZ, strength);
+      burst(right, 0.7, down, debrisColors[1] || '#6b8a35', 10, 0.22, dirX, dirZ, strength);
     };
   }
 }
@@ -878,8 +880,8 @@ function buildShrubs(local, clusters) {
     obstacle.kind = 'bush';
     obstacle.onHit = (dirX, dirZ, strength) => {
       if (squash) return;
-      burst(bush.right, 0.5, bush.down, '#6b8a35', 7, 0.2, dirX, dirZ, strength);
-      burst(bush.right, 0.5, bush.down, '#c78b2a', 4, 0.2, dirX, dirZ, strength);
+      burst(bush.right, 0.5, bush.down, debrisColors[1] || '#6b8a35', 7, 0.2, dirX, dirZ, strength);
+      burst(bush.right, 0.5, bush.down, debrisColors[0] || '#c78b2a', 4, 0.2, dirX, dirZ, strength);
       let time = 0;
       squash = true;
       addAnimation((delta) => {
