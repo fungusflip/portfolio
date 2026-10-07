@@ -11,7 +11,7 @@
 // på alla platser på en gång (6 ritanrop totalt, hur många lyktor det än är).
 import * as THREE from 'three';
 import {
-  PALETTE, BILLBOARD_FACING, CAMERA_PITCH, currentWorld, worldGroup,
+  PALETTE, WORLDS, BILLBOARD_FACING, CAMERA_PITCH, currentWorld, worldGroup,
   towardCamera, toTheRight, makeGlowMaterial,
 } from './core.js';
 import { BILLBOARD_SPACING } from './billboards.js';
@@ -19,6 +19,7 @@ import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE } from './roads.js';
 import { makeMoths } from './magic.js';
 import { knockableInstances } from './knockables.js';
+import { getSeasonConfig } from './season.js';
 
 export const LAMP_SIDE = ROAD_WIDTH / 2 + 1.2; // Hur långt från vägens mitt stolpen står.
 const LAMP_HEIGHT = 4;          // Stolpens höjd.
@@ -106,7 +107,7 @@ export function buildLamps(world, lamps) {
     pools.setColorAt(i, glowColor);
     bulbs.setColorAt(i, bulbColor);
     // Var femte lykta är "trasig" och flimrar ibland. % 5 === 2 = nummer 2, 7, 12 ...
-    lamp.faulty = i % 5 === 2;
+    lamp.faulty = i % 5 === 2 || (world === WORLDS.hub && lampSeason.faultyEvery > 0 && i % lampSeason.faultyEvery === 0); // Säsong (season.js): fler flimrar.
     lamp.flickerLeft = 0; // Sekunder kvar av en pågående flimmerattack.
     // lamp.knock(dirX, dirZ): bilen kör över lyktan. Stolpe, arm, hus och lampa välter runt
     // foten; skenet, ljuspölen och lampan släcks. Anropas från collision.js (via hub.js).
@@ -131,6 +132,7 @@ export function buildLamps(world, lamps) {
 // --- Flimmer ---
 // En trasig lykta lyser stadigt det mesta av tiden, men får då och då en kort
 // "attack" där den blinkar oregelbundet, som ett glappande lysrör.
+const lampSeason = Object.assign({ flickerMul: 1, faultyEvery: 0 }, getSeasonConfig().lamp); // Utan säsong: som vanligt.
 const FLICKER_CHANCE = 0.25; // Chans per sekund att en attack börjar. ÄNDRA för oftare/mer sällan.
 const FLICKER_LENGTH = 0.8;  // Hur länge en attack håller på, i sekunder (ungefär).
 const flickerColor = new THREE.Color();
@@ -146,7 +148,7 @@ export function updateLamps(delta) {
         lamp.flickerLeft -= delta;
         brightness = Math.random() < 0.45 ? 0.12 : 1; // Nästan släckt eller tänd, slumpat varje bild.
         if (lamp.flickerLeft <= 0) brightness = 1;    // Attacken är slut: tänd igen.
-      } else if (Math.random() < FLICKER_CHANCE * delta) {
+      } else if (Math.random() < FLICKER_CHANCE * (set.world === WORLDS.hub ? lampSeason.flickerMul : 1) * delta) {
         lamp.flickerLeft = FLICKER_LENGTH * (0.5 + Math.random());
       } else {
         return; // Lyser stadigt: inget att ändra.

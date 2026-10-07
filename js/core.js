@@ -22,6 +22,7 @@
 // Hämtar allt i three.js och samlar det under namnet THREE.
 // 'three' är inget filnamn – webbläsaren slår upp det i import-kartan i index.html.
 import * as THREE from 'three';
+import { getSeasonConfig } from './season.js';
 
 // Letar upp <canvas id="scene"> i index.html. '#scene' betyder "elementet med id scene".
 const canvas = document.querySelector('#scene');
@@ -154,14 +155,17 @@ export const PALETTE = {
   rockDark: '#5d5462',       // Mörkare stenar.
   caveMouth: '#120e18',      // Grottöppningen: nästan svart.
 };
+// Säsong (se season.js): utanför en säsong är theme tom och ingenting ändras.
+const theme = getSeasonConfig();
+if (theme.palette) Object.assign(PALETTE, theme.palette);
 scene.background = new THREE.Color(PALETTE.background);
 
 // DIMMA – Fog(färg, nära, långt): allt längre bort än "nära" tonas mot färgen, och vid
 // "långt" syns bara färgen. Kameran står ca 42–64 enheter från marken (nederkant–överkant),
 // så överst i bilden blir det lite disigt. Det ger djup nästan gratis.
 // main.js gångrar talen med kamerans zoom. ÄNDRA FOG_NEAR/FOG_FAR för mer/mindre dis.
-export const FOG_NEAR = 46;
-export const FOG_FAR = 120;
+export const FOG_NEAR = 46 * (theme.fog ? theme.fog.nearMul : 1);
+export const FOG_FAR = 120 * (theme.fog ? theme.fog.farMul : 1);
 scene.fog = new THREE.Fog(PALETTE.background, FOG_NEAR, FOG_FAR);
 
 // ---------------------------------------------------------------------------
@@ -208,10 +212,10 @@ export function toTheRight(point, distance) {
 // HemisphereLight(himmelsfärg, markfärg, styrka): ytor som vetter uppåt får himlens
 // färg, ytor som vetter nedåt får markens. Den blålila himlen gör skuggorna svala.
 // ÄNDRA styrkan (1.1) för mörkare eller ljusare kväll.
-scene.add(new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.1));
+scene.add(new THREE.HemisphereLight(PALETTE.skyLight, PALETTE.groundLight, 1.1 * (theme.light ? theme.light.hemi : 1)));
 
 // DirectionalLight: parallella strålar som från solen. ÄNDRA 2.6 för starkare/svagare sol.
-export const keyLight = new THREE.DirectionalLight(PALETTE.sun, 2.6);
+export const keyLight = new THREE.DirectionalLight(PALETTE.sun, 2.6 * (theme.light ? theme.light.sun : 1));
 // Åt vilket håll solen står, sett från marken: lågt till vänster, lite åt kamerans håll.
 export const SUN_DIRECTION = new THREE.Vector3(0.35, 0.6, -1.06).normalize();
 export const SUN_DISTANCE = 60; // Hur långt bort från bilen lampan hålls.
