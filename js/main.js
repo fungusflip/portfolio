@@ -72,10 +72,11 @@ await step(0.65, 'Growing grass');
 hub.buildHubGrass(roadsAndLamps);
 hub.buildHubGrounding(roadsAndLamps);
 // Säsongen (season.js): pumpor, snö, kronblad m.m. Hämtas bara när någon regel ändrar något, så utan säsong händer inget här.
-// Före buildHubCollision: lyktornas knock() lindas in och pumporna lägger egna hinder.
+// Steg 1 före buildHubCollision (lyktornas knock lindas in); steg 2 efter den; steg 3 efter optimizeWorld.
 const seasonFx = seasonActive() ? await import('./seasonfx.js') : null;
-if (seasonFx) seasonFx.buildSeasonFx(roadsAndLamps);
+if (seasonFx) await seasonFx.prepareSeasonFx(roadsAndLamps); // Steg 1 (hook-API i seasonfx.js).
 hub.buildHubCollision(roadsAndLamps); // Fasta saker bilen krockar med (collision.js).
+if (seasonFx) seasonFx.buildSeasonFx(roadsAndLamps); // Steg 2: efter alla hinder, så att pumpor m.m. kan undvika dem.
 // OBS: portals.travel läses som portals.travel varje gång (inte "const { travel } = ..."),
 // för då skulle vi bara få värdet det hade just nu – och det ändras när en resa startar.
 const portals = await import('./portals.js');
@@ -109,6 +110,7 @@ await step(0.7, 'Tidying up the town');
 // inställningar påverkar hur grafikkortets program ser ut.
 perf.applySavedQuality();
 optimizeWorld(WORLDS.hub);
+if (seasonFx) seasonFx.afterOptimizeSeasonFx(); // Steg 3: t.ex. snö på de färdiga materialen.
 setShadows(car); // Bilen kastar och tar emot skuggor.
 
 await step(0.75, 'Warming up the shaders');

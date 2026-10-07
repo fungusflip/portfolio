@@ -46,6 +46,15 @@ export function addObstacles(list) {
   }
 }
 
+// Ligger något hinder (fast eller mjukt) inom radius av punkten? Används av säsongsmodulerna för att lägga
+// ut saker (pumpor, snögubbar ...) så att de aldrig hamnar inuti en lykta, skylt, stolpe eller prydnad.
+// Hindren är sorterade i rutor; en ruta innehåller alla hinder som når in i den (inkl. bilens marginal).
+export function overlapsObstacle(x, z, radius) {
+  const list = grid.get(cellKey(Math.floor(x / CELL), Math.floor(z / CELL)));
+  if (!list) return false;
+  return list.some((obstacle) => Math.hypot(x - obstacle.x, z - obstacle.z) < obstacle.radius + radius);
+}
+
 export function clearObstacles() {
   grid.clear();
 }
