@@ -131,14 +131,18 @@ let lastSpot = null;
 let lastSpeed = 0;
 let dirty = false;
 
+const quadCorners = new Array(8).fill(0); // Återanvänds (inga nya listor per bit).
+const QUAD_ACROSS = [-1, 1, -1, 1];
 function writeQuad(wheel, bLx, bLz, bRx, bRz, along, surface, heavy, alpha) {
   const set = heavy ? surface.heavy : surface.normal;
   const life = heavy ? LIFE_HEAVY : LIFE_NORMAL;
   const now = shared.uTime.value;
   const v = next * 4;
   next = (next + 1) % MAX_QUADS;
-  const corners = [wheel.lx, wheel.lz, wheel.rx, wheel.rz, bLx, bLz, bRx, bRz];
-  const across = [-1, 1, -1, 1];
+  const corners = quadCorners;
+  corners[0] = wheel.lx; corners[1] = wheel.lz; corners[2] = wheel.rx; corners[3] = wheel.rz;
+  corners[4] = bLx; corners[5] = bLz; corners[6] = bRx; corners[7] = bRz;
+  const across = QUAD_ACROSS;
   for (let c = 0; c < 4; c++) {
     const i = v + c;
     positions[i * 3] = corners[c * 2];
