@@ -53,7 +53,7 @@ function streamHalfWidth(x, t) {
   return (1.2 + bump) * THREE.MathUtils.clamp(Math.min(t / 0.05, (1 - t) / 0.07), 0.2, 1);
 }
 // Punkter längs bäcken: { x, z, hw, s } där s = sträcka från källan (enheter).
-const streamSamples = [];
+export const streamSamples = []; // Exporteras för säsongsmodulerna (is på bäcken).
 {
   const points = streamCurve.getSpacedPoints(STREAM_SAMPLES);
   let along = 0;
@@ -284,7 +284,7 @@ function makeWaterMaterial(color, { flow = false, center = null, radius = 0 } = 
 }
 
 // Ett band längs en lista punkter [{ x, z, hw, s }]: x på tvären 0..1, y = sträckan. extra = marginal.
-function ribbonGeometry(samples, extra = 0) {
+export function ribbonGeometry(samples, extra = 0) {
   const positions = [];
   const uvs = [];
   const normals = [];
