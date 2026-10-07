@@ -15,7 +15,7 @@ import { setParkedAt, leaveParking } from './ui.js';
 import { ABOUT } from './projects.js';
 import { markMoving } from './optimize.js';
 import { makeSmoke, makeMatchaMaterial } from './magic.js';
-import { computeHomeCups, LIFT } from './teacups.js';
+import { computeHomeCups } from './teacups.js';
 
 // Texten på namnskylten.
 const HOME_NAME = 'Filip Renemark';

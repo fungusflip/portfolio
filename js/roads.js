@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PALETTE, MAX_ANISOTROPY, worldGroup, towardCamera } from './core.js';
-import { billboards, PAD_DISTANCE, BAY_WIDTH, BAY_LENGTH } from './billboards.js';
+import { billboards, PAD_DISTANCE, BAY_LENGTH } from './billboards.js';
 import { makeGravelImage } from './gravel.js';
 import { paintStone, paintVertices, stoneTint } from './moss.js';
 

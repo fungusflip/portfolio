@@ -16,7 +16,7 @@ import {
 } from './home.js';
 import { PORTALS, techartCave, progCave, artCave, buildPortal } from './portals.js';
 import { buildSignposts } from './signposts.js';
-import { buildLamps, rowLamps, LAMP_SIDE, ARM_UP, ARM_DOWN, ARM_LEFT } from './lamps.js';
+import { buildLamps, rowLamps, LAMP_SIDE, ARM_DOWN, ARM_LEFT } from './lamps.js';
 import {
   PLAZA, ART_ROAD, GAZEBO, GAZEBO_ROAD_END, buildHubProps, plazaRoads, plazaVertex, distanceToWater,
   hubPropObstacles, hubPropShadows, hubGrassFree,
