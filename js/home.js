@@ -402,6 +402,7 @@ const nameGlow = new THREE.Mesh(new THREE.PlaneGeometry(NAME_WIDTH + 2.4, NAME_H
 nameGlow.position.set(0, 0, 0.04);
 nameGlow.userData.noShadow = true;
 const NAME_GLOW_COLOR = new THREE.Color(PALETTE.bulbs);
+const WINDOW_GLOW_COLOR = new THREE.Color(PALETTE.windowGlow); // Förberäknad: slipper tolka färgtexten varje bild.
 nameGlow.material.color.copy(NAME_GLOW_COLOR).multiplyScalar(0.45);
 nameBoard.add(nameGlow);
 markMoving(nameGlow); // Byter styrka: får inte slås ihop.
@@ -628,7 +629,7 @@ export function updateHome(carPosition) {
   // gör att det aldrig ser ut att upprepa sig.
   const time = performance.now() / 1000;
   const flicker = 0.85 + 0.15 * Math.sin(time * 7.3) * Math.sin(time * 3.1 + 1);
-  cabinWindow.material.color.set(PALETTE.windowGlow).multiplyScalar(flicker);
+  cabinWindow.material.color.copy(WINDOW_GLOW_COLOR).multiplyScalar(flicker);
   const mailNear = Math.hypot(carPosition.x - mailboxWorld.x, carPosition.z - mailboxWorld.z) < MAILBOX_RADIUS;
   if (mailNear !== home.mailNear) {
     home.mailNear = mailNear;
