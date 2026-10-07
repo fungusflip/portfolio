@@ -1,11 +1,29 @@
+<div class="facts">
+ <div><b>Role</b><span>Environment, tech art</span></div>
+ <div><b>Tools</b><span>Houdini, Substance, Unreal materials</span></div>
+ <div><b>Engine</b><span>Unreal Engine 5.8</span></div>
+ <div><b>Status</b><span>In development</span></div>
+</div>
 <p>AnGame is my bow-combat roguelite in Unreal Engine 5.8. You play from a top-down-ish view, grow an organic heart and defend it in waves. This page is about the world. I made the meshes in Houdini and the textures in Substance.</p>
 
-<video src="assets/content-media/angame/player-tree-house.mp4" controls muted loop playsinline preload="metadata"></video>
-<p>Walking through the field with the painted look on.</p>
+<figure class="wide">
+ <video src="assets/content-media/angame/player-tree-house.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Walking through the field with the painted look on.</figcaption>
+</figure>
+
+<div class="breakdown">
+ <section class="bd bd-problem"><h3>Problem</h3>
+  <p>The scattered grass looked like a separate layer sitting on the ground. After the 5.8 upgrade the distant trees also crawled.</p></section>
+ <section class="bd bd-built"><h3>What I built</h3>
+  <p>Scattered foliage from Houdini meshes, a Runtime Virtual Texture for ground-matched grass, one wind system for trees and grass, and a painterly post-process with a day/night mood grade.</p></section>
+ <section class="bd bd-result"><h3>Result</h3>
+  <p>Grass picks up the ground colour, and the crawl is gone after switching anti-aliasing to SMAA.</p></section>
+</div>
 
 <h2>Scattering</h2>
 <p>I scatter the foliage, so nothing is placed by hand. The meshes are from Houdini (the cart too) and the textures are from Substance.</p>
 <!-- TODO Filip: name the .hiplc / HDA if you want it mentioned. -->
+<ul class="chips"><li>Houdini</li><li>Substance</li><li>Foliage scattering</li></ul>
 
 <h2>Grass that matches the ground</h2>
 <p>The scattered grass looked like a separate layer sitting on the ground. I set up a Runtime Virtual Texture so the grass picks up the ground colour underneath. Two settings tune it:</p>
@@ -18,43 +36,43 @@
 <p>I rebuilt the wind as a Material Parameter Collection (<code>MPC_Wind</code>) and two material functions, <code>MF_Wind_Tree</code> and <code>MF_Wind_Grass</code>. One <strong>WindIntensity</strong> knob controls all of it, and <strong>LeafMovement</strong> adds noise to the canopy. Trees and grass read the same collection, so they never disagree.</p>
 
 <h2>Painterly look</h2>
-<video src="assets/content-media/angame/yellow-foliage.mp4" controls muted loop playsinline preload="metadata"></video>
-<p>Flying around in the editor viewport with the stats overlay on.</p>
+<figure class="wide">
+ <video src="assets/content-media/angame/yellow-foliage.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Flying around in the editor viewport with the stats overlay on.</figcaption>
+</figure>
 <p>The whole screen goes through a post-process that makes it look painted: a 6x6 Kuwahara filter for the brush strokes and a Sobel pass for the ink lines. A second Material Parameter Collection drives the day/night cycle and a mood grade for each day. It controls saturation, brightness, line strength, brush scale, haze, line colour and the shadow and highlight tints.</p>
+<ul class="chips"><li>Kuwahara 6x6</li><li>Sobel ink lines</li><li>Material Parameter Collection</li><li>Day/night mood grade</li></ul>
 
 <h2>Problems I hit</h2>
-<ul>
- <li>After the 5.8 upgrade the distant trees crawled. Anti-aliasing had switched to TSR, and its jitter went straight into the Sobel lines. I changed the project to SMAA.</li>
- <li>The grass used a dithered opacity mask, which flickers without temporal AA. I turned it off on the foliage materials.</li>
-</ul>
+<aside class="callout"><strong>Tree crawl.</strong> After the 5.8 upgrade the distant trees crawled. Anti-aliasing had switched to TSR, and its jitter went straight into the Sobel lines. I changed the project to SMAA.</aside>
+<aside class="callout"><strong>Flickering grass.</strong> The grass used a dithered opacity mask, which flickers without temporal AA. I turned it off on the foliage materials.</aside>
 <!-- TODO Filip: add a before/after clip of the tree crawl if you have one. -->
-
 
 <h2>How it started</h2>
 <p>Before AnGame had a name, the world lived in a project called AnimeEnv. It was where I tried looks for the world: moonlit fields, mist, trees and a ring of woods around a clearing. These are screen captures from the Unreal editor (July 2026).</p>
 <!-- TODO Filip: fill in what you were testing in each clip if you remember. -->
 
-<figure>
- <video src="assets/content-media/angame/animeenv-moon-wall.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>An early night scene with a stone wall and low moon.</figcaption>
-</figure>
-
-<figure>
- <video src="assets/content-media/angame/animeenv-flythrough.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Flying through the field with the stats overlay on, past the houses and red trees.</figcaption>
-</figure>
-
-<figure>
- <video src="assets/content-media/angame/animeenv-tree-ring.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>A ring of trees around an open clearing, seen from above and then at ground level.</figcaption>
-</figure>
-
-<figure>
- <video src="assets/content-media/angame/animeenv-misty-bridge.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>A foggy grey-green version with a stone bridge and a tiled-roof house.</figcaption>
-</figure>
-
-<figure>
- <video src="assets/content-media/angame/animeenv-ink-lines.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>The first pass with ink outlines, which later became the painterly post-process.</figcaption>
-</figure>
+<div class="media-row">
+ <figure>
+  <video src="assets/content-media/angame/animeenv-moon-wall.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>An early night scene with a stone wall and low moon.</figcaption>
+ </figure>
+ <figure>
+  <video src="assets/content-media/angame/animeenv-flythrough.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Flying through the field with the stats overlay on, past the houses and red trees.</figcaption>
+ </figure>
+ <figure>
+  <video src="assets/content-media/angame/animeenv-tree-ring.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>A ring of trees around an open clearing, seen from above and then at ground level.</figcaption>
+ </figure>
+</div>
+<div class="media-row">
+ <figure>
+  <video src="assets/content-media/angame/animeenv-misty-bridge.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>A foggy grey-green version with a stone bridge and a tiled-roof house.</figcaption>
+ </figure>
+ <figure>
+  <video src="assets/content-media/angame/animeenv-ink-lines.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>The first pass with ink outlines, which later became the painterly post-process.</figcaption>
+ </figure>
+</div>

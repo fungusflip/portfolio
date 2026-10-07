@@ -1,49 +1,59 @@
+<div class="facts">
+ <div><b>Role</b><span>Freelance: corridor, materials, Houdini tool</span></div>
+ <div><b>Tools</b><span>Houdini (HDA), stylized shaders, VFX</span></div>
+</div>
 <p>Freelance work for Camilla, a sci-fi game prototype. I made the corridor, the materials and a Houdini tool that builds rigged robots from sliders.</p>
 
-<h2>Breakdown</h2>
-<ul>
- <li><strong>Problem:</strong> Making a new robot character took about 4 weeks.</li>
- <li><strong>What I built:</strong> A Houdini HDA that generates robot characters and rigs them automatically. It comes with a stylized shader library and VFX.</li>
- <li><strong>Result:</strong> A new character took about 1 week instead of about 4.</li>
-</ul>
+<figure class="wide">
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/03/robots.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Three different robots, one animation.</figcaption>
+</figure>
+
+<div class="breakdown">
+ <section class="bd bd-problem"><h3>Problem</h3><p>Making a new robot character took about 4 weeks.</p></section>
+ <section class="bd bd-built"><h3>What I built</h3><p>A Houdini HDA that generates robot characters and rigs them automatically. It comes with a stylized shader library and VFX.</p></section>
+ <section class="bd bd-result"><h3>Result</h3><p>A new character took about 1 week instead of about 4.</p></section>
+</div>
+
+<h2>Robots</h2>
+<p>Every robot has the same skeleton, so one animation works on all of them. The synced dancing in the clip above is on purpose.</p>
+
+<h2>The generator (Houdini HDA)</h2>
+<figure class="wide">
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/03/1f51b5fa3764a74d5bac3943c1c1f50d.mp4" controls muted loop playsinline preload="metadata"></video>
+</figure>
+<p>Head size, limb length and proportions are sliders. The skeleton follows the mesh, and it exports straight to the engine.</p>
+
+<div class="media-row">
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2026/03/b034f60680fe2d50f5221de8c4df32a3.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Rig controls: shoulder rotate, shoulder bend and a “bend all” slider for arms and legs.</figcaption>
+ </figure>
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2026/03/aa5d783477cd7f0cafb80c2f7bbe3177.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Procedural hands.</figcaption>
+ </figure>
+</div>
+
+<h3>Procedural hands</h3>
+<p>The tool generates and rigs the fingers, palms and joints. Hands are hard to get right, so they were my test of whether the system held up.</p>
 
 <h2>Corridor</h2>
-<figure>
+<figure class="wide">
  <video src="https://filip.renemark.se/wp-content/uploads/2026/03/Corridor.mp4" controls muted loop playsinline preload="metadata"></video>
  <figcaption>Modular pieces, my materials, lighting and VFX.</figcaption>
 </figure>
 
 <h2>Materials</h2>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/b0a0850573ab83e601882a404550d0f3.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/84a15aee570ee558c664593aea5880f1.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/c8290d587537e4670bf5ae5f05b3287a.mp4" controls muted loop playsinline preload="metadata"></video></figure>
-<figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/f23dd0495c39b68da726a3875ca6a184.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+<div class="media-row">
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/b0a0850573ab83e601882a404550d0f3.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/84a15aee570ee558c664593aea5880f1.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+</div>
+<div class="media-row">
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/c8290d587537e4670bf5ae5f05b3287a.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+ <figure><video src="https://filip.renemark.se/wp-content/uploads/2026/03/f23dd0495c39b68da726a3875ca6a184.mp4" controls muted loop playsinline preload="metadata"></video></figure>
+</div>
 <p>Stylized metal, tech panels and organics. They share one palette so any mix still looks like the same game.</p>
 
-<h2>Robots</h2>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/03/robots.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Three different robots, one animation.</figcaption>
-</figure>
-<p>Every robot has the same skeleton, so one animation works on all of them. The synced dancing is on purpose.</p>
-
-<h2>Rig controls</h2>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/03/b034f60680fe2d50f5221de8c4df32a3.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Shoulder rotate, shoulder bend and a “bend all” slider for arms and legs.</figcaption>
-</figure>
-
-<h2>The generator (Houdini HDA)</h2>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/03/1f51b5fa3764a74d5bac3943c1c1f50d.mp4" controls muted loop playsinline preload="metadata"></video>
-</figure>
-<p>Head size, limb length and proportions are sliders. The skeleton follows the mesh, and it exports straight to the engine.</p>
-
-<h2>Procedural hands</h2>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/03/aa5d783477cd7f0cafb80c2f7bbe3177.mp4" controls muted loop playsinline preload="metadata"></video>
-</figure>
-<p>The tool generates and rigs the fingers, palms and joints. Hands are hard to get right, so they were my test of whether the system held up.</p>
-
 <h2>What I learned</h2>
-<p>Materials that match each other matter more than any single great asset. And a procedural rig needs hard limits on its sliders, or it breaks.</p>
+<aside class="callout"><strong>Two lessons.</strong> Materials that match each other matter more than any single great asset. And a procedural rig needs hard limits on its sliders, or it breaks.</aside>

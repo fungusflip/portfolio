@@ -1,41 +1,52 @@
-<p>A farming environment pack: water VFX, a Houdini farmland tile tool and PBR props.</p>
+<div class="facts">
+ <div><b>Role</b><span>Freelance: tools, shaders, props</span></div>
+ <div><b>Tools</b><span>Houdini, vertex shaders, PBR texturing</span></div>
+ <div><b>Project</b><span>ALRPG (action RPG prototype)</span></div>
+ <div><b>Year</b><span>2025</span></div>
+</div>
+<p>A farming environment pack: water VFX, a Houdini farmland tile tool and PBR props. Made for ALRPG, an action RPG prototype.</p>
 
-<h2>Breakdown</h2>
-<p>Made for ALRPG, an action RPG prototype (freelance, 2025).</p>
-<ul>
- <li><strong>Problem:</strong> Farms of different sizes needed to be easy to place and quick to get into the engine.</li>
- <li><strong>What I built:</strong> A terrain tool in Houdini with anchor joints for placing farms. A grass shader where the crops grow through the vertex shader and move naturally. A water shader that shows the plants being watered.</li>
- <li><strong>Result:</strong> A farm is ready in the engine fast, with the growth and watering already working.</li>
-</ul>
+<figure class="wide">
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/01/306ee2f31a6e22b2c2af4707b6a6e28f.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>Water shader and watering.</figcaption>
+</figure>
+
+<div class="breakdown">
+ <section class="bd bd-problem"><h3>Problem</h3><p>Farms of different sizes needed to be easy to place and quick to get into the engine.</p></section>
+ <section class="bd bd-built"><h3>What I built</h3><p>A terrain tool in Houdini with anchor joints for placing farms. A grass shader where the crops grow through the vertex shader and move naturally. A water shader that shows the plants being watered.</p></section>
+ <section class="bd bd-result"><h3>Result</h3><p>A farm is ready in the engine fast, with the growth and watering already working.</p></section>
+</div>
 
 <h2>Water</h2>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/01/306ee2f31a6e22b2c2af4707b6a6e28f.mp4" controls muted loop playsinline preload="metadata"></video>
-</figure>
 <p>Sine waves in the vertex shader, particles for foam, refraction, a depth color gradient and a Fresnel edge glow. Watering makes the carrots grow. Their growth is stored in vertex colors.</p>
+<ul class="chips"><li>Vertex-shader waves</li><li>Foam particles</li><li>Refraction</li><li>Depth gradient</li><li>Fresnel glow</li></ul>
 
 <h2>Farmland tiles</h2>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/01/41058eef991726739e52ede88f60537e.mp4" controls muted loop playsinline preload="metadata"></video>
-</figure>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2026/02/82a5b9a05ba7d53a58479b5c4f134bb0.png" alt="Vertex colors on a farmland tile" loading="lazy">
- <figcaption>The vertex colors pick the texture (soil, grass, path, stone) and how much each part is raised.</figcaption>
-</figure>
+<div class="media-row">
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2026/01/41058eef991726739e52ede88f60537e.mp4" controls muted loop playsinline preload="metadata"></video>
+ </figure>
+ <figure>
+  <img src="https://filip.renemark.se/wp-content/uploads/2026/02/82a5b9a05ba7d53a58479b5c4f134bb0.png" alt="Vertex colors on a farmland tile" loading="lazy">
+  <figcaption>The vertex colors pick the texture (soil, grass, path, stone) and how much each part is raised.</figcaption>
+ </figure>
+</div>
 
 <h2>Sockets</h2>
-<figure>
+<figure class="wide">
  <video src="https://filip.renemark.se/wp-content/uploads/2026/02/1d798bea54027ce1300e17c17fa798ee.mp4" controls muted loop playsinline preload="metadata"></video>
 </figure>
 <p>Each tile comes with anchor points for crops, fences and tools, so props snap in place at the right height and angle.</p>
 
 <h2>Props</h2>
 <p>Full PBR sets: albedo, normal, roughness, metallic, AO.</p>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/02/4d947f7ff147a4e334d4ab0df55ebdb3.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Pitchfork.</figcaption>
-</figure>
-<figure>
- <video src="https://filip.renemark.se/wp-content/uploads/2026/02/99edd8ca57946f06f7bc98ed9bb19a55.mp4" controls muted loop playsinline preload="metadata"></video>
- <figcaption>Watering can.</figcaption>
-</figure>
+<div class="media-row">
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2026/02/4d947f7ff147a4e334d4ab0df55ebdb3.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Pitchfork.</figcaption>
+ </figure>
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2026/02/99edd8ca57946f06f7bc98ed9bb19a55.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Watering can.</figcaption>
+ </figure>
+</div>

@@ -1,7 +1,36 @@
+<div class="facts">
+ <div><b>Role</b><span>Tool and shader author</span></div>
+ <div><b>Tools</b><span>Houdini (TOPs), vertex colors, wind shader</span></div>
+ <div><b>Engine</b><span>Unreal</span></div>
+</div>
 <p>A Houdini tool that generates grass, bakes it to cheap cards and brings it into Unreal with wind.</p>
 
+<figure class="wide">
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/02/608ac32aa7a9c10f14d576e37314cff8.mp4" controls muted loop playsinline preload="metadata"></video>
+ <figcaption>The grass in Unreal.</figcaption>
+</figure>
+
+<div class="breakdown">
+ <section class="bd bd-problem"><h3>Problem</h3><p>Full grass meshes are too heavy for thousands of instances.</p></section>
+ <section class="bd bd-built"><h3>What I built</h3><p>A tool that generates grass variations, bakes them to crossed quads with normal and alpha maps, and keeps the wind data in vertex colors.</p></section>
+ <section class="bd bd-result"><h3>Result</h3><p>The vertex colors survive the bake, so the wind looks the same on the cards.</p></section>
+</div>
+
+<h2>Generation</h2>
+<div class="media-row">
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2026/01/446559c5acd9184eb7abb200f13f74b3.mp4" controls muted loop playsinline preload="metadata"></video>
+ </figure>
+ <figure>
+  <img src="https://filip.renemark.se/wp-content/uploads/2026/02/de0b6b6b9d8cc88be9503801298383cc.png" alt="Tool parameters: Width, ClusterAmount, MaxBlades, Spread, Growth, Bend, Subdivide" loading="lazy">
+ </figure>
+</div>
+<p>Sliders for width, clusters, blades per cluster, spread, height, bend and resolution. TOPs builds the variations in parallel. LODs and UV atlas packing are automatic.</p>
+
 <h2>Wind data</h2>
-<video src="https://filip.renemark.se/wp-content/uploads/2026/02/88f96917e1cbec7a8df68a057ac22c55.mp4" controls muted loop playsinline preload="metadata"></video>
+<figure class="wide">
+ <video src="https://filip.renemark.se/wp-content/uploads/2026/02/88f96917e1cbec7a8df68a057ac22c55.mp4" controls muted loop playsinline preload="metadata"></video>
+</figure>
 <p>Each blade stores its wind data in vertex colors:</p>
 <ul>
  <li><strong>R/G:</strong> position along the blade (0 root, 1 tip)</li>
@@ -9,16 +38,8 @@
  <li><strong>Amplitude:</strong> how much this blade sways</li>
 </ul>
 
-<h2>Generation</h2>
-<video src="https://filip.renemark.se/wp-content/uploads/2026/01/446559c5acd9184eb7abb200f13f74b3.mp4" controls muted loop playsinline preload="metadata"></video>
-<figure>
- <img src="https://filip.renemark.se/wp-content/uploads/2026/02/de0b6b6b9d8cc88be9503801298383cc.png" alt="Tool parameters: Width, ClusterAmount, MaxBlades, Spread, Growth, Bend, Subdivide" loading="lazy">
-</figure>
-<p>Sliders for width, clusters, blades per cluster, spread, height, bend and resolution. TOPs builds the variations in parallel. LODs and UV atlas packing are automatic.</p>
-
 <h2>In Unreal</h2>
-<video src="https://filip.renemark.se/wp-content/uploads/2026/02/608ac32aa7a9c10f14d576e37314cff8.mp4" controls muted loop playsinline preload="metadata"></video>
-<figure>
+<figure class="wide">
  <video src="https://filip.renemark.se/wp-content/uploads/2026/01/40b852a75775d6a348a1cc161bfe0f02.mp4" controls muted loop playsinline preload="metadata"></video>
 </figure>
 <p>Root-to-tip color gradient, subsurface and translucency. The wind shader reads the baked phase and amplitude. The grass bends away when the player walks through it.</p>

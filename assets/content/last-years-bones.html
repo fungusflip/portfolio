@@ -1,40 +1,79 @@
+<div class="facts">
+ <div><b>Type</b><span>School studies, TGA</span></div>
+ <div><b>Tools</b><span>Houdini, Maya, Unreal, Substance Painter</span></div>
+ <div><b>Status</b><span>WIP</span></div>
+</div>
 <p>A collection of school studies from my year at TGA, put together into one piece. WIP.</p>
-<img src="https://filip.renemark.se/wp-content/uploads/2025/09/ezgif-10a9d878648bea.gif" alt="Last Year’s Bones" loading="lazy">
+
+<figure class="wide">
+ <img src="https://filip.renemark.se/wp-content/uploads/2025/09/ezgif-10a9d878648bea.gif" alt="Last Year’s Bones" loading="lazy">
+</figure>
+
+<ul class="chips"><li>Vine HDA</li><li>Serpent rig</li><li>Character rig</li><li>Stone wall</li><li>Materials and lighting</li><li>Centipede (unfinished)</li></ul>
 
 <h2>Vines</h2>
-<p>Houdini HDA that grows vines as curves, with width and mask attributes.</p>
-<img src="https://filip.renemark.se/wp-content/uploads/2025/08/a1ea857add8ad958a100cbcacc2c22c0.gif" alt="Vine growth with width shown as color" loading="lazy">
-<video src="https://filip.renemark.se/wp-content/uploads/2025/08/85ccabb64c808844c0c157502fb73c55.mp4" controls muted loop playsinline preload="metadata"></video>
-<p>A solver changes the data every frame to grow them.</p>
-<p>Showing attributes as colors early made debugging much easier. I also learned not to merge a whole forest into one mesh: split it into batches, and fix texture density when you scale.</p>
+<p>Houdini HDA that grows vines as curves, with width and mask attributes. A solver changes the data every frame to grow them.</p>
+<div class="media-row">
+ <figure>
+  <img src="https://filip.renemark.se/wp-content/uploads/2025/08/a1ea857add8ad958a100cbcacc2c22c0.gif" alt="Vine growth with width shown as color" loading="lazy">
+ </figure>
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2025/08/85ccabb64c808844c0c157502fb73c55.mp4" controls muted loop playsinline preload="metadata"></video>
+ </figure>
+</div>
+<aside class="callout"><strong>Lessons.</strong> Showing attributes as colors early made debugging much easier. I also learned not to merge a whole forest into one mesh: split it into batches, and fix texture density when you scale.</aside>
 
 <h2>Serpent rig (Houdini → Unreal)</h2>
 <p>I modeled the head in Maya. The Houdini tool rigs and animates the body and sets its length, with procedural UVs. The body follows the head along a spline, lags behind it and banks in the curves. Exported both baked and as a runtime version.</p>
-<video src="assets/content-media/last-years-bones/serpent-houdini.mp4" poster="assets/content-media/last-years-bones/serpent-houdini-poster.jpg" aria-label="Serpent rig in Houdini" controls muted loop playsinline preload="metadata"></video>
-<img src="assets/content-media/last-years-bones/serpent-unreal.gif" alt="Serpent in Unreal" loading="lazy">
-<p>Smoothing the head path and using fewer spline points in tight curves got rid of the jitter.</p>
+<div class="media-row">
+ <video src="assets/content-media/last-years-bones/serpent-houdini.mp4" poster="assets/content-media/last-years-bones/serpent-houdini-poster.jpg" aria-label="Serpent rig in Houdini" controls muted loop playsinline preload="metadata"></video>
+ <img src="assets/content-media/last-years-bones/serpent-unreal.gif" alt="Serpent in Unreal" loading="lazy">
+</div>
+<aside class="callout"><strong>Jitter fix.</strong> Smoothing the head path and using fewer spline points in tight curves got rid of the jitter.</aside>
 
 <h2>Character rig</h2>
-<img src="assets/content-media/last-years-bones/character-skeleton.png" alt="Character mesh and skeleton" loading="lazy">
+<figure class="wide">
+ <img src="assets/content-media/last-years-bones/character-skeleton.png" alt="Character mesh and skeleton" loading="lazy">
+</figure>
 <p>Steps: blockout mesh, small skeleton, geodesic skinning (shoulders and hips fixed by hand), then a walk test. I also tried volumetric skinning per joint.</p>
 <p>I also modeled, rigged and skinned a humanoid with wings. The line look is Sobel edge detection on viewport textures.</p>
 
 <h2>Stone wall</h2>
-<img src="https://filip.renemark.se/wp-content/uploads/2025/08/5e6af923333c7b81cbcdaf7ef9bf219f.png" alt="Stone wall, first texture pass" loading="lazy">
-<video src="assets/content-media/last-years-bones/stone-wall-final.mp4" poster="assets/content-media/last-years-bones/stone-wall-final-poster.jpg" aria-label="Stone wall, final" controls muted loop playsinline preload="metadata"></video>
+<div class="media-row">
+ <figure>
+  <img src="https://filip.renemark.se/wp-content/uploads/2025/08/5e6af923333c7b81cbcdaf7ef9bf219f.png" alt="Stone wall, first texture pass" loading="lazy">
+  <figcaption>First texture pass.</figcaption>
+ </figure>
+ <figure>
+  <video src="assets/content-media/last-years-bones/stone-wall-final.mp4" poster="assets/content-media/last-years-bones/stone-wall-final-poster.jpg" aria-label="Stone wall, final" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Final.</figcaption>
+ </figure>
+</div>
 <p>First try vs. final. I exported masks from Houdini so the layers in Substance Painter came out right. Split normals at UV seams, and plan normals before baking.</p>
 
 <h2>Materials and lighting</h2>
-<img src="https://filip.renemark.se/wp-content/uploads/2025/08/6eca4efdbe98362bb490c1c603ed8e76.jpg" alt="Material test, character and ice ground" loading="lazy">
-<img src="assets/content-media/last-years-bones/roughness-color-blockout.gif" alt="Roughness and color blockout" loading="lazy">
-<video src="assets/content-media/last-years-bones/lighting-blockout-1.mp4" poster="assets/content-media/last-years-bones/lighting-blockout-1-poster.jpg" aria-label="Lighting blockout 1" controls muted loop playsinline preload="metadata"></video>
-<video src="assets/content-media/last-years-bones/lighting-blockout-2.mp4" poster="assets/content-media/last-years-bones/lighting-blockout-2-poster.jpg" aria-label="Lighting blockout 2" controls muted loop playsinline preload="metadata"></video>
+<div class="media-row">
+ <img src="https://filip.renemark.se/wp-content/uploads/2025/08/6eca4efdbe98362bb490c1c603ed8e76.jpg" alt="Material test, character and ice ground" loading="lazy">
+ <img src="assets/content-media/last-years-bones/roughness-color-blockout.gif" alt="Roughness and color blockout" loading="lazy">
+</div>
+<div class="media-row">
+ <video src="assets/content-media/last-years-bones/lighting-blockout-1.mp4" poster="assets/content-media/last-years-bones/lighting-blockout-1-poster.jpg" aria-label="Lighting blockout 1" controls muted loop playsinline preload="metadata"></video>
+ <video src="assets/content-media/last-years-bones/lighting-blockout-2.mp4" poster="assets/content-media/last-years-bones/lighting-blockout-2-poster.jpg" aria-label="Lighting blockout 2" controls muted loop playsinline preload="metadata"></video>
+</div>
 
 <h2>Centipede (unfinished)</h2>
-<video src="https://filip.renemark.se/wp-content/uploads/2025/08/e912bc141f017c233ec51c2de2131f81.mp4" controls muted loop playsinline preload="metadata"></video>
-<p>Unreal Control Rig. The segments stick to the ground, but the leg IK isn’t finished.</p>
-<video src="https://filip.renemark.se/wp-content/uploads/2025/08/e44215bef8133a4a908188caf9aa525e.mp4" controls muted loop playsinline preload="metadata"></video>
-<p>Houdini rig, with the segment count set by a parameter.</p>
-<video src="https://filip.renemark.se/wp-content/uploads/2025/08/56f251bc723f22d0bc9b45d55c8121a9.mp4" controls muted loop playsinline preload="metadata"></video>
-<p>Pieces modeled in Maya.</p>
-<p>I took on too much here, and procedural animation punishes every axis mistake.</p>
+<div class="media-row">
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2025/08/e912bc141f017c233ec51c2de2131f81.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Unreal Control Rig. The segments stick to the ground, but the leg IK isn’t finished.</figcaption>
+ </figure>
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2025/08/e44215bef8133a4a908188caf9aa525e.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Houdini rig, with the segment count set by a parameter.</figcaption>
+ </figure>
+ <figure>
+  <video src="https://filip.renemark.se/wp-content/uploads/2025/08/56f251bc723f22d0bc9b45d55c8121a9.mp4" controls muted loop playsinline preload="metadata"></video>
+  <figcaption>Pieces modeled in Maya.</figcaption>
+ </figure>
+</div>
+<aside class="callout"><strong>What went wrong.</strong> I took on too much here, and procedural animation punishes every axis mistake.</aside>

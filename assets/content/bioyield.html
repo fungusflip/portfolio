@@ -1,16 +1,32 @@
+<div class="facts">
+ <div><b>Role</b><span>Tech art: VFX, materials, post-process, UI</span></div>
+ <div><b>Tools</b><span>Niagara, Houdini, ZibraVDB, Blueprints</span></div>
+ <div><b>Engine</b><span>Unreal Engine 5.8</span></div>
+ <div><b>Status</b><span>In development</span></div>
+</div>
 <p>BioYield is a first-person survival shooter I'm building in Unreal Engine 5.8. I use it to practise the tech art side of a game: VFX, materials, post-process and the UI that ties it together.</p>
 
-<h2>Smoke grenade</h2>
-<p>Throw a grenade and it bursts into a smoke cloud. The cloud is a Niagara system, and the grenade is a Blueprint thrown from the player.</p>
-<figure>
+<figure class="wide">
  <video src="assets/content-media/bioyield/smoke-cloud.mp4" controls muted loop playsinline preload="metadata"></video>
  <figcaption>Smoke grenade thrown across the test level, then the cloud drifting and thinning out.</figcaption>
 </figure>
+
+<div class="breakdown">
+ <section class="bd bd-problem"><h3>Problem</h3>
+  <p>While building this I needed a fast way to trigger every effect and test each one on demand.</p></section>
+ <section class="bd bd-built"><h3>What I built</h3>
+  <p>Two grenades (a Niagara smoke cloud and a ZibraVDB explosion), drug and vignette post-process looks, an outlined pickup and inventory system, and a debug keys panel.</p></section>
+</div>
+
+<h2>Smoke grenade</h2>
+<p>Throw a grenade and it bursts into a smoke cloud. The cloud is a Niagara system, and the grenade is a Blueprint thrown from the player.</p>
 <!-- TODO Filip: one line on how the cloud is built (sprite flipbook? lifetime? how it fades out). -->
+<ul class="chips"><li>Niagara</li><li>Blueprint</li></ul>
 
 <h2>Explosion grenade</h2>
 <p>The other grenade is a full volumetric explosion. I simulated a Pyro grenade-frag sim in Houdini and cached it to ZibraVDB, then played it in Unreal. On top of that there is a camera shake, Niagara sparks and rock debris as real meshes.</p>
 <!-- TODO Filip: add the ZibraVDB explosion clip (not captured yet) as a figure here. -->
+<ul class="chips"><li>Houdini Pyro</li><li>ZibraVDB</li><li>Niagara sparks</li><li>Camera shake</li><li>Mesh debris</li></ul>
 
 <h2>Drug effects as post-process</h2>
 <p>Drinking or taking something changes how the screen looks. Beer gives a drunk look, the hallucinogenic gives a colour-split trip look. The same system drives the low-health and winded (out of stamina) vignettes. I ported these from a Godot prototype.</p>
