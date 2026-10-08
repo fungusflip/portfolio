@@ -118,7 +118,7 @@ export const RULES = [
       },
       props: {
         pumpkins: { count: 26, minGap: 4.5, colors: ['#e8731a', '#dd5f12', '#f08a24', '#cf5410', '#e8731a', '#c9a45a', '#f2e6c0', '#7f9a3c'] },
-        lampPumpkins: 4, cobwebs: true,
+        lampPumpkins: 0, cobwebs: true,
         shardColor: '#e8731a', pulpColor: '#f4b04a', seedColor: '#f5ecc8',
       },
       site: { accent: '#ff8a2a', badge: 'pumpkin' },
