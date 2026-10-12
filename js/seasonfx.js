@@ -8,7 +8,7 @@
 // Körs före hub.buildHubCollision, eftersom lyktornas knock() lindas in här innan kollisionen hämtar den.
 import * as THREE from 'three';
 import { WORLDS, BILLBOARD_FACING, CAMERA_PITCH, currentWorld, makeGlowMaterial } from './core.js';
-import { CABIN_X, CABIN_Z, CABIN_SIZE, GARAGE_DEPTH, homeGroup, hubPoint } from './home.js';
+import { CABIN_X, CABIN_Z, CABIN_SIZE, garageDoor, homeGroup, hubPoint } from './home.js';
 import { PORTALS } from './portals.js';
 import { addObstacles, overlapsObstacle } from './collision.js';
 import { knockableObject } from './knockables.js';
@@ -316,24 +316,26 @@ function buildCobwebs() {
   });
   const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
   const geometry = new THREE.PlaneGeometry(1, 1);
-  // [hörnets x, hörnets y, väggens z, storlek, spegelvänd]: i hemgruppens led (home.js). Taken skjuter ut över väggarna (stugans
-  // takfot 0.45, garagets ca 0.4) och döljer allt under dem sett uppifrån, så näten hänger i luften just utanför takkanten.
-  const cabinFront = CABIN_Z + CABIN_SIZE / 2 + 0.6;
-  const garageFront = GARAGE_DEPTH / 2 + 0.55;
-  const webs = [
-    [CABIN_X - CABIN_SIZE / 2 - 0.15, 3.75, cabinFront, 2.7, false],
-    [CABIN_X + CABIN_SIZE / 2 + 0.15, 3.75, cabinFront, 2.2, true],
-    [-2.9, 2.55, garageFront, 2.1, false],
-    [2.9, 2.55, garageFront, 1.8, true],
+  // Näten sitter FAST på något, aldrig i luften: stugans två främre hörn tätt mot väggen (strax under takfoten, som annars
+  // döljer det som sitter högst uppe sett uppifrån) och garageportens två övre hörn (de följer med porten, så de syns inte
+  // heller när porten är öppen och bilen står inne). [hörnets x, hörnets y, storlek, spegelvänd]; nätet växer inåt och nedåt.
+  const cabinFront = CABIN_Z + CABIN_SIZE / 2 + 0.04;
+  const cabinCorners = [
+    [CABIN_X - CABIN_SIZE / 2 + 0.05, 3.15, 1.6, false],
+    [CABIN_X + CABIN_SIZE / 2 - 0.05, 3.15, 1.3, true],
   ];
-  for (const [x, y, z, size, mirror] of webs) {
+  const place = (parent, x, y, z, size, mirror) => {
     const web = new THREE.Mesh(geometry, material);
     web.scale.set(mirror ? -size : size, size, 1);
     web.position.set(x + (mirror ? -size / 2 : size / 2), y - size / 2, z);
     web.userData.noShadow = true;
     web.renderOrder = 3;
-    homeGroup.add(web);
-  }
+    parent.add(web);
+  };
+  for (const [x, y, size, mirror] of cabinCorners) place(homeGroup, x, y, cabinFront, size, mirror);
+  // Portens mitt är (0, 1.05) i dess egna led; överkanten ligger 1.05 upp, sidorna 2.2 ut.
+  place(garageDoor, -2.2, 1.05, 0.05, 1.4, false);
+  place(garageDoor, 2.2, 1.05, 0.05, 1.15, true);
 }
 
 // ============================================================================
