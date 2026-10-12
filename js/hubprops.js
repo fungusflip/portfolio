@@ -14,6 +14,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PALETTE, WORLDS, BILLBOARD_FACING, worldGroup, makeGlowMaterial } from './core.js';
 import { hubPoint } from './home.js';
+import { ROUTE } from './projects.js';
 import { ROAD_WIDTH, addStoneInstances, distanceToRoad } from './roads.js';
 import { shared } from './magic.js';
 import { markMoving } from './optimize.js';
@@ -754,6 +755,140 @@ function buildSculptures(local) {
   addObstacle(2.7, 57.9, 0.75);
 }
 
+// --- Distriktens landmärken: ett stort, tydligt bygge per värld, så att man ser vart rutten leder ---
+// Plats och mått kommer ur ROUTE.districts (projects.js). Allt är enkla former med delade material
+// (slås ihop av optimize.js) och ingenting rör sig, så det kostar inget per bild. De står vid
+// sidorna av spelplanen (väster om garaget, söder om vägen, österkanten): en hög byggnad skymmer
+// markstycket rakt ovanför sig på skärmen, så vägarna ska inte ligga där.
+const labWallMaterial = flat('#cdd5df');
+const pipeMaterial = flat('#aab6c4');
+const techGlowMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.techGridMain });
+const warnGlowMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.signGlow });
+const artPaintMaterials = PALETTE.artPaints.map((color) => new THREE.MeshBasicMaterial({ color }));
+const artGlowMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.artAccent });
+const progRackMaterial = flat('#26332d');
+const progGlowMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.progTrace });
+const progDimMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.progTraceDim });
+
+// Fasta cirklar över en rektangel (halvbredd, halvdjup), så att bilen inte kör in i byggnaden.
+function blockOut(cx, cz, halfW, halfD, radius) {
+  const step = radius * 1.5;
+  const nx = Math.max(1, Math.round((halfW * 2) / step));
+  const nz = Math.max(1, Math.round((halfD * 2) / step));
+  for (let i = 0; i <= nx; i++) {
+    for (let j = 0; j <= nz; j++) {
+      const entry = addObstacle(cx - halfW + (i / nx) * halfW * 2, cz - halfD + (j / nz) * halfD * 2, radius);
+      entry.soft = false; // Alltid fast (se isSoftProp i hub.js).
+    }
+  }
+}
+// Skylt med text på en stolpe-ram (samma stil som kioskens).
+function signBoard(parent, text, width, x, y, z, tilt = -0.45) {
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(width, width * 0.31), new THREE.MeshBasicMaterial({ map: makeSignTexture(text) }));
+  board.position.set(x, y, z);
+  board.rotation.x = tilt;
+  board.userData.noShadow = true;
+  parent.add(board);
+}
+
+function buildTechLab(local, spot) {
+  const lab = new THREE.Group();
+  lab.position.set(spot.right, 0, spot.down);
+  part(lab, round(9.6, 0.2, 7.4, 0.05), concreteMaterial, 0, 0.1, 0);                 // Sockel.
+  part(lab, round(8, 4.2, 4.6, 0.12), labWallMaterial, 0, 2.3, -0.9);                  // Hallen.
+  // Sågtandstak: tre lutande plåtar med en lysande glasyta på den höga sidan.
+  for (const x of [-2.7, 0, 2.7]) {
+    part(lab, round(2.6, 0.14, 4.8, 0.03), charcoalMaterial, x, 4.75, -0.9, [0, 0, -0.32]);
+    part(lab, round(0.08, 0.8, 4.4, 0.02), techGlowMaterial, x - 1.2, 4.75, -0.9);
+  }
+  // Fronten: stort glasparti med lysande list, och skylten ovanför.
+  part(lab, round(5.4, 1.5, 0.1, 0.03), glassMaterial, 0, 1.75, 1.45);
+  part(lab, round(5.5, 0.12, 0.14, 0.03), techGlowMaterial, 0, 2.6, 1.46);
+  part(lab, round(1.3, 2.0, 0.1, 0.03), charcoalMaterial, -3.0, 1.1, 1.45);           // Dörren.
+  signBoard(lab, 'TECH ART', 3.6, 0, 3.6, 1.55, -0.12);
+  // Skorstenarna med orange ränder och glödande toppar: de syns på håll.
+  for (const [x, z, h] of [[3.1, -2.7, 13.5], [4.5, -2.2, 10]]) {
+    part(lab, cylinder(0.55, 0.75, h, 10), pipeMaterial, x, h / 2, z);
+    for (const y of [h - 1.2, h - 2.6]) part(lab, cylinder(0.6, 0.6, 0.42, 10), orangeMaterial, x, y, z);
+    part(lab, cylinder(0.5, 0.5, 0.12, 10), warnGlowMaterial, x, h + 0.04, z);
+  }
+  // Rör längs fronten: stigarrör upp och ett vågrätt rör, och en klotformad tank på ben.
+  for (const x of [-3.9, -3.5]) part(lab, cylinder(0.14, 0.14, 4.1, 8), pipeMaterial, x, 2.05, 1.7);
+  part(lab, cylinder(0.14, 0.14, 7.2, 8), pipeMaterial, 0.2, 3.95, 1.7, [0, 0, Math.PI / 2]);
+  part(lab, cylinder(0.14, 0.14, 7.2, 8), pipeMaterial, 0.2, 0.5, 1.9, [0, 0, Math.PI / 2]);
+  for (const x of [-3.7, 3.9]) part(lab, new THREE.SphereGeometry(0.26, 8, 6), orangeMaterial, x, 3.95, 1.7);
+  part(lab, new THREE.SphereGeometry(1.35, 12, 9), pipeMaterial, 5.4, 2.7, 1.0);
+  for (const [x, z] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) part(lab, cylinder(0.07, 0.07, 1.5, 6), charcoalMaterial, 5.4 + x, 0.75, 1.0 + z);
+  part(lab, round(0.5, 0.4, 0.5, 0.08), techGlowMaterial, 5.4, 4.1, 1.0);             // Luckan överst på tanken.
+  local.add(lab);
+  blockOut(spot.right - 0.5, spot.down - 0.8, 4.2, 2.6, 1.9);
+  blockOut(spot.right + 5.4, spot.down + 1.0, 0.3, 0.3, 1.6);
+  addObstacle(spot.right + 3.8, spot.down - 2.4, 1.6, 0);
+  addGrassFree(spot.right + 0.5, spot.down, 6.4);
+  hubPropShadows.push({ ...hubPoint(spot.right + 0.5, spot.down), radius: 6.2 });
+}
+
+function buildGalleryPavilion(local, spot) {
+  const gallery = new THREE.Group();
+  gallery.position.set(spot.right, 0, spot.down);
+  part(gallery, round(8.6, 0.25, 6.6, 0.05), concreteMaterial, 0, 0.125, 0);          // Sockel.
+  part(gallery, round(7, 3.2, 4.2, 0.1), steelMaterial, 0, 1.85, -0.8);               // Salen.
+  // Takkonstruktion i två plan mot en rosa nock.
+  for (const side of [-1, 1]) part(gallery, round(4.1, 0.18, 4.8, 0.04), charcoalMaterial, side * 1.9, 3.95, -0.8, [0, 0, side * 0.2]);
+  part(gallery, round(0.22, 0.2, 4.8, 0.05), artGlowMaterial, 0, 4.3, -0.8);
+  // Verandan: platt tak på smala pelare, och tavlorna på fasaden under den.
+  part(gallery, round(7.6, 0.14, 1.7, 0.04), charcoalMaterial, 0, 3.55, 2.0);
+  for (let i = 0; i < 5; i++) part(gallery, cylinder(0.1, 0.1, 3.4, 8), steelMaterial, -3.2 + i * 1.6, 1.75, 2.7);
+  [-2.4, 0, 2.4].forEach((x, i) => {
+    part(gallery, round(1.7, 2.1, 0.1, 0.03), charcoalMaterial, x, 1.8, 1.32);
+    part(gallery, new THREE.PlaneGeometry(1.4, 1.8), artPaintMaterials[i % artPaintMaterials.length], x, 1.8, 1.39);
+  });
+  signBoard(gallery, 'GALLERY', 3.4, 0, 4.9, 0.3, -0.35);
+  // En hög skulptur vid sidan: stång med två ringar och en vimpel, som syns över byggnaden.
+  part(gallery, cylinder(0.09, 0.12, 9.5, 8), steelMaterial, 5.2, 4.75, 0.8);
+  part(gallery, new THREE.TorusGeometry(1.2, 0.14, 8, 24), artPaintMaterials[1], 5.2, 7.2, 0.8, [0, 0.5, 0]);
+  part(gallery, new THREE.TorusGeometry(0.8, 0.12, 8, 20), artPaintMaterials[2], 5.2, 7.2, 0.8, [0, 1.9, 0]);
+  part(gallery, new THREE.IcosahedronGeometry(0.4, 0), artGlowMaterial, 5.2, 9.7, 0.8);
+  part(gallery, round(0.06, 1.1, 1.6, 0.02), artPaintMaterials[3], 5.2, 5.2, 1.6);
+  local.add(gallery);
+  blockOut(spot.right, spot.down - 0.8, 3.4, 2.0, 1.9);
+  addObstacle(spot.right + 5.2, spot.down + 0.8, 0.8, 0);
+  addGrassFree(spot.right + 0.8, spot.down, 5.6);
+  hubPropShadows.push({ ...hubPoint(spot.right, spot.down), radius: 5.4 });
+}
+
+function buildServerTower(local, spot) {
+  const tower = new THREE.Group();
+  tower.position.set(spot.right, 0, spot.down);
+  part(tower, round(5.6, 0.2, 5.6, 0.05), concreteMaterial, 0, 0.1, 0);
+  // Fyra staplade serverskåp som smalnar av uppåt, med lysande band emellan och LED-rader på fronten.
+  const levels = [[4.2, 3.4, 0.2], [3.6, 3.2, 3.8], [3.0, 3.0, 7.2], [2.4, 2.8, 10.4]];
+  levels.forEach(([size, height, y], i) => {
+    part(tower, round(size, height, size, 0.1), progRackMaterial, 0, y + height / 2, 0);
+    part(tower, round(size + 0.14, 0.16, size + 0.14, 0.04), progGlowMaterial, 0, y + height + 0.04, 0);
+    const front = size / 2 + 0.02;
+    for (let row = 0; row < 3; row++) {
+      part(tower, round(size * 0.72, 0.1, 0.06, 0.02), row === 1 ? progGlowMaterial : progDimMaterial, 0, y + 0.7 + row * (height - 1.2) / 2, front);
+    }
+  });
+  signBoard(tower, 'CODE', 3.0, 0, 2.6, 2.75, -0.1);
+  // Mast med parabol och en lysande fyr: tornets silhuett syns över träden.
+  part(tower, cylinder(0.07, 0.1, 4.2, 6), steelMaterial, 0, 15.5, 0);
+  part(tower, new THREE.ConeGeometry(0.9, 0.5, 12), steelMaterial, 0.9, 14.6, 0, [0, 0, -1.9]);
+  part(tower, new THREE.SphereGeometry(0.3, 8, 6), progGlowMaterial, 0, 17.7, 0);
+  local.add(tower);
+  blockOut(spot.right, spot.down, 2.0, 2.0, 1.7);
+  addGrassFree(spot.right, spot.down, 4.4);
+  hubPropShadows.push({ ...hubPoint(spot.right, spot.down), radius: 3.8 });
+}
+
+function buildLandmarks(local) {
+  const districts = ROUTE.districts;
+  buildTechLab(local, districts.techart);
+  buildGalleryPavilion(local, districts.art);
+  buildServerTower(local, districts.prog);
+}
+
 // --- Bänkar (soft: bilen kör över dem) och planteringskrukor ---
 const benchSlat = round(1.9, 0.05, 0.14, 0.02);
 const benchLeg = round(0.05, 0.46, 0.5, 0.02);
@@ -970,6 +1105,7 @@ export function buildHubProps(roads = []) {
   buildKiosk(local);
   buildGazebo(local);
   buildSculptures(local);
+  buildLandmarks(local); // Före bänkar, bäddar och växter, så att de ser landmärkena som hinder.
 
   // Bänkar runt torgets kant (vända in mot fontänen), vid skulpturen, dammen och på ängen.
   const ringAt = (degrees, radius) => {
@@ -993,7 +1129,8 @@ export function buildHubProps(roads = []) {
   ]);
   buildBollards(local, [90, 120, 150, 180, 210, 240, 270].map((degrees) => ringAt(degrees, 14.2)));
   buildShrubs(local, [[-22.8, 0.9], [-19.6, 0.9], [-41.8, 45], [-34.2, 45], [-49, 39.5], [26.5, 17.6], [21.5, 17.8]]);
-  buildRocks(local, [[-49, 23, 3, 1.0], [-26, 53, 3, 0.9], [38, 44, 4, 1.0], [50, 30, 3, 0.9], [-4, 60, 3, 0.8]]);
+  // (Stenklungorna vid [-44, 19.5] och [46.5, 34] har flyttats undan från Tech Art-labbet och servertornet.)
+  buildRocks(local, [[-44, 19.5, 3, 1.0], [-26, 53, 3, 0.9], [38, 44, 4, 1.0], [46.5, 34, 3, 0.9], [-4, 60, 3, 0.8]]);
 
   // Ornamentgräsbäddar och ängsfläckar (bara utseende: bilen kör rakt över).
   bed(22, 25, 3.2, 1.4, 0.3, 36);
