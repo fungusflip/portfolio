@@ -15,14 +15,14 @@
 
 // Standardvärden: ÄNDRA här för snabbare/långsammare tur.
 export const TOUR_DEFAULTS = {
-  startHold: 2,       // Sekunder stilla i garagevyn innan turen börjar (så att man hinner se texten).
+  startHold: 0.4,     // Sekunder stilla i garagevyn innan turen börjar (var 2: kändes som att kameran startade för sent efter laddningen).
   legTime: 8,         // Sekunder per sträcka mellan två stopp.
   returnTime: 14,     // Sekunder för hemvägen till garaget (längre sträcka).
   glide: 0.4,         // Fart vid ett mellanstopp, som andel av sträckans medelfart: 0 = stannar helt, 1 = ingen avmattning.
   smoothRadius: 10,   // Mittlinjen glättas över +-så här många enheter, så att kurvorna inte får vassa hörn.
   followRate: 3,      // Siktpunkten hänger efter målet med den här damp-hastigheten (lägre = mjukare).
   lookUp: 7,          // Hur långt UPP på skärmen siktpunkten ligger ovanför vägen, så att skylten hamnar i bild.
-  blendIn: 1.2,       // damp-hastighet in (lägre = mjukare).
+  blendIn: 2.4,       // damp-hastighet in (lägre = mjukare). Var 1.2: tog flera sekunder att komma igång.
   blendOut: 2.5,      // damp-hastighet ut, när man startar (samma som introShift).
 };
 
