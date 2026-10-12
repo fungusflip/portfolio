@@ -79,7 +79,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 
 /* ---------- Header ---------- */
 .site-header { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg-deep) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-.header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; }
+/* Namnet sitter i vänstra hörnet och menyn i det högra: raden går ut till fönstrets kanter i stället för att centreras i 1160 px. */
+.site-header .header-row { width: 100%; max-width: none; margin: 0; padding-inline: clamp(16px, 2.4vw, 36px); display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; }
+.site-nav { margin-left: auto; }
+/* Tre länkar överst. Resten (data-more) glider in när man har scrollat förbi första skärmen. */
+@media (min-width: 961px) {
+  .site-nav li[data-more] { max-width: 0; opacity: 0; overflow: hidden; visibility: hidden; transition: max-width .35s ease, opacity .3s ease, visibility 0s .35s; }
+  .site-header.is-scrolled .site-nav li[data-more] { max-width: 140px; opacity: 1; visibility: visible; transition: max-width .35s ease, opacity .3s ease .1s, visibility 0s; }
+}
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; min-height: 44px; }
 .brand img { border-radius: 8px; }
 .brand-name { font-family: var(--display); font-size: 18px; }
@@ -165,12 +172,12 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 22px; }
 .card[hidden] { display: none; }
-.card-open { all: unset; box-sizing: border-box; display: flex; flex-direction: column; width: 100%; height: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; cursor: pointer; box-shadow: var(--shadow); transition: transform .25s, border-color .2s; }
-.card-open:hover, .card-open:focus-visible { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 16px 36px rgba(15, 8, 30, 0.45), 0 0 0 1px var(--accent); }
-.card-open:hover .card-title, .card-open:focus-visible .card-title { color: var(--accent); }
+.card-inner { display: flex; flex-direction: column; height: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: transform .25s, border-color .2s, box-shadow .2s; }
+.card-inner:hover, .card-inner:focus-within { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 16px 36px rgba(15, 8, 30, 0.45), 0 0 0 1px var(--accent); }
+.card-media, .card-text { cursor: pointer; }
+.card-inner:hover .card-title { color: var(--accent); }
 .card-media img { transition: transform .5s ease; }
-.card-open:hover .card-media img { transform: scale(1.04); }
-.card-open:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.card-inner:hover .card-media img { transform: scale(1.04); }
 .card-media { position: relative; aspect-ratio: 16 / 10; background: var(--frame); overflow: hidden; }
 .card-media img, .card-media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .card.phone .card-media img, .card.phone .card-media video { object-fit: contain; }
@@ -181,9 +188,17 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
 .play-hint { position: absolute; right: 10px; bottom: 10px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; background: rgba(43, 45, 51, .8); display: grid; place-items: center; transition: opacity .2s; }
 .play-hint::after { content: ''; border-left: 11px solid #fff3d6; border-block: 7px solid transparent; margin-left: 3px; }
 .card-media video.on ~ .play-hint { opacity: 0; }
-.card-text { padding: 16px 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+.card-text { padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 .card-cat { font: 700 12px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
-.card-title { font: 400 19px/1.2 var(--display); }
+.card-title { font: 400 19px/1.2 var(--display); margin: 0; transition: color .2s; }
+.card-actions { display: flex; gap: 10px; padding: 4px 18px 18px; }
+.card-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 2px solid var(--line-strong); background: transparent; color: var(--text); font: 800 14px var(--body); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.card-btn:hover { border-color: var(--accent); color: var(--accent); }
+.card-btn-open { flex: 1; background: var(--btn); border-color: var(--btn); color: var(--btn-text); }
+.card-btn-open:hover { filter: brightness(1.12); color: var(--btn-text); border-color: var(--btn); }
+.card-btn-icon { width: 0; height: 0; border-left: 9px solid currentColor; border-block: 6px solid transparent; }
+.card-btn.is-on .card-btn-icon { width: 10px; height: 10px; border: 0; background: currentColor; border-radius: 2px; }
+.card-btn.is-on { border-color: var(--accent); color: var(--accent); }
 
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tags li, .tags .tag { padding: 5px 12px; border-radius: 999px; background: var(--line); color: var(--text); font: 600 13px/1.3 var(--body); }
@@ -277,10 +292,10 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; -webkit-text-size-adju
   html { scroll-behavior: auto; }
   .js .reveal { opacity: 1; transform: none; transition: none; }
   .leaves { display: none; }
-  .btn, .card-open, .drive-card, .drive-mini, .ticket { transition: none; }
-  .btn:hover, .card-open:hover, .drive-card:hover, .drive-mini:hover, .chip:hover { transform: none; }
+  .btn, .card-inner, .drive-card, .drive-mini, .ticket { transition: none; }
+  .btn:hover, .card-inner:hover, .drive-card:hover, .drive-mini:hover, .chip:hover { transform: none; }
   .card-media img { transition: none; }
-  .card-open:hover .card-media img { transform: none; }
+  .card-inner:hover .card-media img { transform: none; }
 }
 
 /* ---------- Utskrift: bara det viktiga ---------- */

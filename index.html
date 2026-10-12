@@ -39,10 +39,10 @@
        visar gärna den gamla kopian. När adressen ändras tror webbläsaren att det är
        en ny fil och hämtar den på nytt. HÖJ TALET (här och vid main.js längst ner)
        varje gång du pushar ändringar i css eller js. -->
-  <link rel="stylesheet" href="css/style.css?v=149">
+  <link rel="stylesheet" href="css/style.css?v=165">
   <!-- Den vanliga webbplatsen under spelet (se site/). site.css laddas EFTER style.css och är
        avgränsad till .site-root, så att de två inte krockar. -->
-  <link rel="stylesheet" href="site/css/site.css?v=10">
+  <link rel="stylesheet" href="site/css/site.css?v=12">
   <!-- Markerar att JS finns, så att reveal-animationerna bara döljer saker när de kan visas igen. -->
   <script>document.documentElement.classList.add('js');</script>
 
@@ -83,24 +83,19 @@
   <header class="site-header hero-header site-root">
     <a class="skip-link" href="#work">Skip to the work</a>
     <div class="wrap header-row">
-      <a class="brand" href="#top" aria-label="Filip Renemark, back to top">
-        <img src="assets/images/favicon.svg" alt="" width="36" height="36">
-        <span class="brand-text"><span class="brand-name">Filip Renemark</span><span class="brand-role">Technical Artist</span></span>
-      </a>
+      <!-- Namnet står på skylten på startskärmen (tillsammans med titeln); i hörnet sitter säsongsknappen. -->
       <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="siteNav">
         <span class="visually-hidden">Menu</span>
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
       </button>
       <nav class="site-nav" id="siteNav" aria-label="Main">
         <ul>
-          <li><a href="#clients">Clients</a></li>
+          <li data-more><a href="#clients">Clients</a></li>
           <li><a href="#work">Work</a></li>
           <li><a href="#about">About</a></li>
-          <li><a href="#cv">CV</a></li>
+          <li data-more><a href="#cv">CV</a></li>
           <li><a href="#contact">Contact</a></li>
         </ul>
-        <!-- Startar spelet (js/ui.js: alla [data-drive]). -->
-        <button class="nav-drive" type="button" data-drive>Drive my portfolio</button>
       </nav>
     </div>
   </header>
@@ -113,9 +108,12 @@
     <!-- "Selected work": ett litet urval av de bästa projekten uppe till höger (fylls av site/js/site.js,
          göms på smala skärmar så att det aldrig täcker texten). -->
     <aside class="peek" id="peek" hidden aria-labelledby="peekTitle">
-      <h2 class="peek-title" id="peekTitle">Selected work</h2>
+      <!-- Datum + säsong: höger, strax ovanför "All projects" (js fyller i, se site/js/site.js). -->
+      <div class="peek-season" id="seasonSlot"></div>
+      <div class="peek-head">
+        <h2 class="peek-title" id="peekTitle">Selected work</h2>
+      </div>
       <ul class="peek-list" id="peekList"></ul>
-      <a class="peek-all" href="#work">All projects &darr;</a>
     </aside>
     <a class="scroll-cue" href="#work">Scroll for the work <span aria-hidden="true">&darr;</span></a>
     <div class="intro-card">
@@ -192,7 +190,7 @@
         <div class="section-head reveal">
           <p class="eyebrow">Selected projects</p>
           <h2 id="workTitle" class="display">Work</h2>
-          <p class="section-lede">Open a card for the full write-up. On desktop, hover or focus one for a short preview.</p>
+          <p class="section-lede">Press Preview on a card to play a short clip, or Open project for the full write-up.</p>
         </div>
         <div class="chips" role="group" aria-label="Filter projects by category" id="chips">
           <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
@@ -371,7 +369,7 @@
 
   <!-- Startar programmet. type="module" krävs för att "import" ska fungera.
        Ligger sist i body så att canvasen redan finns när koden körs. -->
-  <script type="module" src="site/js/site.js?v=10"></script>
-  <script type="module" src="js/main.js?v=149"></script>
+  <script type="module" src="site/js/site.js?v=13"></script>
+  <script type="module" src="js/main.js?v=150"></script>
 </body>
 </html>

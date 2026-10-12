@@ -11,10 +11,6 @@ const R = (path) => (path ? new URL(path, SITE_BASE).href : path);
 
 const $ = (s, r = document) => r.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const saveData = !!(navigator.connection && navigator.connection.saveData);
-const canHover = matchMedia('(hover: hover)').matches;
-// Ingen förhandsvideo om användaren ber om mindre rörelse eller data.
-const allowPreview = !reduceMotion && !saveData;
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -24,48 +20,76 @@ const el = (tag, cls, text) => {
 };
 
 // ---------- Grid ----------
+// Varje kort har två knappar: "Preview" spelar en tyst förhandsvideo direkt i kortet (funkar också på
+// touch, där hover inte finns) och "Open" öppnar hela write-upen i dialogen. Bara ett kort spelar i taget.
 const grid = $('#grid');
+let playing = null; // { stop } för kortet som spelar just nu
 const cards = PROJECTS.map(p => {
   const li = el('li', 'card reveal' + (p.phone ? ' phone' : ''));
   li.dataset.category = p.category;
-  const btn = el('button', 'card-open');
-  btn.type = 'button';
-  btn.setAttribute('aria-haspopup', 'dialog');
+  const inner = el('div', 'card-inner');
 
-  const media = el('span', 'card-media');
+  const media = el('div', 'card-media');
   const posterSrc = R(p.poster || p.still);
   if (posterSrc) {
     const img = el('img');
     img.src = posterSrc;
-    img.alt = ''; // Titeln står i knappen; bilden är dekor.
+    img.alt = ''; // Titeln står i texten under; bilden är dekor.
     img.loading = 'lazy';
     img.decoding = 'async';
     img.width = 640; img.height = 400;
     media.append(img);
   }
   if (p.featured) media.append(el('span', 'badge', 'Featured'));
-  if (p.freelance) { const s = el('span', 'badge star', '★ Freelance'); media.append(s); }
-  if (p.video && allowPreview) media.append(el('span', 'play-hint'));
+  if (p.freelance) media.append(el('span', 'badge star', '★ Freelance'));
 
-  const text = el('span', 'card-text');
-  text.append(el('span', 'card-cat', p.category), el('span', 'card-title', p.title));
+  const text = el('div', 'card-text');
+  text.append(el('span', 'card-cat', p.category), el('h3', 'card-title', p.title));
   const tags = el('span', 'tags tags-sm');
   p.tags.slice(0, 3).forEach(t => tags.append(el('span', 'tag', t)));
   text.append(tags);
 
-  btn.append(media, text);
-  li.append(btn);
-  grid.append(li);
+  const actions = el('div', 'card-actions');
+  const open = el('button', 'card-btn card-btn-open', 'Open project');
+  open.type = 'button';
+  open.setAttribute('aria-haspopup', 'dialog');
+  open.setAttribute('aria-label', 'Open ' + p.title);
+  open.addEventListener('click', () => openProject(p, open));
+  if (p.video) {
+    const prev = el('button', 'card-btn card-btn-preview');
+    prev.type = 'button';
+    prev.setAttribute('aria-pressed', 'false');
+    prev.setAttribute('aria-label', 'Preview ' + p.title);
+    prev.append(el('span', 'card-btn-icon'), el('span', 'card-btn-label', 'Preview'));
+    attachPreview(prev, media, R(p.video), posterSrc);
+    actions.append(prev);
+  }
+  actions.append(open);
 
-  if (p.video && allowPreview) attachPreview(btn, media, R(p.video), posterSrc);
-  btn.addEventListener('click', () => openProject(p, btn));
+  // Bilden och texten är också klickbara med mus, utan att bli extra tabbstopp.
+  [media, text].forEach(n => n.addEventListener('click', e => { if (!e.target.closest('button, a')) open.click(); }));
+
+  inner.append(media, text, actions);
+  li.append(inner);
+  grid.append(li);
   return { p, li };
 });
 
-// Videon skapas först vid hover/fokus, så inget laddas i förväg.
+// Videon skapas först vid första klicket på Preview, så inget laddas i förväg.
 function attachPreview(btn, media, src, poster) {
-  let video = null;
+  let video = null, on = false;
+  const label = btn.querySelector('.card-btn-label');
+  const stop = () => {
+    if (!on) return;
+    on = false;
+    if (video) { video.pause(); video.classList.remove('on'); }
+    btn.setAttribute('aria-pressed', 'false');
+    btn.classList.remove('is-on');
+    label.textContent = 'Preview';
+    if (playing && playing.stop === stop) playing = null;
+  };
   const start = () => {
+    if (playing) playing.stop();
     if (!video) {
       video = el('video');
       video.muted = true; video.loop = true; video.playsInline = true;
@@ -75,18 +99,17 @@ function attachPreview(btn, media, src, poster) {
       if (poster) video.poster = poster;
       video.src = src;
       video.addEventListener('playing', () => video.classList.add('on'));
-      media.insertBefore(video, media.querySelector('.badge, .play-hint'));
+      media.insertBefore(video, media.querySelector('.badge'));
     }
+    on = true;
+    playing = { stop };
+    btn.setAttribute('aria-pressed', 'true');
+    btn.classList.add('is-on');
+    label.textContent = 'Stop';
     const pr = video.play();
-    if (pr) pr.catch(() => {});
+    if (pr) pr.catch(() => stop());
   };
-  const stop = () => { if (video) { video.pause(); video.classList.remove('on'); } };
-  if (canHover) {
-    btn.addEventListener('pointerenter', start);
-    btn.addEventListener('pointerleave', stop);
-  }
-  btn.addEventListener('focus', () => { if (btn.matches(':focus-visible')) start(); });
-  btn.addEventListener('blur', stop);
+  btn.addEventListener('click', () => (on ? stop() : start()));
 }
 
 // ---------- Filter ----------
@@ -189,6 +212,15 @@ if ('IntersectionObserver' in window) {
   links.forEach((a, id) => { const s = document.getElementById(id); if (s) spy.observe(s); });
 }
 
+// ---------- Rubriken: tre länkar överst, resten dyker upp när man scrollar ----------
+// Länkar med data-more göms på toppen (css) och visas när man har scrollat förbi första skärmen.
+const header = $('.site-header');
+if (header) {
+  const update = () => header.classList.toggle('is-scrolled', scrollY > innerHeight * 0.5);
+  addEventListener('scroll', update, { passive: true });
+  update();
+}
+
 // ---------- Höstlöv i hero (billigt: CSS-animation, 12 stycken) ----------
 const box = $('#leaves'); // Finns bara på den fristående sidan.
 if (!reduceMotion && box) {
@@ -203,7 +235,7 @@ if (!reduceMotion && box) {
 // ---------- "Selected work" uppe till höger på startskärmen (bara i index.html) ----------
 const peek = $('#peek'), peekList = $('#peekList');
 if (peek && peekList) {
-  PROJECTS.filter(p => p.featured).slice(0, 4).forEach(p => {
+  PROJECTS.filter(p => p.featured).slice(0, 3).forEach(p => {
     const li = el('li');
     const b = el('button', 'peek-item');
     b.type = 'button';
@@ -266,5 +298,7 @@ function showSeasonToast(message) {
 
 // ---------- Knappen "Season": prova alla säsongslooks (js/seasonmenu.js) ----------
 // I rubriken på båda sidorna, och (bara i 3D-sidan) som flytande knapp medan man kör.
-document.querySelectorAll('.site-header .header-row').forEach((row) => row.append(createSeasonMenu('header')));
+const seasonSlot = $('#seasonSlot'); // Finns bara i 3D-sidan: knappen sitter då på startskärmen, inte i rubriken.
+if (seasonSlot) seasonSlot.append(createSeasonMenu('header'));
+else document.querySelectorAll('.site-header .header-row').forEach((row) => row.append(createSeasonMenu('header')));
 if (document.getElementById('backButton')) document.body.append(createSeasonMenu('game'));
