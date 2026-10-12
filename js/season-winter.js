@@ -24,7 +24,8 @@ const SNOW = '#f3f7fd';
 // Snö på allt som vetter uppåt: ett materialbyte (skuggaren), inga extra föremål.
 // ============================================================================
 // Körs EFTER optimizeWorld, så att det är de färdiga materialen som ändras. Markens och vägarnas lager (renderOrder
-// under 0) får sin snö av paletten och hoppas över. Inne i garaget (under taket) läggs ingen snö.
+// under 0) får sin snö av paletten och hoppas över, liksom material med userData.noSnow (vinjetternas golv). Inne i
+// garaget (under taket) läggs ingen snö.
 function applySnowSurfaces() {
   const color = new THREE.Color(SNOW);
   const cos = Math.cos(BILLBOARD_FACING).toFixed(5);
@@ -36,6 +37,7 @@ function applySnowSurfaces() {
     const material = object.material;
     if (!material || done.has(material)) return;
     done.add(material);
+    if (material.userData && material.userData.noSnow) return; // Vinjettgolv (mattan, terrassplattan): inte snötäckta.
     if (material.transparent || !(material.isMeshLambertMaterial || material.isMeshStandardMaterial)) return;
     const before = material.onBeforeCompile;
     const key = material.customProgramCacheKey();

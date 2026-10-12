@@ -50,7 +50,7 @@ export function buildAngame(THREE, palette = {}) { // palette används inte: nat
   const shadows = [];
 
   // --- Geometri-hjälpare: allt som ska slås ihop görs icke-indexerat och får vertexfärg ---
-  const parts = { stone: [], blossom: [], glow: [], halo: [], rim: [] };
+  const parts = { stone: [], platform: [], blossom: [], glow: [], halo: [], rim: [] };
   const matrix = new THREE.Matrix4();
   const euler = new THREE.Euler();
   const quat = new THREE.Quaternion();
@@ -72,6 +72,8 @@ export function buildAngame(THREE, palette = {}) { // palette används inte: nat
 
   // --- Material (delas) ---
   const stoneMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const platformMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  platformMat.userData.noSnow = true; // Terrassplattan (egen hink, så att muren och stammarna får snö): månljus, ingen snö (season-winter.js).
   const blossomMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
   const rimMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
@@ -82,8 +84,8 @@ export function buildAngame(THREE, palette = {}) { // palette används inte: nat
   // --- Terrassen: en låg åttkantig platta med ljus kant ---
   const CX = 4.6;      // Plattans mitt (x). Radie 3.7 + sken till 4.35 ryms i x 0.25..8.95, z ±4.35.
   const PLAT_R = 3.7;
-  put(parts.stone, new THREE.CylinderGeometry(PLAT_R, PLAT_R + 0.12, 0.26, 10), COLOR.platform, CX, 0.13, 0, [0, 0.16, 0]);
-  put(parts.stone, new THREE.CylinderGeometry(PLAT_R - 0.35, PLAT_R - 0.3, 0.06, 10), COLOR.platformEdge, CX, 0.28, 0, [0, 0.16, 0]);
+  put(parts.platform, new THREE.CylinderGeometry(PLAT_R, PLAT_R + 0.12, 0.26, 10), COLOR.platform, CX, 0.13, 0, [0, 0.16, 0]);
+  put(parts.platform, new THREE.CylinderGeometry(PLAT_R - 0.35, PLAT_R - 0.3, 0.06, 10), COLOR.platformEdge, CX, 0.28, 0, [0, 0.16, 0]);
 
   // --- Muren: kolumner av stenblock i olika höjd, trasig i toppen. Tjocklek 1.2 runt x = WALL_X ---
   const WALL_X = 7.5;
@@ -234,6 +236,7 @@ export function buildAngame(THREE, palette = {}) { // palette används inte: nat
     return mesh;
   };
   addMerged(parts.stone, stoneMat, 'angame-stone');
+  addMerged(parts.platform, platformMat, 'angame-platform');
   addMerged(parts.blossom, blossomMat, 'angame-blossom');
   addMerged(parts.glow, glowMat, 'angame-glow');
   addMerged(parts.rim, rimMat, 'angame-rim').renderOrder = 1;

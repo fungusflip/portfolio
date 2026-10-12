@@ -3,9 +3,9 @@
 // randig markis, två citronträd med jättefrukter, lådor med citroner, parasoll, solstol
 // och en liten grund lagun med en uppblåsbar badring som guppar.
 // ============================================================================
-// Byggs i LOKALA koordinater (ingen scen här): origo = marken bredvid skyltfickan, +x = bort från
-// vägen längs den fria sidan, +z = längs vägen, y = upp. Allt ryms i 9 x 9 enheter (x 0.5..9.2,
-// z -4.5..4.5). Den som kopplar in den vrider/speglar gruppen efter stop.side.
+// Byggs i LOKALA koordinater (ingen scen här): origo = mitten av framkanten, +x = bakåt in i vinjetten (kiosken),
+// +z = åt sidan, y = upp. Allt ryms i ca 9 x 9 enheter (x 0.9..9.2, z -4.4..4.3). Kopplaren (vignettes.js,
+// moduleBuilder) vrider gruppen ett kvarts varv (ingen spegling), så att +x pekar uppåt på skärmen (MODULRAMEN).
 // Alla former slås ihop per (föremål, material), så det blir ~23 meshar med delad geometri/material.
 // Ljust och sommarigt med flit: citrongult, turkos, grädde och korall – raka motsatsen till de andra stoppen.
 //
@@ -27,6 +27,8 @@ const C = {
   sand: '#f3e2b0',        // Sandplattan under allt.
   lagoon: '#22c3cc',      // Lagunens djupa kant.
   lagoonShallow: '#8ff0df', // Det grunda, ljusa vattnet i mitten.
+  iceDeep: '#c9deec',     // Vinter med is: lagunen (samma som dammen i vignettes.js).
+  iceShallow: '#e2eef6',  // ... och den ljusare mitten.
 };
 
 // Lagunen och badringen ligger här (lokalt).
@@ -35,7 +37,8 @@ const KIOSK = { x: 6.4, z: -1.4 }; // Mitten på kioskens golv.
 const TREE_A = { x: 2.3, z: -3.0 };
 const TREE_B = { x: 2.3, z: 2.7 };
 
-export function buildLemon(THREE, palette) {
+export function buildLemon(THREE, palette, options = {}) {
+  const frozen = !!options.frozen; // Vintern med is: lagunen är en frusen, blek skiva (samma färg som dammen i vignettes.js).
   const group = new THREE.Group();
   group.name = 'LemonVignette';
   void palette; // Vinjetten har en egen sommarpalett (se C ovan); PALETTE är kvällsfärger.
@@ -54,7 +57,7 @@ export function buildLemon(THREE, palette) {
   };
   // Marklager (samma knep som hubprops: ritas utan djuptest, med negativ renderOrder = ingen skugga).
   const layer = (color) => new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false });
-  const G = { sand: layer(C.sand), lagoon: layer(C.lagoon), shallow: layer(C.lagoonShallow) };
+  const G = { sand: layer(C.sand), lagoon: layer(frozen ? C.iceDeep : C.lagoon), shallow: layer(frozen ? C.iceShallow : C.lagoonShallow) };
 
   // --- Hopslagning: samla geometri per (föremål, material), bygg en mesh per hink ---
   // Egen liten sammanslagning (bakar in matrisen, ingen import behövs): allt blir icke-indexerat.

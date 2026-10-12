@@ -12,7 +12,9 @@
 // grupp som är vriden som hubprops-gruppen, så en plats i gruppen är direkt (right, down). Varje vinjett
 // har en egen liten grupp vars mitt (origin) ligger där `place` säger; måtten inne i den är enheter.
 // Träd, gräs, säsongsprylar och kollisioner lär sig vinjetterna via hubPropObstacles / hubPropShadows /
-// hubGrassFree (hubprops.js), så buildVignettes ska anropas direkt EFTER buildHubProps (före träden).
+// hubGrassFree (hubprops.js), så buildVignettes ska anropas direkt EFTER buildHubProps (före träden). Eftersom
+// bäddar, ängar och bänkar byggs INNAN dess får buildHubProps vinjetternas mark i förväg: vignetteReserved() i
+// DATA-blocket (hub.js skickar den in, hubprops.js får inte importera det här).
 // Allt är sammanslaget per material (batch nedan). Vattnet och neonen drivs av shared.uTime i shadern, och
 // kronorna gungar med samma addSway som träden. Modulvinjetterna har en liten update(t) (stenar som gungar,
 // badring, neonflimmer): den anropas från en osynlig "tickare" (se addTicker), alltså bara medan vinjetten syns.
@@ -30,10 +32,13 @@ import { buildAngame } from './vignettes/angame.js';
 import { buildMutation } from './vignettes/mutation.js';
 import { buildLemon } from './vignettes/lemon.js';
 
-// ---- DATA START (läses också av kontrollskriptet; inga importerade namn får användas här) ----
-// Layouten i "right, down". `place(stop)` ger vinjettens mitt. `side` på stoppet (+1 / -1) väljer åt vilket
-// håll fri mark finns bredvid skylten; Water Shader står i stället under vägen (mitt för skylten ligger
-// stugan och brevlådan på den sidan, så där finns ingen plats).
+// ---- DATA START (läses också av tests/vignette-layout.test.mjs; inga importerade namn får användas här) ----
+// Layouten i "right, down". `place(stop)` ger vinjettens mitt. Alla sex stoppen har side = +1: den fria marken
+// ligger ÅT HÖGER om skylten, i luckan fram till nästa skylt. Varje stopp har ett fritt fält som vinjetten ska
+// rymmas i: right [stop.right + 3.5, stop.right + 13.5], down [-20, 5.5] på norra raden (stopp 1, 3, 5, vägen
+// ligger högt) och [-20, 8] på södra raden (stopp 2, 4, 6). Närmaste kant på vinjetten ska ligga 1-3 enheter från
+// den egna skylten (right +- 3.5), och ingen vinjett får röra nästa stopps skylt, fickan, lyktorna eller vägen.
+// Det kontrollerar tests/vignette-layout.test.mjs (node tests/vignette-layout.test.mjs).
 // solid: [dx, dz, radie] fasta cirklar (bilen krockar). soft: lågt, bilen kör över. free: [dx, dz, radie]
 // där gräset inte ska växa. extent: [dx, dz, radie] som täcker hela det synliga bygget (för kontrollen).
 // MODULRAMEN: AnGame, Mutation Protocol och Lemon Lagoon är byggda i en lokal ram (x, z, y upp) där origo ligger
@@ -50,17 +55,20 @@ import { buildLemon } from './vignettes/lemon.js';
 const MODULE_ROT = Math.PI / 2;
 const framed = (list) => list.map(([x, z, r]) => [z, -x, r]);
 export const VIGNETTE_LAYOUT = {
+  // Dammen står direkt till höger om skylten (bäcken och den riktiga dammen ligger långt söderut, down ca 26).
+  // Bredd +-3.8 (vass och stenar), djup -4.1 (bryggan) ... +3.0 (vassen): right -25.8 ... -18.2, down -4.6 ... 2.5.
   'Water Shader': {
-    place: (stop) => ({ right: stop.right + 2.0, down: stop.road + 8.6 }),
+    place: (stop) => ({ right: stop.right + stop.side * 9.0, down: stop.down + 2.0 }),
     pond: { a: 2.8, b: 2.2 }, // Dammens halvaxlar (right, down).
     solid: [[-1.6, 0.1, 1.2], [0, 0, 1.4], [1.6, 0.1, 1.2], [0, 1.2, 1.0], [0, -2.4, 0.6], [0, -3.2, 0.6]],
     soft: [],
     free: [[0, 0, 3.4], [0, -3.0, 1.3]],
-    extent: [[-2.2, 0.1, 1.5], [2.2, 0.1, 1.5], [0, 0.2, 2.6], [0, -3.1, 1.0]], // Dammen, vassen och bryggans land.
+    extent: [[-2.2, 0.1, 1.6], [2.2, 0.1, 1.6], [0, 0.3, 2.7], [0, -3.1, 1.0]], // Dammen, vassen och bryggans land.
     shadows: [],
   },
+  // Lunden: fröet längst fram (dz 5.8) till det fullvuxna trädet bak (dz -2.5), nodskylten till vänster.
   'Foliage Generator': {
-    place: (stop) => ({ right: stop.right + stop.side * 7.3, down: stop.down + 3.8 }),
+    place: (stop) => ({ right: stop.right + stop.side * 8.0, down: stop.down - 4.0 }),
     // Växtstegen från fröet längst fram till fullvuxet längst bak: [x, z, steg].
     plants: [[0, 5.8, 0], [0.25, 4.6, 1], [-0.2, 3.2, 2], [0.15, 1.7, 3], [-0.2, -0.3, 4], [0, -2.5, 5]],
     sign: [-2.0, 4.3],
@@ -71,7 +79,7 @@ export const VIGNETTE_LAYOUT = {
     shadows: [[0.15, 1.7, 1.2], [-0.2, -0.3, 1.5], [0, -2.5, 1.8]],
   },
   'SpookChester: Pixel Art Render': {
-    place: (stop) => ({ right: stop.right + stop.side * 7.4, down: stop.down + 3.0 }),
+    place: (stop) => ({ right: stop.right + stop.side * 7.4, down: stop.down - 1.0 }),
     solid: [[-1.0, -0.25, 0.85], [0, -0.25, 0.85], [1.0, -0.25, 0.85], [-1.0, 0.45, 0.85], [0, 0.45, 0.85], [1.0, 0.45, 0.85]],
     soft: [[1.15, 1.55, 0.3]],
     free: [[0, 0.2, 2.5]],
@@ -79,30 +87,46 @@ export const VIGNETTE_LAYOUT = {
     shadows: [[0, 0.1, 2.7]],
   },
   // De tre modulvinjetterna. solid / soft / shadows kommer ur modulens egna hinder vid bygget (de är tomma här);
-  // free / extent är skrivna i modulens ram och görs om med framed().
-  // Placering (framtagen med ett kontrollskript mot vägar, fickor, skyltar, lyktor, landmärken och övriga vinjetter):
-  // AnGame står på stoppets HÖGRA sida (stop.side = -1 pekar mot Foliage Generators lund, där det inte finns plats).
-  // Mutation Protocol och Lemon Lagoon har ingen ledig mark intill sina fickor (SpookChesters vinjett respektive
-  // kartans kant), så de står norr om raden, bredvid skyltens bortre ände och utanför brädans döda vinkel.
+  // free / extent är skrivna i modulens ram och görs om med framed(). De står alla på stoppets högra sida, som
+  // de andra: AnGame och Mutation Protocol 9.0 till höger (bredd 9 / 8.6: västkanten 1.0 / 1.2 från skylten, ostkanten
+  // vid right + 13.5 / 13.3), Lemon Lagoon sist (kartans kant: den yttersta delen ligger utanför körradien men på
+  // ritad mark, tonad < 15 %).
   'AnGame: Procedural Environment': {
-    place: (stop) => ({ right: stop.right + 9.5, down: stop.down - 1.0 }),
+    place: (stop) => ({ right: stop.right + stop.side * 9.0, down: stop.down + 7.0 }),
     solid: [], soft: [], shadows: [],
-    free: framed([[4.6, 0, 4.4], [7.5, -3.0, 1.6], [7.5, 0, 1.6], [7.5, 3.0, 1.6]]), // Terrassplattan och muren.
+    free: framed([[4.6, 0, 4.4], [7.5, -3.0, 1.5], [7.5, 0, 1.6], [7.5, 3.0, 1.5]]), // Terrassplattan och muren.
     extent: framed([[4.6, 0, 4.35], [7.5, -3.0, 1.5], [7.5, 3.0, 1.5]]),
   },
   'Mutation Protocol': {
-    place: (stop) => ({ right: stop.right - 5.5, down: stop.down - 6.5 }),
+    place: (stop) => ({ right: stop.right + stop.side * 9.0, down: stop.down + 7.0 }),
     solid: [], soft: [], shadows: [],
-    free: framed([[3.4, -2.5, 2.7], [3.4, 2.5, 2.7], [6.8, -2.5, 2.0], [6.8, 0, 2.0], [6.8, 2.5, 2.0]]), // Mattan och bakväggen.
-    extent: framed([[3.4, -2.3, 2.3], [3.4, 2.3, 2.3], [6.8, 0, 2.6]]),
+    free: framed([[3.4, -1.6, 2.45], [3.4, 1.6, 2.45], [6.6, -2.6, 1.85], [6.6, 0, 1.85], [6.6, 2.6, 1.85]]), // Mattan och bakväggen.
+    extent: framed([[3.4, -1.95, 2.25], [3.4, 1.95, 2.25], [6.6, -2.6, 1.7], [6.6, 0, 1.7], [6.6, 2.6, 1.7]]),
   },
   'Lemon Lagoon': {
-    place: (stop) => ({ right: stop.right - 7.6, down: stop.down - 1.5 }),
+    place: (stop) => ({ right: stop.right + stop.side * 9.0, down: stop.down + 3.0 }),
     solid: [], soft: [], shadows: [],
     free: framed([[5.3, 0, 4.1], [3.3, 0.6, 2.2], [8.0, -3.0, 1.3], [2.3, -3.0, 1.2], [2.3, 2.7, 1.2]]), // Sandplattan, lagunen, lådorna, träden.
-    extent: framed([[5.3, 0, 4.2]]),
+    extent: framed([[5.3, 0, 4.2], [2.3, -3.0, 1.4], [2.3, 2.7, 1.4]]),
   },
 };
+
+// Det som hubprops.js måste hålla undan från redan innan vinjetterna byggs (bäddar, ängar, buskar, bänkar):
+// [{ right, down, radius }] i hubbens (right, down), alltså varje vinjetts free + extent. stopOf = (titel) => stoppet
+// (stopFor i projects.js; skickas in så att den här raden inte behöver några importer).
+export function vignetteReserved(stopOf) {
+  const reserved = [];
+  for (const title of Object.keys(VIGNETTE_LAYOUT)) {
+    const stop = stopOf(title);
+    if (!stop) continue;
+    const layout = VIGNETTE_LAYOUT[title];
+    const origin = layout.place(stop);
+    for (const [dx, dz, radius] of [...layout.free, ...layout.extent]) {
+      reserved.push({ right: origin.right + dx, down: origin.down + dz, radius });
+    }
+  }
+  return reserved;
+}
 // ---- DATA END ----
 
 // --- Hjälpare ---
@@ -643,7 +667,7 @@ function addTicker(group, update) {
 
 function moduleBuilder(make) {
   return (parent, layout) => {
-    const result = make(THREE, PALETTE);
+    const result = make(THREE, PALETTE, { frozen: !!seasonWinter().ice }); // Vintern med is: lagunen fryser (lemon.js).
     const frame = new THREE.Group();
     frame.rotation.y = MODULE_ROT;
     frame.add(result.group);

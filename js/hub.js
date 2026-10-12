@@ -8,7 +8,7 @@ import {
   towardCamera, worldGroup, makeEdgeFade, makeTileTexture,
 } from './core.js';
 import { billboards, buildBillboards, BAY_WIDTH, BAY_LENGTH, BAY_SKIRT } from './billboards.js';
-import { PROJECTS, ROUTE, routePath, routeDownAt } from './projects.js';
+import { PROJECTS, ROUTE, routePath, routeDownAt, stopFor } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad, bayFrames } from './roads.js';
 import {
   HOME_X, HOME_Z, GARAGE_Z, GARAGE_DEPTH, CABIN_X, CABIN_Z, CABIN_SIZE,
@@ -21,7 +21,7 @@ import {
   PLAZA, ART_ROAD, GAZEBO, GAZEBO_ROAD_END, buildHubProps, plazaRoads, plazaVertex, distanceToWater,
   hubPropObstacles, hubPropShadows, hubGrassFree,
 } from './hubprops.js';
-import { buildVignettes } from './vignettes.js';
+import { buildVignettes, vignetteReserved } from './vignettes.js';
 import { getSeasonConfig } from './season.js';
 import { makeTrees, randomTree, leafColors } from './trees.js';
 import { makeGrass, addSaturation } from './magic.js';
@@ -341,8 +341,10 @@ export function buildHubRoads() {
     ...billboardDriveways(hub), // En kort infart till varje skylts ficka. ... = packa upp listan.
     ...footpath,
   ];
-  buildHubProps(roads); // Torg, bäck och broar, kiosk, paviljong, skulpturer, bänkar, växter (hubprops.js).
-  buildVignettes(roads); // Vinjetter vid Water Shader, Foliage Generator och SpookChester (vignettes.js). Före träden.
+  // Torg, bäck och broar, kiosk, paviljong, skulpturer, bänkar, växter (hubprops.js). Vinjetterna byggs först efter
+  // det här, så deras mark skickas in i förväg (vignetteReserved): bäddar, ängar och bänkar håller sig utanför den.
+  buildHubProps(roads, vignetteReserved(stopFor));
+  buildVignettes(roads); // De sex vinjetterna vid skyltarna (vignettes.js). Före träden.
   buildRoads(hub, roads);
 
   const signposts = [
@@ -353,7 +355,7 @@ export function buildHubRoads() {
     { text: 'Programming', arrow: 'down', at: belowRoad(PLAZA.right + 6.2, 4.7) },
     // Art: vägen ligger nu lågt här (right -9 ca 17.6), så skylten står tätt under den, strax före bäckens källa.
     { text: 'Art', arrow: 'down', at: belowRoad(ART_ROAD.right + 4.3, 3) },
-    { text: 'Gazebo', arrow: 'down', at: belowRoad(GAZEBO.right + 3.5, 4.7) }, // Väster om Water Shaders damm (vinjetten, right -29).
+    { text: 'Gazebo', arrow: 'down', at: belowRoad(GAZEBO.right + 3.5, 4.7) }, // Väster om Water Shader-skylten (dammen står öster om den, right -22).
     { text: 'Tech Art', arrow: 'down', at: belowRoad(TECH_ROAD_RIGHT - 4, 5) },
   ];
   buildSignposts(hub, signposts);

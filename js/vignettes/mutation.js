@@ -39,6 +39,8 @@ export function buildMutation(THREE, palette = {}) { // palette används inte: v
     beam: new THREE.MeshBasicMaterial({ color: MAGENTA, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide }),
   };
 
+  M.mat.userData.noSnow = true; // Mattan är inomhusgolv: vintern (season-winter.js, applySnowSurfaces) lägger ingen snö på den.
+
   // --- Små byggare: samla geometri per material, slå ihop sist ---
   const buckets = new Map(); // material -> [geometri]
   const tmpQuat = new THREE.Quaternion();

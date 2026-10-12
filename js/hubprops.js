@@ -325,8 +325,13 @@ const PLUME_COLORS = ['#f2e3b0', '#e8c97a', '#d9a04a'].map((hex) => new THREE.Co
 const FLOWER_COLORS = ['#fff1c9', '#f48c06', '#8e63c9', '#fff1c9', '#e85d04', '#a77bdc'].map((hex) => new THREE.Color(hex));
 const stemColor = new THREE.Color('#6d7a3c');
 let roadsForPlanting = [];
+// Vinjetternas mark ({ right, down, radius }, se vignetteReserved i vignettes.js). Vinjetterna byggs först EFTER
+// buildHubProps, så utan den här listan kunde bäddar, ängar och bänkar hamna mitt i en vinjett.
+let reservedZones = [];
+const inReserved = (right, down, margin = 0) => reservedZones.some((zone) => Math.hypot(right - zone.right, down - zone.down) < zone.radius + margin);
 // Får något växa här (local-koordinater)? Inte på vägar, i vatten eller på fasta föremål.
 function plantOk(x, z, margin = 0.9) {
+  if (inReserved(x, z, 0.3)) return false;
   const spot = hubPoint(x, z);
   if (roadsForPlanting.some((road) => distanceToRoad(spot.x, spot.z, road) < (road.width || ROAD_WIDTH) / 2 + margin)) return false;
   if (distanceToWater(spot.x, spot.z) < 0.5) return false;
@@ -905,6 +910,7 @@ function addBench(parent, x, z, angle, y = 0, length = 1.9) {
 // Då flyttas den till närmaste fria plats.
 const BENCH_ROAD_MARGIN = 1.3;
 function benchOk(right, down) {
+  if (inReserved(right, down, 0.5)) return false;
   const spot = hubPoint(right, down);
   if (roadsForPlanting.some((road) => distanceToRoad(spot.x, spot.z, road) < (road.width || ROAD_WIDTH) / 2 + BENCH_ROAD_MARGIN)) return false;
   return distanceToWater(spot.x, spot.z) > 1;
@@ -1077,14 +1083,18 @@ function buildRocks(local, clusters) {
 }
 
 // Bygger allt i hemvärlden. roads = vägarna (för att hålla växter borta från dem).
+// reserved = vinjetternas mark [{ right, down, radius }] (vignetteReserved(stopFor) i vignettes.js, som hubprops
+// inte får importera): bäddar, ängar och bänkar håller sig borta, och gräset och träden ser den som fri mark.
 // Körs före optimizeWorld (se main.js), så att allt slås ihop.
-export function buildHubProps(roads = []) {
+export function buildHubProps(roads = [], reserved = []) {
   hubPropObstacles.length = 0;
   hubPropShadows.length = 0;
   hubGrassFree.length = 0;
   tuftItems.length = 0;
   flowerItems.length = 0;
   roadsForPlanting = roads;
+  reservedZones = reserved;
+  for (const zone of reserved) addGrassFree(zone.right, zone.down, zone.radius);
   const local = new THREE.Group();
   const base = hubPoint(0, 0);
   local.position.set(base.x, 0, base.z);
