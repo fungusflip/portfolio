@@ -23,14 +23,16 @@
 import * as THREE from 'three';
 import {
   renderer, scene, camera, cameraOffset, cameraLead, keyLight, SUN_DIRECTION, SUN_DISTANCE,
-  WORLDS, currentWorld, towardCamera, toTheRight, FOG_NEAR, FOG_FAR, CAMERA_PITCH,
+  WORLDS, currentWorld, towardCamera, toTheRight, FOG_NEAR, FOG_FAR, CAMERA_PITCH, BILLBOARD_FACING,
 } from './core.js';
-import { introOpen, panelOpen, canvasVisible, setLoadingProgress, setReady, setFade, placeParkPrompt } from './ui.js';
+import { introOpen, listOpen, panelOpen, canvasVisible, setLoadingProgress, setReady, setFade, placeParkPrompt } from './ui.js';
 import { renderLoadingScene, disposeLoadingScene } from './loading-scene.js';
 // Projektlistan fungerar direkt, även under laddningen (den behöver bara projektdatan).
 import { setWorldJumper } from './project-list.js';
 import { startFromCode } from './ui.js';
 import { seasonActive } from './season.js';
+import { ROUTE, routePath, routeStops } from './projects.js';
+import { createIntroTour, TOUR_DEFAULTS } from './introtour.js';
 
 // ---------------------------------------------------------------------------
 // 1. LADDNINGSSCENEN – börjar rulla direkt
@@ -58,7 +60,7 @@ const carModule = await import('./car.js'); // Hela modulen sparas: nitro/drifti
 const { car, beam, HEADLIGHT_STRENGTH, startAutoDrive, updateCar } = carModule;
 const { billboards, padTextureActive, updateBillboards, getFocus, BAY_WIDTH, BAY_LENGTH } = await import('./billboards.js');
 await step(0.2, 'Building the garage');
-const { HOME_X, HOME_Z, GARAGE_Z, home, garageDoor, updateHome } = await import('./home.js');
+const { HOME_X, HOME_Z, GARAGE_Z, home, hubPoint, garageDoor, updateHome } = await import('./home.js');
 await step(0.3, 'Painting the ground');
 const hub = await import('./hub.js'); // Hämtar också grottorna, löven och optimeringen.
 hub.buildHubGround();
@@ -216,6 +218,28 @@ function introCameraShift() {
     : toTheRight(origin, -INTRO_SHIFT_SIDE * introShift);
 }
 
+// Startskärmens kameratur (introtour.js): siktpunkten glider sakta längs vägen förbi de första
+// skyltarna och tillbaka till garaget. Bilen rör sig inte. Förskjutningen läggs OVANPÅ
+// introCameraShift, så att det intressanta hamnar där bilen annars syns (höger/mitten, inte under kortet).
+const TOUR_STOPS = 3;       // Hur många skyltar turen dröjer vid (de första i körordning). ÄNDRA här.
+const tourMotion = window.matchMedia('(prefers-reduced-motion: reduce)'); // Live: .matches läses varje bild.
+const introTour = createIntroTour(
+  routePath(),
+  routeStops().slice(0, TOUR_STOPS).map((stop) => stop.s),
+  ROUTE.districts.home,
+  TOUR_DEFAULTS, // startHold / legTime / returnTime / lookUp m.m. – se introtour.js.
+);
+const tourSin = Math.sin(BILLBOARD_FACING);
+const tourCos = Math.cos(BILLBOARD_FACING);
+const tourProbe = new THREE.Vector3(); // Var turen "är" på vägen: skyltarna vaknar när den närmar sig.
+const hubOrigin = hubPoint(0, 0);      // hubPoint är linjär i (right, down): origo + right * åt höger + down * nedåt.
+const TOUR_PARKED_RADIUS = 2.5;        // Bilen måste stå (nästan) kvar i garaget, annars ingen tur (t.ex. efter "Back to site").
+function introTourActive() {
+  return introOpen && !listOpen && !document.hidden && !tourMotion.matches
+    && currentWorld === WORLDS.hub && !portals.travel
+    && Math.hypot(car.position.x - carStart.x, car.position.z - carStart.z) < TOUR_PARKED_RADIUS;
+}
+
 // Kameran tittar FRAMÅT dit bilen kör: siktpunkten flyttas en bit i bilens färdriktning,
 // längre ju fortare den kör. Då ser man vart man är på väg även när man kör nedåt på
 // skärmen (förut tittade kameran alltid lika mycket uppåt, så bilen hamnade i nederkanten).
@@ -280,7 +304,17 @@ function gameFrame(time) {
 
   updateCar(delta, portals.travel !== null);
   portals.updateTravel(delta);
-  updateBillboards(delta, car.position);
+  // Turen: medan den går "närmar" sig skyltarna turens plats på vägen (lamporna vaknar), inte bilen.
+  // Mittlinjen ligger >6 enheter från varje ficka, så ingen skylt startar sin film av misstag.
+  introTour.update(delta, introTourActive());
+  let billboardProbe = car.position;
+  if (introTour.blend > 0.5) {
+    const r = introTour.roadRight;
+    const d = introTour.roadDown;
+    billboardProbe = tourProbe.set(
+      hubOrigin.x + tourCos * r + tourSin * d, 0, hubOrigin.z - tourSin * r + tourCos * d);
+  }
+  updateBillboards(delta, billboardProbe);
   if (currentWorld === WORLDS.hub) updateHome(car.position);
   portals.updateWorldExtras(delta);
   updateLamps(delta);
@@ -298,6 +332,13 @@ function gameFrame(time) {
     const shift = introCameraShift();
     target.x += shift.x;
     target.z += shift.z;
+  }
+  if (introTour.blend > 0.001) {
+    // Turens förskjutning (skärmens höger/ned -> världen), samma matte som toTheRight/towardCamera.
+    const right = introTour.right * introTour.blend;
+    const down = introTour.down * introTour.blend;
+    target.x += tourCos * right + tourSin * down;
+    target.z += -tourSin * right + tourCos * down;
   }
   // Luta mot skylten bilen står vid (mjukt in och ut).
   const focus = getFocus();
