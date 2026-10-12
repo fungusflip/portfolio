@@ -1,18 +1,21 @@
 // ============================================================================
 // vignettes.js — små scener bredvid skyltarna, så att världen antyder vad projektet handlar om.
 // ============================================================================
-// Tre av de sex främsta projekten har en vinjett: Water Shader (en liten damm med brygga och roddbåt),
-// Foliage Generator (ett lund där samma träd står i olika växtsteg) och SpookChester (en pixel-diner med
-// flimrande neon). Vinjetterna är ren data i VIGNETTES nedan, nycklade på projektets titel (samma som i
+// Alla sex de främsta projekten har en vinjett: Water Shader (en liten damm med brygga och roddbåt),
+// Foliage Generator (ett lund där samma träd står i olika växtsteg), AnGame (en månbelyst terrass), SpookChester
+// (en pixel-diner med flimrande neon), Mutation Protocol (ett neonvapenförråd) och Lemon Lagoon (en citronkiosk
+// vid en lagun). Vinjetterna är ren data i VIGNETTES nedan, nycklade på projektets titel (samma som i
 // projects.js), så en ny vinjett läggs till med ett nytt objekt där: { place, build, solid, soft, free, ... }.
+// De tre senaste är egna moduler (js/vignettes/*.js) i en lokal ram; se MODULRAMEN nedan.
 //
 // KOORDINATER: som hubprops.js: "right, down" räknat från skyltradens mitt (hubPoint). Allt byggs i en
 // grupp som är vriden som hubprops-gruppen, så en plats i gruppen är direkt (right, down). Varje vinjett
 // har en egen liten grupp vars mitt (origin) ligger där `place` säger; måtten inne i den är enheter.
 // Träd, gräs, säsongsprylar och kollisioner lär sig vinjetterna via hubPropObstacles / hubPropShadows /
 // hubGrassFree (hubprops.js), så buildVignettes ska anropas direkt EFTER buildHubProps (före träden).
-// Allt är sammanslaget per material (batch nedan), inget rör sig i JavaScript: vattnet och neonen drivs
-// av shared.uTime i shadern, och kronorna gungar med samma addSway som träden.
+// Allt är sammanslaget per material (batch nedan). Vattnet och neonen drivs av shared.uTime i shadern, och
+// kronorna gungar med samma addSway som träden. Modulvinjetterna har en liten update(t) (stenar som gungar,
+// badring, neonflimmer): den anropas från en osynlig "tickare" (se addTicker), alltså bara medan vinjetten syns.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PALETTE, WORLDS, BILLBOARD_FACING, worldGroup, makeGlowMaterial } from './core.js';
@@ -23,6 +26,9 @@ import { hubPropObstacles, hubPropShadows, hubGrassFree } from './hubprops.js';
 import { shared, addSway } from './magic.js';
 import { markMoving } from './optimize.js';
 import { getSeasonConfig } from './season.js';
+import { buildAngame } from './vignettes/angame.js';
+import { buildMutation } from './vignettes/mutation.js';
+import { buildLemon } from './vignettes/lemon.js';
 
 // ---- DATA START (läses också av kontrollskriptet; inga importerade namn får användas här) ----
 // Layouten i "right, down". `place(stop)` ger vinjettens mitt. `side` på stoppet (+1 / -1) väljer åt vilket
@@ -30,6 +36,19 @@ import { getSeasonConfig } from './season.js';
 // stugan och brevlådan på den sidan, så där finns ingen plats).
 // solid: [dx, dz, radie] fasta cirklar (bilen krockar). soft: lågt, bilen kör över. free: [dx, dz, radie]
 // där gräset inte ska växa. extent: [dx, dz, radie] som täcker hela det synliga bygget (för kontrollen).
+// MODULRAMEN: AnGame, Mutation Protocol och Lemon Lagoon är byggda i en lokal ram (x, z, y upp) där origo ligger
+// i mitten av framkanten, +x = bakåt in i vinjetten (där bakväggen / kiosken / muren står) och +z = åt sidan.
+// Världens ram är (right, down) där down pekar mot kameran. Bakväggen ska vetta mot kameran, alltså måste
+// lokala +x peka UPP på skärmen (down minskar) och lokala +z åt höger (right ökar):
+//   (right, down) = (z, -x)   =>   lokala (1, 0) -> (0, -1) och lokala (0, 1) -> (1, 0).
+// Det är en ren vridning, ingen spegling (matrisen [[0, 1], [-1, 0]] har determinant 0*0 - 1*(-1) = +1), så
+// text och asymmetri bevaras. En Group med rotation.y = t ger x' = x cos t + z sin t, z' = -x sin t + z cos t,
+// och t = PI / 2 ger x' = z, z' = -x. Modulens "bort från vägen" blir alltså "norrut på skärmen" (vägen och
+// kameran ligger söderut), och breddsidan (z, +-4.5) löper längs vägen, åt höger. place() ger FRAMKANTENS mitt:
+// right = mitten, down = framkanten; bygget sträcker sig sedan ca 9 enheter norrut (down minskar) och 4.5 åt var sida.
+// framed() gör om [x, z, r]-cirklar i modulens ram till gruppens [dx, dz, r].
+const MODULE_ROT = Math.PI / 2;
+const framed = (list) => list.map(([x, z, r]) => [z, -x, r]);
 export const VIGNETTE_LAYOUT = {
   'Water Shader': {
     place: (stop) => ({ right: stop.right + 2.0, down: stop.road + 8.6 }),
@@ -58,6 +77,30 @@ export const VIGNETTE_LAYOUT = {
     free: [[0, 0.2, 2.5]],
     extent: [[0, 0.1, 2.15], [1.15, 1.55, 0.35]],
     shadows: [[0, 0.1, 2.7]],
+  },
+  // De tre modulvinjetterna. solid / soft / shadows kommer ur modulens egna hinder vid bygget (de är tomma här);
+  // free / extent är skrivna i modulens ram och görs om med framed().
+  // Placering (framtagen med ett kontrollskript mot vägar, fickor, skyltar, lyktor, landmärken och övriga vinjetter):
+  // AnGame står på stoppets HÖGRA sida (stop.side = -1 pekar mot Foliage Generators lund, där det inte finns plats).
+  // Mutation Protocol och Lemon Lagoon har ingen ledig mark intill sina fickor (SpookChesters vinjett respektive
+  // kartans kant), så de står norr om raden, bredvid skyltens bortre ände och utanför brädans döda vinkel.
+  'AnGame: Procedural Environment': {
+    place: (stop) => ({ right: stop.right + 9.5, down: stop.down - 1.0 }),
+    solid: [], soft: [], shadows: [],
+    free: framed([[4.6, 0, 4.4], [7.5, -3.0, 1.6], [7.5, 0, 1.6], [7.5, 3.0, 1.6]]), // Terrassplattan och muren.
+    extent: framed([[4.6, 0, 4.35], [7.5, -3.0, 1.5], [7.5, 3.0, 1.5]]),
+  },
+  'Mutation Protocol': {
+    place: (stop) => ({ right: stop.right - 5.5, down: stop.down - 6.5 }),
+    solid: [], soft: [], shadows: [],
+    free: framed([[3.4, -2.5, 2.7], [3.4, 2.5, 2.7], [6.8, -2.5, 2.0], [6.8, 0, 2.0], [6.8, 2.5, 2.0]]), // Mattan och bakväggen.
+    extent: framed([[3.4, -2.3, 2.3], [3.4, 2.3, 2.3], [6.8, 0, 2.6]]),
+  },
+  'Lemon Lagoon': {
+    place: (stop) => ({ right: stop.right - 7.6, down: stop.down - 1.5 }),
+    solid: [], soft: [], shadows: [],
+    free: framed([[5.3, 0, 4.1], [3.3, 0.6, 2.2], [8.0, -3.0, 1.3], [2.3, -3.0, 1.2], [2.3, 2.7, 1.2]]), // Sandplattan, lagunen, lådorna, träden.
+    extent: framed([[5.3, 0, 4.2]]),
   },
 };
 // ---- DATA END ----
@@ -549,12 +592,85 @@ function buildDiner(parent) {
 }
 
 // ---------------------------------------------------------------------------
+// MODULVINJETTERNA: AnGame, Mutation Protocol och Lemon Lagoon (js/vignettes/*.js).
+// ---------------------------------------------------------------------------
+// En modul ger { group, obstacles, shadows } i sin lokala ram (se MODULRAMEN överst). Här vrids gruppen in i
+// (right, down)-ramen, hindren görs om till layoutens [dx, dz, r] och update(t) kopplas till klockan.
+const TICK_FOOTPRINT = { x: 4.5, y: 2, z: 0, radius: 7 }; // Tickaren syns så länge någon del av vinjettens yta syns.
+const tickMaterial = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false, transparent: true });
+
+// Letar upp vilka objekt update(t) flyttar (jämför två tider) och anmäler dem som rörliga, så att optimize.js
+// varken slår ihop eller fryser dem. Material som bara byter färg / opacitet behöver inget (de delas som de är).
+function markAnimated(root, update) {
+  const snapshot = () => {
+    const matrices = new Map();
+    root.traverse((object) => {
+      object.updateMatrix();
+      matrices.set(object, object.matrix.elements.slice());
+    });
+    return matrices;
+  };
+  update(0);
+  const before = snapshot();
+  update(2.9);
+  const after = snapshot();
+  for (const [object, elements] of after) {
+    const old = before.get(object);
+    if (old && elements.some((value, i) => Math.abs(value - old[i]) > 1e-6)) markMoving(object);
+  }
+  update(0);
+}
+
+// Ingen egen rAF-slinga: ett osynligt mesh (skriver varken färg eller djup, en degenererad triangel) vars
+// onBeforeRender körs av renderern varje bild, men bara medan dess (stora) begränsningssfär är i bild. Tiden är shared.uTime (magic.js),
+// samma klocka som vattnets och neonens shaders.
+function addTicker(group, update) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3)); // En degenererad triangel.
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(TICK_FOOTPRINT.x, TICK_FOOTPRINT.y, TICK_FOOTPRINT.z), TICK_FOOTPRINT.radius);
+  const ticker = new THREE.Mesh(geometry, tickMaterial);
+  ticker.userData.noShadow = true;
+  let last = -1;
+  ticker.onBeforeRender = () => {
+    const t = shared.uTime.value;
+    if (t === last) return; // Samma bild ritas flera gånger (skuggpass): en uppdatering räcker.
+    last = t;
+    update(t);
+  };
+  markMoving(ticker);
+  group.add(ticker);
+}
+
+function moduleBuilder(make) {
+  return (parent, layout) => {
+    const result = make(THREE, PALETTE);
+    const frame = new THREE.Group();
+    frame.rotation.y = MODULE_ROT;
+    frame.add(result.group);
+    parent.add(frame);
+    const update = result.group.userData.update;
+    if (typeof update === 'function') {
+      markAnimated(result.group, update);
+      addTicker(result.group, update);
+    }
+    // Hinder och skuggor: (x, z) i modulens ram -> (dx, dz) = (z, -x). Soft = bilen kör över.
+    const solid = [];
+    const soft = [];
+    for (const o of result.obstacles) (o.soft ? soft : solid).push([o.z, -o.x, o.r]);
+    return { ...layout, solid, soft, shadows: result.shadows.map((o) => [o.z, -o.x, o.r]) };
+  };
+}
+
+// ---------------------------------------------------------------------------
 // REGISTRET: titel → bygge. Fler vinjetter läggs till här (och i VIGNETTE_LAYOUT ovan).
 // ---------------------------------------------------------------------------
 export const VIGNETTES = {
   'Water Shader': { build: buildWater },
   'Foliage Generator': { build: buildFoliage },
   'SpookChester: Pixel Art Render': { build: buildDiner },
+  'AnGame: Procedural Environment': { build: moduleBuilder(buildAngame) },
+  'Mutation Protocol': { build: moduleBuilder(buildMutation) },
+  'Lemon Lagoon': { build: moduleBuilder(buildLemon) },
 };
 
 // Bygger alla vinjetter. roads = samma lista som buildHubProps får (för en kontroll i konsolen).
@@ -576,11 +692,11 @@ export function buildVignettes(roads = []) {
     const group = new THREE.Group();
     group.position.set(origin.right, 0, origin.down);
     local.add(group);
-    vignette.build(group, layout);
-    register(origin, layout);
+    const built = vignette.build(group, layout) || layout; // Modulvinjetterna ger en layout med sina egna hinder.
+    register(origin, built);
 
     // Kontroll (som "Fast hinder på en väg" i hub.js): inget av bygget får ligga på en väg.
-    for (const [dx, dz, radius] of layout.extent) {
+    for (const [dx, dz, radius] of built.extent) {
       const spot = hubPoint(origin.right + dx, origin.down + dz);
       if (roads.some((road) => distanceToRoad(spot.x, spot.z, road) < (road.width || ROAD_WIDTH) / 2 + radius - 0.2)) console.warn('Vinjett nära en väg:', title);
     }
