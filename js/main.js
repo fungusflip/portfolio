@@ -131,7 +131,18 @@ fallingLeaves.material = fallingLeafMaterial;
 // Bilen står inne i garaget med nosen in och porten öppen, så att man ser baklysena.
 const carStart = towardCamera({ x: HOME_X, z: HOME_Z }, GARAGE_Z);
 car.position.set(carStart.x, 0, carStart.z);
-garageDoor.visible = false;
+// Porten är uppvriden (öppen) från början och rullas ner när bilen kommit ut (carReady): se setDoorDrop.
+const DOOR_HEIGHT = garageDoor.geometry.parameters.height;
+let doorDrop = 0;        // 0 = uppe/öppen, 1 = nere/stängd.
+let doorDropGoal = 0;
+function setDoorDrop(amount) {
+  doorDrop = amount;
+  const eased = amount * amount * (3 - 2 * amount);
+  garageDoor.visible = eased > 0.005;
+  garageDoor.scale.y = Math.max(eased, 0.001);
+  garageDoor.position.y = DOOR_HEIGHT - garageDoor.scale.y * DOOR_HEIGHT / 2; // Överkanten ligger kvar: porten rullar ner från taket.
+}
+setDoorDrop(0);
 
 // Tona till bakgrundsfärgen, byt scen bakom toningen och tona tillbaka.
 await step(1, 'Ready');
@@ -162,7 +173,7 @@ const INTRO_SPEED = 4;
 let jumpTarget = WORLDS[location.hash.slice(1)] || WORLDS[new URLSearchParams(location.search).get('goto')] || null;
 if (jumpTarget === WORLDS.hub) jumpTarget = null; // #hub = vanlig start.
 function carReady() {
-  garageDoor.visible = true;
+  doorDropGoal = 1;
   beam.intensity = HEADLIGHT_STRENGTH;
 }
 setReady(() => {
@@ -307,6 +318,7 @@ function gameFrame(time) {
   portals.updateTravel(delta);
   // Turen: medan den går "närmar" sig skyltarna turens plats på vägen (lamporna vaknar), inte bilen.
   // Mittlinjen ligger >6 enheter från varje ficka, så ingen skylt startar sin film av misstag.
+  if (doorDrop < doorDropGoal) setDoorDrop(Math.min(doorDropGoal, doorDrop + delta / 1.1)); // Rullar ner på ca 1 s.
   if (!tourPreRolled) { // Första bilden: turen har redan hunnit en bit, annars känns starten sen efter laddningen.
     tourPreRolled = true;
     if (introTourActive()) {
