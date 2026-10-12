@@ -2,6 +2,7 @@
 // ui.js — allt som är HTML ovanpå 3D-scenen: tangentbord och touchknappar,
 // guiden nere till vänster, infopanelen och startskärmen.
 // ============================================================================
+import { visit } from './stamps.js';
 
 // ---------------------------------------------------------------------------
 // TANGENTBORD
@@ -101,6 +102,7 @@ const contentCache = new Map();
 async function openPanel(project) {
   panelOpen = true;
   panelProject = project;
+  visit(project); // Stämpelräknaren (stamps.js): okända saker som "About me" räknas inte.
   keys.clear(); // Släpp alla körtangenter så att bilen inte fortsätter själv.
   panelCategory.textContent = project.category || '';
   panelTitle.textContent = project.title;

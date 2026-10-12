@@ -8,6 +8,7 @@
 import { WORLDS } from './core.js';
 import { PROJECTS, ABOUT } from './projects.js';
 import { openProject, setListOpen, panelOpen } from './ui.js';
+import { isVisited, onChange, idOf } from './stamps.js';
 
 const listElement = document.getElementById('projects');
 const listBody = document.getElementById('projectsBody');
@@ -44,8 +45,26 @@ function makeCard(project) {
   category.className = 'project-category';
   category.textContent = project.category || '';
   card.append(thumb, title, category);
+  card.dataset.stamp = idOf(project);
+  markCard(card, project);
   card.addEventListener('click', () => openProject(project));
   return card;
+}
+
+// Liten bock efter titeln om projektet är sett (stämpelräknaren, stamps.js).
+function markCard(card, project) {
+  const seen = isVisited(project);
+  card.classList.toggle('visited', seen);
+  const title = card.querySelector('.project-title');
+  let mark = title.querySelector('.project-check');
+  if (seen && !mark) {
+    mark = document.createElement('span');
+    mark.className = 'project-check';
+    mark.innerHTML = '<span aria-hidden="true">✓</span><span class="stamp-sr"> (seen)</span>';
+    title.append(mark);
+  } else if (!seen && mark) {
+    mark.remove();
+  }
 }
 
 // Laddar ett korts bild/video när kortet kommer in i bild. IntersectionObserver
@@ -128,6 +147,13 @@ function build() {
   }
 }
 build();
+// En ny stämpel (eller reset) uppdaterar bockarna. Listan byggs inte om.
+onChange(() => {
+  for (const project of PROJECTS) {
+    const card = listBody.querySelector(`[data-stamp="${idOf(project)}"]`);
+    if (card) markCard(card, project);
+  }
+});
 
 export function open() {
   if (isOpen) return;
