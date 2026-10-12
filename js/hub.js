@@ -21,6 +21,7 @@ import {
   PLAZA, ART_ROAD, GAZEBO, GAZEBO_ROAD_END, buildHubProps, plazaRoads, plazaVertex, distanceToWater,
   hubPropObstacles, hubPropShadows, hubGrassFree,
 } from './hubprops.js';
+import { buildVignettes } from './vignettes.js';
 import { getSeasonConfig } from './season.js';
 import { makeTrees, randomTree, leafColors } from './trees.js';
 import { makeGrass, addSaturation } from './magic.js';
@@ -341,6 +342,7 @@ export function buildHubRoads() {
     ...footpath,
   ];
   buildHubProps(roads); // Torg, bäck och broar, kiosk, paviljong, skulpturer, bänkar, växter (hubprops.js).
+  buildVignettes(roads); // Vinjetter vid Water Shader, Foliage Generator och SpookChester (vignettes.js). Före träden.
   buildRoads(hub, roads);
 
   const signposts = [
