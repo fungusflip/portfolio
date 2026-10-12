@@ -83,15 +83,20 @@ export const ABOUT = {
 export const ROUTE = {
   // Vägen: [right, down] för varje ankarpunkt. Mellan ankarna mjuk S-kurva (se routeDownAt).
   // Första punkten = uppfarten från garaget. Alla `down` utom första är stoppets `road`.
-  road: [[-44.5, 12.5], [-29, 14], [-13, 9.5], [0, 17], [21, 10.5], [35.5, 16], [47, 9.5], [50, 9.5]],
-  // De sex främsta, i körordning från garaget. Varierat avstånd (16 / 13 / 21 / 14.5 / 11.5).
+  // Udda stopp (1, 3, 5) ligger på den NORRA raden (vägen högt, road 10), jämna (2, 4, 6) på den SÖDRA (road 18):
+  // vägen svänger 8 enheter upp och ner, så sträckan mellan två stopp blir ca 26 enheter fast de står 25 isär i sidled.
+  road: [[-44.5, 12.5], [-31, 10], [-6, 18], [19, 10], [44, 18], [69, 10], [94, 18], [100, 18]],
+  // De sex främsta, i körordning från garaget, 25 enheter isär (right). Skyltarna står alltid NORR om vägen
+  // (infarten går rakt ner till vägen); norra/södra raden skiljer sig i `down`. side = +1: den fria marken för
+  // stoppets vinjett ligger ÅT HÖGER om skylten, i luckan fram till nästa skylt (right + 3.5 ... right + 13.5, minst 8
+  // enheter öppen mark kvar före nästa skylt). Åt vänster ligger föregående stopps lucka (och för första stoppet stugan).
   stops: [
-    { title: 'Water Shader', district: 'techart', right: -29, down: 1.5, road: 14, side: -1 },
-    { title: 'Foliage Generator', district: 'techart', right: -13, down: -3, road: 9.5, side: 1 },
-    { title: 'AnGame: Procedural Environment', district: 'art', right: 0, down: 4.5, road: 17, side: -1 },
-    { title: 'SpookChester: Pixel Art Render', district: 'art', right: 21, down: -2, road: 10.5, side: 1 },
-    { title: 'Mutation Protocol', district: 'techart', right: 35.5, down: 3.5, road: 16, side: -1 },
-    { title: 'Lemon Lagoon', district: 'prog', right: 47, down: -3, road: 9.5, side: -1 },
+    { title: 'Water Shader', district: 'techart', right: -31, down: -2.5, road: 10, side: 1 },
+    { title: 'Foliage Generator', district: 'techart', right: -6, down: 5.5, road: 18, side: 1 },
+    { title: 'AnGame: Procedural Environment', district: 'art', right: 19, down: -2.5, road: 10, side: 1 },
+    { title: 'SpookChester: Pixel Art Render', district: 'art', right: 44, down: 5.5, road: 18, side: 1 },
+    { title: 'Mutation Protocol', district: 'techart', right: 69, down: -2.5, road: 10, side: 1 },
+    { title: 'Lemon Lagoon', district: 'prog', right: 94, down: 5.5, road: 18, side: 1 },
   ],
   // Distriktens landmärken (stora, syns på håll). Mått i enheter: w = bredd (åt höger),
   // d = djup (nedåt), h = ungefärlig höjd. `portal` = var grottan dit ligger (portals.js).
@@ -103,7 +108,7 @@ export const ROUTE = {
   },
   // Hemvägen: redan byggda vägar som tar en tillbaka till huvudvägen. Från plaza-stickvägen
   // (right 0) runt torget och tillbaka över bron vid right -13.
-  loop: { via: [[0, 17], [0, 27], [0, 38], [-13, 30], [-13, 9.5]], note: 'plaza stick, plaza ring, art road bridge, main road' },
+  loop: { via: [[0, 16.8], [0, 27], [0, 38], [-13, 30], [-13, 16.5]], note: 'plaza stick, plaza ring, art road bridge, main road' },
 };
 
 // Mjuk höjd (nedåt-värde) på huvudvägen vid en viss `right`: smoothstep mellan ankarpunkterna,

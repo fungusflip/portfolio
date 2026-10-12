@@ -26,7 +26,7 @@ export const PLAZA = { right: 0, down: 38, radius: 11, width: 4.4 }; // Torgets 
 export const ART_ROAD = { right: -13 };    // Art-vägen rakt ner från huvudvägen, över bäcken.
 export const GAZEBO = { right: -38, down: 40 }; // Paviljongen, med en egen väg över bron.
 export const GAZEBO_ROAD_END = 33;          // Där paviljongvägen slutar (rakt ovanför paviljongen).
-export const KIOSK = { right: -21.2, down: 3.6 };
+export const KIOSK = { right: -21, down: 21 }; // Söder om vägen (flyttad ur skyltraden: där är luckan mellan Water Shader och Foliage Generator vinjettmark).
 const SCULPTURE = { right: 24, down: 21 };  // Ringskulpturen på ön mellan huvudvägen och Tech Art-vägen.
 const RAIN_GARDEN = { right: -45.5, down: 35.2, a: 3.4, b: 2.2 };
 const DECK_HALF = 3.5; // Brons halva bredd: vägen (5) plus marginal. Räckena står utanför.
@@ -1125,16 +1125,15 @@ export function buildHubProps(roads = []) {
   buildPlanters(local, [
     [SCULPTURE.right - 3.4, SCULPTURE.down - 1.2, 0], [SCULPTURE.right + 3.4, SCULPTURE.down - 1.2, 0],
     [GAZEBO.right - 3.9, GAZEBO_ROAD_END + 1.8, 0], [GAZEBO.right + 3.9, GAZEBO_ROAD_END + 1.8, 0],
-    [KIOSK.right + 5.2, KIOSK.down + 2.6, 0.3],
+    [KIOSK.right - 5.0, KIOSK.down + 2.6, 0.3],
   ]);
   buildBollards(local, [90, 120, 150, 180, 210, 240, 270].map((degrees) => ringAt(degrees, 14.2)));
-  buildShrubs(local, [[-22.8, 0.9], [-19.6, 0.9], [-41.8, 45], [-34.2, 45], [-49, 39.5], [26.5, 17.6], [21.5, 17.8]]);
+  buildShrubs(local, [[-41.8, 45], [-34.2, 45], [-49, 39.5], [26.5, 17.6], [21.5, 17.8]]);
   // (Stenklungorna vid [-44, 19.5] och [46.5, 34] har flyttats undan från Tech Art-labbet och servertornet.)
   buildRocks(local, [[-44, 19.5, 3, 1.0], [-26, 53, 3, 0.9], [38, 44, 4, 1.0], [46.5, 34, 3, 0.9], [-4, 60, 3, 0.8]]);
 
   // Ornamentgräsbäddar och ängsfläckar (bara utseende: bilen kör rakt över).
   bed(22, 25, 3.2, 1.4, 0.3, 36);
-  bed(-21, 19.5, 3.0, 1.3, -0.2, 30);
   bed(9, 52.5, 3.5, 1.4, 0.1, 36);
   bed(-10, 54, 3, 1.3, -0.1, 30);
   bed(-31, 46, 2.8, 1.3, 0.2, 26);

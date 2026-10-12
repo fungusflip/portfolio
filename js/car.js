@@ -256,9 +256,10 @@ export function updateCar(delta, travelling) {
   const fromCenterX = car.position.x - currentWorld.x;
   const fromCenterZ = car.position.z - currentWorld.z;
   const distance = Math.hypot(fromCenterX, fromCenterZ);
-  if (distance > DRIVE_RADIUS) {
-    car.position.x = currentWorld.x + fromCenterX * (DRIVE_RADIUS / distance);
-    car.position.z = currentWorld.z + fromCenterZ * (DRIVE_RADIUS / distance);
+  const driveRadius = currentWorld.driveRadius || DRIVE_RADIUS; // Hemvärlden är större (se core.js).
+  if (distance > driveRadius) {
+    car.position.x = currentWorld.x + fromCenterX * (driveRadius / distance);
+    car.position.z = currentWorld.z + fromCenterZ * (driveRadius / distance);
   }
   car.rotation.y = heading;
   for (const wheel of frontWheels) wheel.rotation.y = THREE.MathUtils.damp(wheel.rotation.y, steer * MAX_STEER, 12, delta);

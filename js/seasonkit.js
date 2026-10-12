@@ -4,7 +4,7 @@
 // Slumptal med frö, canvas-texturer, platsprov ("får något stå här?"), uppdateringslistan och den
 // gemensamma "krossa något"-animationen (pumpor, snögubbar). Ingen byggkod för själva säsongerna här.
 import * as THREE from 'three';
-import { WORLDS, DRIVE_RADIUS, HUB_X, HUB_Z, worldGroup } from './core.js';
+import { WORLDS, HUB_DRIVE_RADIUS, HUB_X, HUB_Z, worldGroup } from './core.js';
 import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, distanceToRoad } from './roads.js';
 import { HOME_X, HOME_Z } from './home.js';
@@ -69,7 +69,7 @@ export const addUpdater = (fn) => updaters.push(fn);
 // ctx = { roads, lamps, signposts, trees }. placed = [{ x, z }] redan utlagda (minGap emellan).
 // clearance = fri yta runt punkten mot ALLA hinder i collision.js (lyktor, skyltar, stolpar, prydnad ...), efter att de byggts.
 export function spotOk(x, z, ctx, placed = [], minGap = 0, roadMargin = 1.7, clearance = 0.9) {
-  if (Math.hypot(x - HUB_X, z - HUB_Z) > DRIVE_RADIUS - 6) return false;
+  if (Math.hypot(x - HUB_X, z - HUB_Z) > HUB_DRIVE_RADIUS - 6) return false;
   if (Math.hypot(x - HOME_X, z - HOME_Z) < 13) return false;                                       // Garaget och stugan.
   if (ctx.roads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + roadMargin)) return false; // Vägar.
   if (PORTALS.some((portal) => portal.world === hub && portal.style === 'cave' && (Math.hypot(x - portal.center.x, z - portal.center.z) < 14 || Math.hypot(x - portal.door.x, z - portal.door.z) < 9))) return false; // Grottorna.

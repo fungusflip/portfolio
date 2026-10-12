@@ -11,7 +11,7 @@
 // Hämtas av seasonfx.js via hook-API:t (config.modules['spring-summer'], se season.js).
 import * as THREE from 'three';
 import {
-  scene, WORLDS, HUB_X, HUB_Z, DRIVE_RADIUS, BILLBOARD_FACING, CAMERA_PITCH, currentWorld, worldGroup,
+  scene, WORLDS, HUB_X, HUB_Z, HUB_DRIVE_RADIUS, BILLBOARD_FACING, CAMERA_PITCH, currentWorld, worldGroup,
 } from './core.js';
 import { PROJECTS } from './projects.js';
 import { ROAD_WIDTH, distanceToRoad } from './roads.js';
@@ -42,7 +42,7 @@ const softTexture = () => canvasTexture(64, (pen, n) => { // Mjuk rund fläck, v
 
 // Står vi på gräs där inget annat står? (liknar pumpornas kontroll i seasonfx.js, men med mindre marginaler)
 function grassSpotOk(x, z, ctx, roadMargin = 1.2) {
-  if (Math.hypot(x - HUB_X, z - HUB_Z) > DRIVE_RADIUS - 5) return false;
+  if (Math.hypot(x - HUB_X, z - HUB_Z) > HUB_DRIVE_RADIUS - 5) return false;
   if (Math.hypot(x - HOME_X, z - HOME_Z) < 12) return false;
   if (ctx.roads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + roadMargin)) return false;
   if (PORTALS.some((portal) => portal.world === hub && portal.style === 'cave' && (Math.hypot(x - portal.center.x, z - portal.center.z) < 12 || Math.hypot(x - portal.door.x, z - portal.door.z) < 8))) return false;

@@ -10,7 +10,7 @@
 // trädkronornas färg eller lövhögarna (de ligger i season.js / leaves.js).
 // Allt som kan justeras ligger i AUTUMN nedan (och kan skrivas över med config.autumn).
 import * as THREE from 'three';
-import { BILLBOARD_FACING, DRIVE_RADIUS, HUB_X, HUB_Z, currentWorld, keyLight } from './core.js';
+import { BILLBOARD_FACING, HUB_DRIVE_RADIUS, HUB_X, HUB_Z, currentWorld, keyLight } from './core.js';
 import { PROJECTS } from './projects.js';
 import { PORTALS } from './portals.js';
 import { ROAD_WIDTH, distanceToRoad } from './roads.js';
@@ -63,7 +63,7 @@ function onRoad(x, z, roads, margin) {
   return roads.some((road) => distanceToRoad(x, z, road) < (road.width || ROAD_WIDTH) / 2 + margin);
 }
 function insideWorld(x, z) {
-  return Math.hypot(x - HUB_X, z - HUB_Z) < DRIVE_RADIUS - 6;
+  return Math.hypot(x - HUB_X, z - HUB_Z) < HUB_DRIVE_RADIUS - 6;
 }
 function nearPortalOrSign(x, z, gap) {
   if (PORTALS.some((portal) => portal.world === hub && Math.hypot(x - portal.door.x, z - portal.door.z) < gap + 4)) return true;

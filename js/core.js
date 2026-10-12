@@ -257,8 +257,12 @@ export const TILE_PIXELS = 512; // Markmönstrets bild i pixlar (512 x 512).
 export const TILE_UNITS = 16;   // Hur stor en kopia av bilden blir på marken, i enheter.
 // Hemvärldens mitt. Den ligger mitt i allt som byggs där (garaget, skyltraden,
 // grottorna), så att inget hamnar ute i kanttoningen.
-export const HUB_X = -9;
-export const HUB_Z = -2;
+// Hemvärlden är större än de andra (HUB_GROUND_SIZE): skyltraden är utdragen med ca 25 enheter mellan stoppen (ROUTE i
+// projects.js), så mitten ligger ca 22 åt höger om skyltradens mitt (right 22, down 14.9). Garaget (right -44.5) och sista
+// stoppet (right ca 94) ligger båda innanför körradien.
+export const HUB_GROUND_SIZE = 240;  // = 15 markbilder à TILE_UNITS.
+export const HUB_X = -26.1;
+export const HUB_Z = 15;
 
 // --- Mjuk kant ---
 // I stället för att marken tar tvärt slut tonas den ut i bakgrundsfärgen. Det är en
@@ -268,9 +272,14 @@ const FADE_INNER = (GROUND_SIZE / 2) * FADE_START;      // Ringens innerkant.
 const FADE_OUTER = (GROUND_SIZE / 2) * Math.SQRT2 + 1;  // Ytterkant: når ut till markens hörn.
 // Så långt från mitten bilen får köra: fram till där toningen börjar.
 export const DRIVE_RADIUS = FADE_INNER;
+export const HUB_DRIVE_RADIUS = (HUB_GROUND_SIZE / 2) * FADE_START; // Hemvärldens körradie (84).
 
 // Gör en kanttoning för en värld och lägger den i världens grupp.
 export function makeEdgeFade(world) {
+  // Hemvärlden har egen storlek (world.groundSize), de andra delar GROUND_SIZE.
+  const size = world.groundSize || GROUND_SIZE;
+  const fadeInner = (size / 2) * FADE_START;
+  const fadeOuter = (size / 2) * Math.SQRT2 + 1;
   const fadeImage = document.createElement('canvas');
   fadeImage.width = 512;
   fadeImage.height = 512;
@@ -278,8 +287,8 @@ export function makeEdgeFade(world) {
   // Ringens bild täcker en kvadrat lika stor som ringens ytterkant (RingGeometry gör så),
   // så toningens cirklar räknas om till pixlar: radie / FADE_OUTER * 256.
   const gradient = fadePen.createRadialGradient(
-    256, 256, 256 * (FADE_INNER / FADE_OUTER),
-    256, 256, 256 * ((GROUND_SIZE / 2) / FADE_OUTER)
+    256, 256, 256 * (fadeInner / fadeOuter),
+    256, 256, 256 * ((size / 2) / fadeOuter)
   );
   // color + '00' = färgen helt genomskinlig, + 'ff' = helt täckande.
   gradient.addColorStop(0, world.background + '00');
@@ -289,7 +298,7 @@ export function makeEdgeFade(world) {
   const fadeTexture = new THREE.CanvasTexture(fadeImage);
   fadeTexture.colorSpace = THREE.SRGBColorSpace;
   const fade = new THREE.Mesh(
-    new THREE.RingGeometry(FADE_INNER, FADE_OUTER, 96),
+    new THREE.RingGeometry(fadeInner, fadeOuter, 96),
     // transparent: genomskinliga delar syns igenom. depthWrite: false = skymmer inget.
     new THREE.MeshBasicMaterial({ map: fadeTexture, transparent: true, depthWrite: false })
   );
@@ -309,12 +318,13 @@ export function makeEdgeFade(world) {
 //   background – färgen runt marken (och toningen när man reser dit).
 //   accent     – världens "lysande" färg: grottljuset dit, teleportplattan och lyktornas sken.
 //   rowStart   – (bara hemma) var första projektskylten står.
+//   groundSize, driveRadius – (bara hemma) egen markstorlek och körradie; utelämnade = GROUND_SIZE / DRIVE_RADIUS.
 //   display    – hur projekten visas där: 'cinema' (drive-in-duk), 'viewport' (3D-programfönster),
 //                'arcade' (arkadmaskin) eller 'easel' (tavla på staffli). Se billboards.js.
 //   module     – (andra världar) filen som bygger världen. Den hämtas och byggs först när
 //                man reser dit första gången (se portals.js och worlds/).
 export const WORLDS = {
-  hub: { title: 'Home', x: HUB_X, z: HUB_Z, background: PALETTE.background, accent: PALETTE.warmLamp, display: 'cinema', rowStart: { x: 20, z: -10 } },
+  hub: { title: 'Home', x: HUB_X, z: HUB_Z, background: PALETTE.background, accent: PALETTE.warmLamp, display: 'cinema', rowStart: { x: 20, z: -10 }, groundSize: HUB_GROUND_SIZE, driveRadius: HUB_DRIVE_RADIUS },
   techart: { title: 'Tech Art', x: 1000, z: 0, background: PALETTE.techBackground, accent: PALETTE.techGridMain, display: 'viewport', module: './worlds/techart.js' },
   prog: { title: 'Programming', x: 0, z: 1000, background: PALETTE.progBackground, accent: PALETTE.progTrace, display: 'arcade', module: './worlds/prog.js' },
   art: { title: 'Art', x: -1000, z: 0, background: PALETTE.artBackground, accent: PALETTE.artAccent, display: 'easel', module: './worlds/art.js' },
