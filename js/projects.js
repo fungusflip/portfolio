@@ -58,3 +58,108 @@ export const ABOUT = {
   url: 'mailto:filip@renemark.me',
   linkText: 'Email me →',
 };
+
+// ---------------------------------------------------------------------------
+// RUTTEN – hur hemvärlden är lagd som en färdväg med distrikt. Bara data (inget 3D),
+// så att andra moduler (intro-kameran, vinjetter vid skyltarna, stämpelräknaren) kan läsa
+// den utan att importera three. hub.js, roads.js och hubprops.js bygger världen ur den.
+// ---------------------------------------------------------------------------
+// KOORDINATER: samma "right, down" som hubPoint() i home.js: right = enheter åt höger på
+// skärmen, down = enheter nedåt, räknat från mitten av den ursprungliga skyltraden.
+// Skyltarna står alltid vända mot kameran, så rutten läses rakt på skärmen.
+//   Huvudvägen ligger 12.5 (= ROAD_DISTANCE) nedanför varje skylt: infarten går rakt ner
+//   från skyltens ficka till vägen, så skyltens `down` + 12.5 = vägens `down` vid skylten.
+// OBS: gen-data.mjs läser den här filen med en enkel textersättning, så håll allt nedan som
+// `export const` (inga `export function`) och lägg inga fler `import`-rader.
+//
+// Fält per stopp:
+//   title    – samma som i PROJECTS.
+//   district – 'techart' | 'art' | 'prog' | 'home': vilket distrikt stoppet hör till (se districts).
+//   right, down – skyltens plats (hub.js sätter project.x / project.z från dem).
+//   road     – hur långt NED vägen ligger vid stoppet (= down + 12.5). Där möter infarten vägen.
+//   side     – +1 / -1: åt vilket håll det finns fri mark bredvid skylten (för vinjetter).
+//   s        – sträckan längs vägen från garaget, i enheter (räknas ut längst ner).
+//   x, z     – världskoordinater. FYLLS I av hub.js när världen byggs (som project.x / z).
+export const ROUTE = {
+  // Vägen: [right, down] för varje ankarpunkt. Mellan ankarna mjuk S-kurva (se routeDownAt).
+  // Första punkten = uppfarten från garaget. Alla `down` utom första är stoppets `road`.
+  road: [[-44.5, 12.5], [-29, 14], [-13, 9.5], [0, 17], [21, 10.5], [35.5, 16], [47, 9.5], [50, 9.5]],
+  // De sex främsta, i körordning från garaget. Varierat avstånd (16 / 13 / 21 / 14.5 / 11.5).
+  stops: [
+    { title: 'Water Shader', district: 'techart', right: -29, down: 1.5, road: 14, side: -1 },
+    { title: 'Foliage Generator', district: 'techart', right: -13, down: -3, road: 9.5, side: 1 },
+    { title: 'AnGame: Procedural Environment', district: 'art', right: 0, down: 4.5, road: 17, side: -1 },
+    { title: 'SpookChester: Pixel Art Render', district: 'art', right: 21, down: -2, road: 10.5, side: 1 },
+    { title: 'Mutation Protocol', district: 'techart', right: 35.5, down: 3.5, road: 16, side: -1 },
+    { title: 'Lemon Lagoon', district: 'prog', right: 47, down: -3, road: 9.5, side: -1 },
+  ],
+  // Distriktens landmärken (stora, syns på håll). Mått i enheter: w = bredd (åt höger),
+  // d = djup (nedåt), h = ungefärlig höjd. `portal` = var grottan dit ligger (portals.js).
+  districts: {
+    home: { name: 'Home', right: -44.5, down: 0, color: '#ffb45e' },
+    techart: { name: 'Tech Art lab', right: -53.5, down: 24, w: 9, d: 7, h: 15, color: '#6f93c4', portal: { right: 35.5, down: 29 } },
+    art: { name: 'Gallery pavilion', right: 13, down: 25, w: 8, d: 6, h: 11, color: '#ff5d8f', portal: { right: -22.5, down: 44.5 } },
+    prog: { name: 'Server tower', right: 51, down: 25, w: 5, d: 5, h: 17, color: '#3ddc84', portal: { right: 21, down: 40 } },
+  },
+  // Hemvägen: redan byggda vägar som tar en tillbaka till huvudvägen. Från plaza-stickvägen
+  // (right 0) runt torget och tillbaka över bron vid right -13.
+  loop: { via: [[0, 17], [0, 27], [0, 38], [-13, 30], [-13, 9.5]], note: 'plaza stick, plaza ring, art road bridge, main road' },
+};
+
+// Mjuk höjd (nedåt-värde) på huvudvägen vid en viss `right`: smoothstep mellan ankarpunkterna,
+// så vägen är rak vid varje stopp och bågar mellan dem. Utanför ändarna: första/sista värdet.
+export const routeDownAt = (right) => {
+  const road = ROUTE.road;
+  if (right <= road[0][0]) return road[0][1];
+  for (let i = 1; i < road.length; i++) {
+    if (right <= road[i][0]) {
+      const t = (right - road[i - 1][0]) / (road[i][0] - road[i - 1][0]);
+      return road[i - 1][1] + (road[i][1] - road[i - 1][1]) * (t * t * (3 - 2 * t));
+    }
+  }
+  return road[road.length - 1][1];
+};
+
+// Vägens mittlinje som punkter [{ right, down, s }], s = sträcka från garaget. `step` = ungefärligt
+// avstånd i `right` mellan punkterna. Ankarpunkter och `extra` (rights där sidovägar lämnar huvudvägen) tas alltid med.
+export const routePath = (step = 3.5, extra = []) => {
+  const rights = [];
+  for (const [right] of ROUTE.road) rights.push(right);
+  for (const right of extra) rights.push(right);
+  const first = ROUTE.road[0][0];
+  const last = ROUTE.road[ROUTE.road.length - 1][0];
+  const fixed = rights.slice();
+  for (let right = first + step; right < last; right += step) {
+    if (fixed.every((at) => Math.abs(at - right) > step * 0.35)) rights.push(right); // Inte alldeles intill en ankarpunkt.
+  }
+  rights.sort((a, b) => a - b);
+  const points = [];
+  let along = 0;
+  for (const right of rights) {
+    if (points.length && right - points[points.length - 1].right < 0.01) continue; // Dubblett.
+    const down = routeDownAt(right);
+    if (points.length) {
+      const before = points[points.length - 1];
+      along += Math.hypot(right - before.right, down - before.down);
+    }
+    points.push({ right, down, s: along });
+  }
+  return points;
+};
+
+// Stoppen i körordning (en kopia av listan, själva objekten delas): { title, district, right, down, road, side, s, x?, z? }.
+export const routeStops = () => ROUTE.stops.slice();
+// Stoppet för ett projekt (på titeln), eller null om projektet inte är ett av de främsta.
+export const stopFor = (title) => ROUTE.stops.find((stop) => stop.title === title) || null;
+// Stoppen i ett distrikt ('techart' | 'art' | 'prog' | 'home').
+export const stopsIn = (district) => ROUTE.stops.filter((stop) => stop.district === district);
+
+// Sträckan längs vägen (från garaget) till varje stopp: räknas en gång här så att `s` finns på stoppen.
+{
+  const path = routePath(0.5);
+  for (const stop of ROUTE.stops) {
+    let best = path[0];
+    for (const point of path) if (Math.abs(point.right - stop.right) < Math.abs(best.right - stop.right)) best = point;
+    stop.s = Math.round(best.s * 10) / 10;
+  }
+}

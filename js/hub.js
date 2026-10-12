@@ -8,7 +8,7 @@ import {
   towardCamera, worldGroup, makeEdgeFade, makeTileTexture,
 } from './core.js';
 import { billboards, buildBillboards, BAY_WIDTH, BAY_LENGTH, BAY_SKIRT } from './billboards.js';
-import { PROJECTS } from './projects.js';
+import { PROJECTS, ROUTE, routePath, routeDownAt } from './projects.js';
 import { ROAD_WIDTH, ROAD_DISTANCE, buildRoads, billboardDriveways, distanceToRoad, bayFrames } from './roads.js';
 import {
   HOME_X, HOME_Z, GARAGE_Z, GARAGE_DEPTH, CABIN_X, CABIN_Z, CABIN_SIZE,
@@ -16,7 +16,7 @@ import {
 } from './home.js';
 import { PORTALS, techartCave, progCave, artCave, buildPortal } from './portals.js';
 import { buildSignposts } from './signposts.js';
-import { buildLamps, rowLamps, LAMP_SIDE, ARM_DOWN, ARM_LEFT } from './lamps.js';
+import { buildLamps, LAMP_SIDE, ARM_DOWN, ARM_LEFT } from './lamps.js';
 import {
   PLAZA, ART_ROAD, GAZEBO, GAZEBO_ROAD_END, buildHubProps, plazaRoads, plazaVertex, distanceToWater,
   hubPropObstacles, hubPropShadows, hubGrassFree,
@@ -29,6 +29,29 @@ import { addObstacles } from './collision.js';
 import { knockableInstances, knockableObject, wobbler } from './knockables.js';
 
 const hub = WORLDS.hub;
+
+// --- Rutten (ROUTE i projects.js) ---
+// Skyltarna flyttas från den raka raden till sina stopp längs vägen. Det görs här, efter att home.js
+// och billboards.js är klara: home.js har redan räknat ut korsningen (hubPoint) ur den ursprungliga raden,
+// så alla "right, down"-platser i världen ligger kvar där de var. Skylten byggs sedan (buildBillboards)
+// där project.x / project.z säger. Stoppet får också världskoordinater (x, z) för andra moduler.
+for (const stop of ROUTE.stops) {
+  const project = PROJECTS.find((entry) => entry.world === hub && entry.title === stop.title);
+  if (!project) {
+    console.warn('Stoppet saknar projekt:', stop.title);
+    continue;
+  }
+  const spot = hubPoint(stop.right, stop.down);
+  project.x = spot.x;
+  project.z = spot.z;
+  stop.x = spot.x;
+  stop.z = spot.z;
+  if (Math.abs(stop.down + ROAD_DISTANCE - stop.road) > 0.01) console.warn('Stoppets väg ligger inte ROAD_DISTANCE nedanför skylten:', stop.title);
+}
+// Var vägen ligger (hubPoint) vid en viss `right`: där sidovägarna börjar.
+const onRoad = (right) => hubPoint(right, routeDownAt(right));
+// ...och en plats `gap` enheter nedanför vägens mitt vid den (vägskyltar).
+const belowRoad = (right, gap) => hubPoint(right, routeDownAt(right) + gap);
 // Armen på en lykta pekar åt (right, down) på skärmen. (0, 1) = nedåt, (-1, 0) = åt vänster.
 const armToward = (right, down) => BILLBOARD_FACING + Math.atan2(right, down);
 const ARM_RIGHT = armToward(1, 0);
@@ -266,7 +289,6 @@ export function buildHubRoads() {
   // åtta korta, raka och smala bitar. Ingen kantsten (noCurb), bara stenar längs kanten.
   const PATH_WIDTH = 1.3;
   const TECH_ROAD_RIGHT = 35.5;   // Där Tech Art-vägen lämnar huvudvägen.
-  const LAST_SIGN_ROAD_END = 46;  // Huvudvägen slutar här: lite förbi sjätte skylten (3 x 14.14 = 42.4 åt höger om mitten).
   const PATH_SEGMENTS = 8;
   const DOOR_X = CABIN_X + 1.1;
   const DOOR_Z = CABIN_Z + CABIN_SIZE / 2;
@@ -282,18 +304,22 @@ export function buildHubRoads() {
     footpath.push({ from: pathAt(i / PATH_SEGMENTS), to: pathAt((i + 1) / PATH_SEGMENTS), width: PATH_WIDTH, noCurb: true });
   }
   // Varje rad är en rak väg från en punkt till en annan. ÄNDRA HÄR för fler eller färre vägar.
+  // Huvudvägen följer rutten (ROUTE.road i projects.js): en mjuk S-kurva genom stoppen, uppbyggd av korta
+  // raka bitar (samma sätt som gångvägen). Första punkten är exakt uppfartens ände; sidovägarna börjar
+  // på vägens punkter vid GAZEBO / ART_ROAD / PLAZA / Tech Art (de tas alltid med i punktlistan).
+  const mainPoints = routePath(3.5, [GAZEBO.right, ART_ROAD.right, PLAZA.right, TECH_ROAD_RIGHT])
+    .map((point, i) => (i === 0 ? homeRoadPoint : hubPoint(point.right, point.down)));
+  const mainRoad = [];
+  for (let i = 1; i < mainPoints.length; i++) mainRoad.push({ from: mainPoints[i - 1], to: mainPoints[i] });
   const roads = [
-    // Huvudvägen: från uppfarten förbi alla skyltar, till avfarten mot Tech Art-grottan.
-    { from: homeRoadPoint, to: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE) },
-    // Förlängning förbi Tech Art-avfarten, så att den sjätte skyltens (Lemon Lagoon) infart når en väg.
-    { from: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE), to: hubPoint(LAST_SIGN_ROAD_END, ROAD_DISTANCE) },
-    // Tech Art: en mjuk S-kurva ner från huvudvägen, och de sista 6.5 enheterna rakt in i öppningen.
-    { from: hubPoint(TECH_ROAD_RIGHT, ROAD_DISTANCE), to: hubPoint(38.5, 17) },
-    { from: hubPoint(38.5, 17), to: hubPoint(35.5, 22.5) },
-    { from: hubPoint(35.5, 22.5), to: techartCave.at },
+    ...mainRoad,
+    // Tech Art: en mjuk S-kurva ner från huvudvägen, och de sista enheterna rakt in i öppningen.
+    { from: onRoad(TECH_ROAD_RIGHT), to: hubPoint(38.3, 19.6) },
+    { from: hubPoint(38.3, 19.6), to: hubPoint(35.5, 23.6) },
+    { from: hubPoint(35.5, 23.6), to: techartCave.at },
     // Torget: en stickväg rakt ner från huvudvägen (siktlinje mot fontänen) och en ring av tolv bitar
     // (nästan en cirkel). Innanför ringen är det öppen stenläggning att köra runt på.
-    { from: hubPoint(PLAZA.right, ROAD_DISTANCE), to: plazaVertex(0) },
+    { from: onRoad(PLAZA.right), to: plazaVertex(0) },
     ...plazaRoads(),
     // Programming: från torgets ring (hörn 2), en mjuk kurva och sedan rakt ner i öppningen.
     { from: plazaVertex(2), to: hubPoint(14.5, 31.9) },
@@ -301,14 +327,14 @@ export function buildHubRoads() {
     { from: hubPoint(18.8, 32.6), to: hubPoint(21, 34) },
     { from: hubPoint(21, 34), to: progCave.at },
     // Art: rakt ner över den breda bron över bäcken, en mjuk kurva åt vänster och rakt in i öppningen.
-    { from: hubPoint(ART_ROAD.right, ROAD_DISTANCE), to: hubPoint(ART_ROAD.right, 30) },
+    { from: onRoad(ART_ROAD.right), to: hubPoint(ART_ROAD.right, 30) },
     { from: hubPoint(ART_ROAD.right, 30), to: hubPoint(-16, 33.5) },
     { from: hubPoint(-16, 33.5), to: hubPoint(-20, 36.5) },
     { from: hubPoint(-20, 36.5), to: hubPoint(-22.5, 38.5) },
     { from: hubPoint(-22.5, 38.5), to: artCave.at },
     { from: plazaVertex(10), to: hubPoint(-14.8, 32.1) }, // Från torgets vänstra sida in på Art-vägen.
     // Paviljongen: rakt ner från huvudvägen över den andra bron.
-    { from: hubPoint(GAZEBO.right, ROAD_DISTANCE), to: hubPoint(GAZEBO.right, GAZEBO_ROAD_END) },
+    { from: onRoad(GAZEBO.right), to: hubPoint(GAZEBO.right, GAZEBO_ROAD_END) },
     // Uppfarten: från garageporten ner till huvudvägen.
     { from: towardCamera({ x: HOME_X, z: HOME_Z }, GARAGE_Z + GARAGE_DEPTH / 2), to: homeRoadPoint },
     ...billboardDriveways(hub), // En kort infart till varje skylts ficka. ... = packa upp listan.
@@ -321,18 +347,32 @@ export function buildHubRoads() {
     // Mitt emot uppfarten: åt höger ligger projekten och Tech Art-grottan.
     { text: 'Tech Art', arrow: 'right', at: towardCamera(homeRoadPoint, 4.2) },
     // Vid avfarterna ner till grottorna: Programming via torget, Art via bron, Tech Art till höger.
-    { text: 'Programming', arrow: 'down', at: hubPoint(PLAZA.right + 5.5, ROAD_DISTANCE + 4.7) },
-    { text: 'Art', arrow: 'down', at: hubPoint(ART_ROAD.right + 5.5, ROAD_DISTANCE + 4.7) },
-    { text: 'Gazebo', arrow: 'down', at: hubPoint(GAZEBO.right + 5.5, ROAD_DISTANCE + 4.7) },
-    { text: 'Tech Art', arrow: 'down', at: hubPoint(TECH_ROAD_RIGHT - 4.5, ROAD_DISTANCE + 5) },
+    // (Vägen bågar nu, så skyltarna står 4.7 nedanför vägens mitt vid sin plats.)
+    { text: 'Programming', arrow: 'down', at: belowRoad(PLAZA.right + 6.2, 4.7) },
+    { text: 'Art', arrow: 'down', at: belowRoad(ART_ROAD.right + 5.5, 4.7) },
+    { text: 'Gazebo', arrow: 'down', at: belowRoad(GAZEBO.right + 7, 4.7) },
+    { text: 'Tech Art', arrow: 'down', at: belowRoad(TECH_ROAD_RIGHT - 4, 5) },
   ];
   buildSignposts(hub, signposts);
 
+  // Lyktor längs huvudvägen (ersätter rowLamps, som antar en rak rad): en mellan varje par av stopp och en
+  // i vardera änden, på vägens övre sida. Stolpen ligger LAMP_SIDE från vägens mitt, mätt tvärs över vägen
+  // (där vägen lutar blir det lite mer rakt nedåt), och armen pekar ut över vägen.
+  const stopRights = ROUTE.stops.map((stop) => stop.right);
+  const lampRights = [
+    stopRights[0] - 7,
+    ...stopRights.slice(1).map((right, i) => (right + stopRights[i]) / 2),
+    stopRights[stopRights.length - 1] + 5.5,
+  ];
+  const routeLamps = lampRights.map((right) => {
+    const slope = (routeDownAt(right + 0.5) - routeDownAt(right - 0.5)); // Lutningen: höjd per enhet i sidled.
+    return { at: hubPoint(right, routeDownAt(right) - LAMP_SIDE * Math.sqrt(1 + slope * slope)), arm: ARM_DOWN };
+  });
   const lamps = [
-    ...rowLamps(hub),
+    ...routeLamps,
     // Stickvägen till torget, och tre runt torgets ring (pekar in mot fontänen).
-    { at: hubPoint(PLAZA.right + LAMP_SIDE, 21), arm: ARM_LEFT },
-    { at: hubPoint(PLAZA.right - LAMP_SIDE, 17.5), arm: ARM_RIGHT },
+    { at: hubPoint(PLAZA.right + LAMP_SIDE, 22.8), arm: ARM_LEFT },
+    { at: hubPoint(PLAZA.right - LAMP_SIDE, 22.5), arm: ARM_RIGHT },
     ...[105, 165, 225].map((degrees) => {
       const angle = degrees * Math.PI / 180;
       const reach = PLAZA.radius + 3.9;
@@ -342,7 +382,7 @@ export function buildHubRoads() {
       };
     }),
     // Bredvid vägarna till grottorna och vid bron.
-    { at: hubPoint(techartCave.right + LAMP_SIDE, 25.5), arm: ARM_LEFT },
+    { at: hubPoint(techartCave.right + LAMP_SIDE + 0.5, 26.5), arm: ARM_LEFT },
     { at: hubPoint(progCave.right - 4.5, 28.7), arm: ARM_DOWN },
     { at: hubPoint(progCave.right + LAMP_SIDE, 36), arm: ARM_LEFT },
     { at: hubPoint(ART_ROAD.right + LAMP_SIDE, 19.8), arm: ARM_LEFT },
