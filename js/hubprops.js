@@ -795,6 +795,15 @@ function signBoard(parent, text, width, x, y, z, tilt = -0.45) {
   parent.add(board);
 }
 
+// Skylt på en vriden byggnad: ligger i världen (inte i den vridna gruppen), så att den alltid vetter mot kameran. `legs` =
+// två tunna ben under skylten (tak-skylt), annars hänger den direkt på väggen.
+function cameraSign(local, text, width, right, down, y, tilt, legs) {
+  const group = new THREE.Group();
+  group.position.set(right, 0, down);
+  signBoard(group, text, width, 0, y, 0, tilt);
+  if (legs) for (const side of [-1, 1]) part(group, cylinder(0.06, 0.06, legs, 6), charcoalMaterial, side * width * 0.32, y - width * 0.155 - legs / 2, 0);
+  local.add(group);
+}
 // Landmärkena kan vridas så att fronten (lokala +z) vetter mot vägen intill: spot.facing = +1 (fronten åt höger / +right),
 // -1 (åt vänster), 0 (som förut, mot kameran). rotOff ger världspunkten för en lokal förskjutning, blockOutLocal
 // byter halvbredd/halvdjup när byggnaden står vriden.
@@ -822,7 +831,7 @@ function buildTechLab(local, spot) {
   part(lab, round(5.4, 1.5, 0.1, 0.03), glassMaterial, 0, 1.75, 1.45);
   part(lab, round(5.5, 0.12, 0.14, 0.03), techGlowMaterial, 0, 2.6, 1.46);
   part(lab, round(1.3, 2.0, 0.1, 0.03), charcoalMaterial, -3.0, 1.1, 1.45);           // Dörren.
-  signBoard(lab, 'TECH ART', 3.6, 0, 3.6, 1.55, -0.12);
+  cameraSign(local, 'TECH ART', 3.6, ...rotOff(spot, 0, 0.6), 6.1, -0.12, 0.9); // Tak-skylt: syns oavsett åt vilket håll fronten vetter.
   // Skorstenarna med orange ränder och glödande toppar: de syns på håll.
   for (const [x, z, h] of [[3.1, -2.7, 13.5], [4.5, -2.2, 10]]) {
     part(lab, cylinder(0.55, 0.75, h, 10), pipeMaterial, x, h / 2, z);
@@ -861,7 +870,7 @@ function buildGalleryPavilion(local, spot) {
     part(gallery, round(1.7, 2.1, 0.1, 0.03), charcoalMaterial, x, 1.8, 1.32);
     part(gallery, new THREE.PlaneGeometry(1.4, 1.8), artPaintMaterials[i % artPaintMaterials.length], x, 1.8, 1.39);
   });
-  signBoard(gallery, 'GALLERY', 3.4, 0, 4.9, 0.3, -0.35);
+  cameraSign(local, 'GALLERY', 3.4, ...rotOff(spot, 0, 0.3), 5.5, -0.35, 0.7);
   // En hög skulptur vid sidan: stång med två ringar och en vimpel, som syns över byggnaden.
   part(gallery, cylinder(0.09, 0.12, 9.5, 8), steelMaterial, 5.2, 4.75, 0.8);
   part(gallery, new THREE.TorusGeometry(1.2, 0.14, 8, 24), artPaintMaterials[1], 5.2, 7.2, 0.8, [0, 0.5, 0]);
@@ -890,7 +899,7 @@ function buildServerTower(local, spot) {
       part(tower, round(size * 0.72, 0.1, 0.06, 0.02), row === 1 ? progGlowMaterial : progDimMaterial, 0, y + 0.7 + row * (height - 1.2) / 2, front);
     }
   });
-  signBoard(tower, 'CODE', 3.0, 0, 2.6, 2.75, -0.1);
+  cameraSign(local, 'CODE', 3.0, spot.right, spot.down + 2.6, 3.4, -0.1, 0); // På södra väggen, mot kameran.
   // Mast med parabol och en lysande fyr: tornets silhuett syns över träden.
   part(tower, cylinder(0.07, 0.1, 4.2, 6), steelMaterial, 0, 15.5, 0);
   part(tower, new THREE.ConeGeometry(0.9, 0.5, 12), steelMaterial, 0.9, 14.6, 0, [0, 0, -1.9]);
