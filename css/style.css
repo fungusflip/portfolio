@@ -686,20 +686,41 @@ body.loading .intro-hint { visibility: hidden; }
 }
 .intro-skip:hover { color: #ffd98a; }
 
-/* Knappen uppe till höger i spelet. Syns inte på startskärmen eller när listan är öppen. */
-.projects-button {
+/* Körläget har en enda rad längst upp, med samma marginal och samma mörka glas på allt:
+   "Back to site" till vänster, "Stamps" + "All projects" till höger.
+   Syns inte på startskärmen eller när listan är öppen. */
+:root { --drive-margin: clamp(16px, 3vw, 40px); }
+.drive-bar {
   position: fixed;
-  top: calc(16px + env(safe-area-inset-top));
-  right: calc(16px + env(safe-area-inset-right));
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 243, 214, 0.92);
-  color: #25323d;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  font: 700 14px system-ui, sans-serif;
-  cursor: pointer;
+  top: calc(var(--drive-margin) + env(safe-area-inset-top));
+  right: calc(var(--drive-margin) + env(safe-area-inset-right));
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none; /* Bara knapparna tar emot klick. */
 }
+.projects-button,
+.back-button {
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 243, 214, 0.16);
+  border-radius: 999px;
+  background: rgba(25, 18, 40, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #fff3d6;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  font: 600 14px system-ui, sans-serif;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.projects-button:hover,
+.back-button:hover,
+.projects-button:focus-visible,
+.back-button:focus-visible { background: rgba(25, 18, 40, 0.92); }
 body.intro-open .projects-button,
 body.list-open .projects-button { display: none; }
 
@@ -861,23 +882,14 @@ body.playing .site-header {
   display: none;
 }
 
-/* "Back to site": uppe till vänster, bara medan man kör. */
+/* "Back to site": uppe till vänster på samma rad som .drive-bar, bara medan man kör. */
 .back-button {
   display: none;
   position: fixed;
-  top: calc(16px + env(safe-area-inset-top));
-  left: calc(16px + env(safe-area-inset-left));
+  top: calc(var(--drive-margin) + env(safe-area-inset-top));
+  left: calc(var(--drive-margin) + env(safe-area-inset-left));
   z-index: 12;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 243, 214, 0.92);
-  color: #25323d;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  font: 700 14px system-ui, sans-serif;
-  cursor: pointer;
 }
-.back-button:hover { background: #fff3d6; }
 body.playing .back-button { display: block; }
 body.list-open .back-button { display: none; }
 
@@ -1510,19 +1522,19 @@ body.loading .scroll-cue { opacity: 0.8; }
    Syns bara medan man kör; infopanelen och listan täcker hela fönstret och göms med dem. */
 .stamps {
   display: none;
-  position: fixed;
-  top: calc(62px + env(safe-area-inset-top)); /* Under "All projects"-knappen (16px + ca 38px + luft). */
-  right: calc(16px + env(safe-area-inset-right));
-  z-index: 12;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  position: relative; /* Ligger i .drive-bar, på raden bredvid "All projects". Meddelandet hänger under. */
+  align-items: center;
   pointer-events: none; /* Räknaren är bara en uppgift: klick går igenom till spelet. */
   font-family: system-ui, sans-serif;
 }
+.stamps-toast { position: absolute; top: calc(100% + 8px); right: 0; width: max-content; }
 body.playing:not(.panel-open):not(.list-open) .stamps { display: flex; }
 .stamps-count {
-  padding: 5px 12px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 14px;
   border-radius: 999px;
   background: rgba(25, 18, 40, 0.78);
   color: #fff3d6;
@@ -1554,12 +1566,18 @@ body.playing:not(.panel-open):not(.list-open) .stamps { display: flex; }
 .stamps-toast[hidden] { display: none; }
 .stamps-toast.show { opacity: 1; transform: none; }
 .stamps-toast-links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+/* Smal skärm: raden ska rymma tre saker utan att krocka. */
+@media (max-width: 520px) {
+  .projects-button, .back-button { height: 34px; padding: 0 11px; font-size: 13px; }
+  .stamps-count { height: 34px; padding: 0 10px; font-size: 12px; }
+  .drive-bar { gap: 6px; }
+}
 .stamps-toast-links:empty,
 .stamps-toast-close { display: none; }
 .stamps-toast-links a { color: #ffd98a; font-weight: 700; text-underline-offset: 3px; }
 .stamps-toast-links a:hover { color: #fff3d6; }
 /* Tack-rutan tar emot klick (länkarna) och har ett kryss. */
-.stamps-toast.final { pointer-events: auto; padding-right: 36px; position: relative; }
+.stamps-toast.final { pointer-events: auto; padding-right: 36px; }
 .stamps-toast.final .stamps-toast-close {
   display: block;
   position: absolute;

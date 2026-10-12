@@ -86,7 +86,7 @@ export function reset() {
 }
 
 // ---------------------------------------------------------------------------
-// HUD – en liten ruta under "All projects"-knappen uppe till höger, plus ett meddelande.
+// HUD – en liten ruta bredvid "All projects"-knappen uppe till höger, plus ett meddelande.
 // ---------------------------------------------------------------------------
 let counterElement = null;
 let counterText = null;
@@ -120,7 +120,9 @@ function build() {
   toast.append(toastText, toastLinks, close);
   toast.hidden = true;
   counterElement.append(toast);
-  document.body.append(counterElement);
+  // Raden längst upp (.drive-bar) delar den med "All projects"; finns den inte hamnar räknaren i body.
+  const bar = document.getElementById('driveBar');
+  if (bar) bar.prepend(counterElement); else document.body.append(counterElement);
   render(false);
 }
 
