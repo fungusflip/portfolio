@@ -128,7 +128,7 @@ function build() {
 
 function render(pop) {
   if (!counterText) return;
-  counterText.textContent = `Stamps ${visited.size} / ${ALL.length}`;
+  counterText.innerHTML = `<span class="stamps-num">${visited.size}</span><span class="stamps-of">/ ${ALL.length} stamps</span>`; // Bara siffror: inget användarinnehåll.
   counterElement.setAttribute('aria-label', `${visited.size} of ${ALL.length} projects seen`);
   if (pop) {
     counterElement.classList.remove('pop');
