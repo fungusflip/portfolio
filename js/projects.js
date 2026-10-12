@@ -104,7 +104,7 @@ export const ROUTE = {
     home: { name: 'Home', right: -44.5, down: 0, color: '#ffb45e' },
     techart: { name: 'Tech Art lab', right: 46.5, down: 38, w: 9, d: 7, h: 15, color: '#6f93c4', portal: { right: 57, down: 52 } },
     art: { name: 'Gallery pavilion', right: -31, down: 49, w: 8, d: 6, h: 11, color: '#ff5d8f', portal: { right: -22.5, down: 61 } },
-    prog: { name: 'Server tower', right: 28.5, down: 35.5, w: 5, d: 5, h: 17, color: '#3ddc84', portal: { right: 21, down: 46 } },
+    prog: { name: 'Server tower', right: 28.5, down: 35.5, w: 5, d: 5, h: 17, color: '#3ddc84', portal: { right: 21, down: 52 } },
   },
   // Hemvägen: redan byggda vägar som tar en tillbaka till huvudvägen. Från plaza-stickvägen
   // (right 0) runt torget och tillbaka över bron vid right -13.

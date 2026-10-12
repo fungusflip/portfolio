@@ -1138,17 +1138,17 @@ export function buildHubProps(roads = [], reserved = []) {
     [KIOSK.right - 5.0, KIOSK.down + 2.6, 0.3],
   ]);
   buildBollards(local, [90, 120, 150, 180, 210, 240, 270].map((degrees) => ringAt(degrees, 14.2)));
-  buildShrubs(local, [[-41.8, 45], [-41, 53], [-49, 39.5], [26.5, 17.6], [21.5, 17.8]]);
+  buildShrubs(local, [[-40, 46], [-41, 49], [-52, 39.5], [26.5, 17.6], [21.5, 17.8]]);
   // (Stenklungorna vid [-44, 19.5] och [46.5, 34] har flyttats undan från Tech Art-labbet och servertornet.)
-  buildRocks(local, [[-44, 19.5, 3, 1.0], [-17, 57, 3, 0.9], [38, 44, 4, 1.0], [64, 36, 3, 0.9], [-4, 60, 3, 0.8]]);
+  buildRocks(local, [[-44, 19.5, 3, 1.0], [-14, 62, 3, 0.9], [38, 51, 4, 1.0], [64, 36, 3, 0.9], [-4, 60, 3, 0.8]]);
 
   // Ornamentgräsbäddar och ängsfläckar (bara utseende: bilen kör rakt över).
   bed(22, 25, 3.2, 1.4, 0.3, 36);
   bed(9, 52.5, 3.5, 1.4, 0.1, 36);
   bed(-10, 54, 3, 1.3, -0.1, 30);
-  bed(-44, 50, 2.8, 1.3, 0.2, 26);
+  bed(-33, 60, 2.8, 1.3, 0.2, 26);
   bed(44, 26, 2.5, 1.2, 0.5, 24);
-  for (const [cx, cz, a, b, count] of [[33, 53, 7, 4.5, 90], [-41, 59, 6, 4, 70], [67, 42, 5, 6, 60], [12, 57.5, 6, 3, 55], [14, 21, 5, 3.2, 50], [-47, 17, 4, 3, 40], [-2, 20, 4, 2.4, 36]]) {
+  for (const [cx, cz, a, b, count] of [[33, 53, 7, 4.5, 90], [-36, 64, 6, 4, 70], [67, 42, 5, 6, 60], [12, 57.5, 6, 3, 55], [14, 21, 5, 3.2, 50], [-47, 17, 4, 3, 40], [-2, 20, 4, 2.4, 36]]) {
     meadow(cx, cz, a, b, count);
   }
   buildPlants(local);

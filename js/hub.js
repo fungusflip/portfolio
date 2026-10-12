@@ -316,10 +316,15 @@ export function buildHubRoads() {
     ...mainRoad,
     // Tech Art: en mjuk S-kurva ner från huvudvägen, och de sista enheterna rakt in i öppningen.
     { from: onRoad(TECH_ROAD_RIGHT), to: techartCave.at },
-    // Gårdsvägar: en kort väg från varje landmärkes front ut till grottvägen, så att byggnaden vetter mot en väg.
-    { from: hubPoint(TECH_ROAD_RIGHT, 44.5), to: hubPoint(ROUTE.districts.techart.right - 3, 44.5) },
-    { from: hubPoint(21, 37.8), to: hubPoint(ROUTE.districts.prog.right, 37.8) },
-    { from: hubPoint(-22.5, 54.6), to: hubPoint(ROUTE.districts.art.right, 54.6) },
+    // Distriktsgator: Programming- och Tech Art-vägarna förbinds med en gata framför byggnaderna (ingen återvändsgränd),
+    // och Art-gatan går vidare runt till paviljongen. Korta stickvägar leder upp till varje byggnads front.
+    { from: hubPoint(21, 45), to: hubPoint(TECH_ROAD_RIGHT, 45) },
+    { from: hubPoint(ROUTE.districts.prog.right, 45), to: hubPoint(ROUTE.districts.prog.right, 38.6) },
+    { from: hubPoint(ROUTE.districts.techart.right - 3, 45), to: hubPoint(ROUTE.districts.techart.right - 3, 42.6) },
+    { from: hubPoint(-22.5, 55), to: hubPoint(-46, 55) },
+    { from: hubPoint(-46, 55), to: hubPoint(-46, 40) },
+    { from: hubPoint(-46, 40), to: hubPoint(GAZEBO.right - 3.8, 40) },
+    { from: hubPoint(ROUTE.districts.art.right, 55), to: hubPoint(ROUTE.districts.art.right, 52.6) },
     // Torget: en stickväg rakt ner från huvudvägen (siktlinje mot fontänen) och en ring av tolv bitar
     // (nästan en cirkel). Innanför ringen är det öppen stenläggning att köra runt på.
     { from: onRoad(PLAZA.right), to: plazaVertex(0) },

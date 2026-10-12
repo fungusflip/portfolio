@@ -34,7 +34,7 @@ export const PORTALS = [
   // rad, med öppningen uppåt mot vägen. Tech Art: högt upp till höger, en bit bortom sista skylten.
   { world: WORLDS.hub, leadsTo: WORLDS.techart, style: 'cave', at: hubPoint(57, 52) },
   // Programming: till höger om torget, längre ner.
-  { world: WORLDS.hub, leadsTo: WORLDS.prog, style: 'cave', at: hubPoint(21, 46) },
+  { world: WORLDS.hub, leadsTo: WORLDS.prog, style: 'cave', at: hubPoint(21, 52) },
   // Art: längst ner till vänster, bortom dammen och bron.
   { world: WORLDS.hub, leadsTo: WORLDS.art, style: 'cave', at: hubPoint(-22.5, 61) },
   // I de andra världarna ligger plattan hem 8 enheter "nedåt på skärmen" från mitten.
@@ -48,7 +48,7 @@ export const [techartCave, progCave, artCave] = PORTALS; // De tre första: grot
 techartCave.right = 57;
 techartCave.down = 52;
 progCave.right = 21;
-progCave.down = 46;
+progCave.down = 52;
 artCave.right = -22.5;
 artCave.down = 61;
 // Punkterna bilen kör mellan. För en grotta räknas de från öppningen: öppningen vetter uppåt,
