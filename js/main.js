@@ -147,6 +147,11 @@ await new Promise((resolve) => {
   fade();
 });
 disposeLoadingScene();
+// Turen har redan hunnit en bit när bilden tonas fram: annars känns starten sen efter laddningen.
+if (introTourActive()) {
+  introTour.seek(TOUR_DEFAULTS.startHold + 1.5);
+  introTour.blend = 0.6;
+}
 renderer.setAnimationLoop(gameFrame); // Från och med nu ritas spelet.
 const fadeBack = performance.now();
 (function unfade() {
