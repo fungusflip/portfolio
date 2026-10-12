@@ -25,7 +25,7 @@ import { addAnimation, knockableObject } from './knockables.js';
 export const PLAZA = { right: 0, down: 38, radius: 11, width: 4.4 }; // Torgets ring: radien är till vägens mitt.
 export const ART_ROAD = { right: -13 };    // Art-vägen rakt ner från huvudvägen, över bäcken.
 export const GAZEBO = { right: -38, down: 40 }; // Paviljongen, med en egen väg över bron.
-export const GAZEBO_ROAD_END = 33;          // Där paviljongvägen slutar (rakt ovanför paviljongen).
+export const GAZEBO_ROAD_END = 36.6;          // Där paviljongvägen slutar (rakt ovanför paviljongen).
 export const KIOSK = { right: -21, down: 21 }; // Söder om vägen (flyttad ur skyltraden: där är luckan mellan Water Shader och Foliage Generator vinjettmark).
 const SCULPTURE = { right: 24, down: 21 };  // Ringskulpturen på ön mellan huvudvägen och Tech Art-vägen.
 const RAIN_GARDEN = { right: -45.5, down: 35.2, a: 3.4, b: 2.2 };
@@ -101,8 +101,7 @@ export function distanceToWater(x, z) {
   const spot = toScreen(x, z);
   let best = Infinity;
   for (const sample of streamSamples) best = Math.min(best, Math.hypot(spot.right - sample.x, spot.down - sample.z) - sample.hw);
-  const k = Math.hypot((spot.right - RAIN_GARDEN.right) / RAIN_GARDEN.a, (spot.down - RAIN_GARDEN.down) / RAIN_GARDEN.b);
-  return Math.min(best, (k - 1) * Math.min(RAIN_GARDEN.a, RAIN_GARDEN.b));
+  return best; // (Regnträdgården är borttagen, se buildHubProps.)
 }
 
 function addObstacle(right, down, radius, shadow = 0, soft = false) {
@@ -796,9 +795,22 @@ function signBoard(parent, text, width, x, y, z, tilt = -0.45) {
   parent.add(board);
 }
 
+// Landmärkena kan vridas så att fronten (lokala +z) vetter mot vägen intill: spot.facing = +1 (fronten åt höger / +right),
+// -1 (åt vänster), 0 (som förut, mot kameran). rotOff ger världspunkten för en lokal förskjutning, blockOutLocal
+// byter halvbredd/halvdjup när byggnaden står vriden.
+const facingAngle = (spot) => (spot.facing || 0) * Math.PI / 2;
+function rotOff(spot, dx, dz) {
+  const t = facingAngle(spot);
+  return [spot.right + dx * Math.cos(t) + dz * Math.sin(t), spot.down - dx * Math.sin(t) + dz * Math.cos(t)];
+}
+function blockOutLocal(spot, dx, dz, halfW, halfD, radius) {
+  const [x, z] = rotOff(spot, dx, dz);
+  blockOut(x, z, spot.facing ? halfD : halfW, spot.facing ? halfW : halfD, radius);
+}
 function buildTechLab(local, spot) {
   const lab = new THREE.Group();
   lab.position.set(spot.right, 0, spot.down);
+  lab.rotation.y = facingAngle(spot);
   part(lab, round(9.6, 0.2, 7.4, 0.05), concreteMaterial, 0, 0.1, 0);                 // Sockel.
   part(lab, round(8, 4.2, 4.6, 0.12), labWallMaterial, 0, 2.3, -0.9);                  // Hallen.
   // Sågtandstak: tre lutande plåtar med en lysande glasyta på den höga sidan.
@@ -826,16 +838,17 @@ function buildTechLab(local, spot) {
   for (const [x, z] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) part(lab, cylinder(0.07, 0.07, 1.5, 6), charcoalMaterial, 5.4 + x, 0.75, 1.0 + z);
   part(lab, round(0.5, 0.4, 0.5, 0.08), techGlowMaterial, 5.4, 4.1, 1.0);             // Luckan överst på tanken.
   local.add(lab);
-  blockOut(spot.right - 0.5, spot.down - 0.8, 4.2, 2.6, 1.9);
-  blockOut(spot.right + 5.4, spot.down + 1.0, 0.3, 0.3, 1.6);
-  addObstacle(spot.right + 3.8, spot.down - 2.4, 1.6, 0);
-  addGrassFree(spot.right + 0.5, spot.down, 6.4);
-  hubPropShadows.push({ ...hubPoint(spot.right + 0.5, spot.down), radius: 6.2 });
+  blockOutLocal(spot, -0.5, -0.8, 4.2, 2.6, 1.9);
+  blockOutLocal(spot, 5.4, 1.0, 0.3, 0.3, 1.6);
+  addObstacle(...rotOff(spot, 3.8, -2.4), 1.6, 0);
+  addGrassFree(...rotOff(spot, 0.5, 0), 6.4);
+  hubPropShadows.push({ ...hubPoint(...rotOff(spot, 0.5, 0)), radius: 6.2 });
 }
 
 function buildGalleryPavilion(local, spot) {
   const gallery = new THREE.Group();
   gallery.position.set(spot.right, 0, spot.down);
+  gallery.rotation.y = facingAngle(spot);
   part(gallery, round(8.6, 0.25, 6.6, 0.05), concreteMaterial, 0, 0.125, 0);          // Sockel.
   part(gallery, round(7, 3.2, 4.2, 0.1), steelMaterial, 0, 1.85, -0.8);               // Salen.
   // Takkonstruktion i två plan mot en rosa nock.
@@ -856,15 +869,16 @@ function buildGalleryPavilion(local, spot) {
   part(gallery, new THREE.IcosahedronGeometry(0.4, 0), artGlowMaterial, 5.2, 9.7, 0.8);
   part(gallery, round(0.06, 1.1, 1.6, 0.02), artPaintMaterials[3], 5.2, 5.2, 1.6);
   local.add(gallery);
-  blockOut(spot.right, spot.down - 0.8, 3.4, 2.0, 1.9);
-  addObstacle(spot.right + 5.2, spot.down + 0.8, 0.8, 0);
-  addGrassFree(spot.right + 0.8, spot.down, 5.6);
+  blockOutLocal(spot, 0, -0.8, 3.4, 2.0, 1.9);
+  addObstacle(...rotOff(spot, 5.2, 0.8), 0.8, 0);
+  addGrassFree(...rotOff(spot, 0.8, 0), 5.6);
   hubPropShadows.push({ ...hubPoint(spot.right, spot.down), radius: 5.4 });
 }
 
 function buildServerTower(local, spot) {
   const tower = new THREE.Group();
   tower.position.set(spot.right, 0, spot.down);
+  tower.rotation.y = facingAngle(spot);
   part(tower, round(5.6, 0.2, 5.6, 0.05), concreteMaterial, 0, 0.1, 0);
   // Fyra staplade serverskåp som smalnar av uppåt, med lysande band emellan och LED-rader på fronten.
   const levels = [[4.2, 3.4, 0.2], [3.6, 3.2, 3.8], [3.0, 3.0, 7.2], [2.4, 2.8, 10.4]];
@@ -1111,7 +1125,7 @@ export function buildHubProps(roads = [], reserved = []) {
   buildFountain(local);
   buildStream(local);
   for (const bridge of BRIDGES) buildBridge(local, bridge);
-  buildRainGarden(local);
+  // Regnträdgården (buildRainGarden) är avstängd: den såg inte bra ut och grönskan flimrade in på vägen intill.
   buildKiosk(local);
   buildGazebo(local);
   buildSculptures(local);
@@ -1140,7 +1154,7 @@ export function buildHubProps(roads = [], reserved = []) {
   buildBollards(local, [90, 120, 150, 180, 210, 240, 270].map((degrees) => ringAt(degrees, 14.2)));
   buildShrubs(local, [[-40, 46], [-41, 49], [-52, 39.5], [26.5, 17.6], [21.5, 17.8]]);
   // (Stenklungorna vid [-44, 19.5] och [46.5, 34] har flyttats undan från Tech Art-labbet och servertornet.)
-  buildRocks(local, [[-44, 19.5, 3, 1.0], [-14, 62, 3, 0.9], [38, 51, 4, 1.0], [64, 36, 3, 0.9], [-4, 60, 3, 0.8]]);
+  buildRocks(local, [[-44, 19.5, 3, 1.0], [-14, 62, 3, 0.9], [38, 53, 4, 1.0], [64, 36, 3, 0.9], [-4, 60, 3, 0.8]]);
 
   // Ornamentgräsbäddar och ängsfläckar (bara utseende: bilen kör rakt över).
   bed(22, 25, 3.2, 1.4, 0.3, 36);
@@ -1148,7 +1162,7 @@ export function buildHubProps(roads = [], reserved = []) {
   bed(-10, 54, 3, 1.3, -0.1, 30);
   bed(-33, 60, 2.8, 1.3, 0.2, 26);
   bed(44, 26, 2.5, 1.2, 0.5, 24);
-  for (const [cx, cz, a, b, count] of [[33, 53, 7, 4.5, 90], [-36, 64, 6, 4, 70], [67, 42, 5, 6, 60], [12, 57.5, 6, 3, 55], [14, 21, 5, 3.2, 50], [-47, 17, 4, 3, 40], [-2, 20, 4, 2.4, 36]]) {
+  for (const [cx, cz, a, b, count] of [[33, 58, 7, 4.5, 90], [-36, 64, 6, 4, 70], [67, 42, 5, 6, 60], [12, 57.5, 6, 3, 55], [14, 21, 5, 3.2, 50], [-47, 17, 4, 3, 40], [-2, 20, 4, 2.4, 36]]) {
     meadow(cx, cz, a, b, count);
   }
   buildPlants(local);
