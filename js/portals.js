@@ -32,11 +32,11 @@ import { decorateCave } from './cavethemes.js';
 export const PORTALS = [
   // De tre grottorna ligger NEDANFÖR huvudvägen, förskjutna i djupled så att de inte står på en
   // rad, med öppningen uppåt mot vägen. Tech Art: högt upp till höger, en bit bortom sista skylten.
-  { world: WORLDS.hub, leadsTo: WORLDS.techart, style: 'cave', at: hubPoint(35.5, 29) },
+  { world: WORLDS.hub, leadsTo: WORLDS.techart, style: 'cave', at: hubPoint(57, 52) },
   // Programming: till höger om torget, längre ner.
-  { world: WORLDS.hub, leadsTo: WORLDS.prog, style: 'cave', at: hubPoint(21, 40) },
+  { world: WORLDS.hub, leadsTo: WORLDS.prog, style: 'cave', at: hubPoint(21, 46) },
   // Art: längst ner till vänster, bortom dammen och bron.
-  { world: WORLDS.hub, leadsTo: WORLDS.art, style: 'cave', at: hubPoint(-22.5, 44.5) },
+  { world: WORLDS.hub, leadsTo: WORLDS.art, style: 'cave', at: hubPoint(-22.5, 61) },
   // I de andra världarna ligger plattan hem 8 enheter "nedåt på skärmen" från mitten.
   { world: WORLDS.techart, leadsTo: WORLDS.hub, style: 'pad', at: towardCamera(WORLDS.techart, 8) },
   { world: WORLDS.prog, leadsTo: WORLDS.hub, style: 'pad', at: towardCamera(WORLDS.prog, 8) },
@@ -45,12 +45,12 @@ export const PORTALS = [
 export const [techartCave, progCave, artCave] = PORTALS; // De tre första: grottorna hemma.
 // Var varje grotta ligger räknat från skyltradens mitt (hubPoint): åt höger och nedåt på skärmen.
 // Vägarna dit byggs i hub.js och slutar rakt in i öppningen.
-techartCave.right = 35.5;
-techartCave.down = 29;
+techartCave.right = 57;
+techartCave.down = 52;
 progCave.right = 21;
-progCave.down = 40;
+progCave.down = 46;
 artCave.right = -22.5;
-artCave.down = 44.5;
+artCave.down = 61;
 // Punkterna bilen kör mellan. För en grotta räknas de från öppningen: öppningen vetter uppåt,
 // så "framför" den är uppåt på skärmen och berget ligger nedåt (mot kameran).
 for (const portal of PORTALS) {

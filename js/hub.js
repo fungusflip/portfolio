@@ -289,7 +289,7 @@ export function buildHubRoads() {
   // Gångvägen från stugans dörr till sidan av parkeringen: en mjuk kurva (kubisk Bezier) av
   // åtta korta, raka och smala bitar. Ingen kantsten (noCurb), bara stenar längs kanten.
   const PATH_WIDTH = 1.3;
-  const TECH_ROAD_RIGHT = 35.5;   // Där Tech Art-vägen lämnar huvudvägen.
+  const TECH_ROAD_RIGHT = 57;     // Där Tech Art-vägen lämnar huvudvägen (rakt ner till grottan).
   const PATH_SEGMENTS = 8;
   const DOOR_X = CABIN_X + 1.1;
   const DOOR_Z = CABIN_Z + CABIN_SIZE / 2;
@@ -315,9 +315,11 @@ export function buildHubRoads() {
   const roads = [
     ...mainRoad,
     // Tech Art: en mjuk S-kurva ner från huvudvägen, och de sista enheterna rakt in i öppningen.
-    { from: onRoad(TECH_ROAD_RIGHT), to: hubPoint(38.3, 19.6) },
-    { from: hubPoint(38.3, 19.6), to: hubPoint(35.5, 23.6) },
-    { from: hubPoint(35.5, 23.6), to: techartCave.at },
+    { from: onRoad(TECH_ROAD_RIGHT), to: techartCave.at },
+    // Gårdsvägar: en kort väg från varje landmärkes front ut till grottvägen, så att byggnaden vetter mot en väg.
+    { from: hubPoint(TECH_ROAD_RIGHT, 44.5), to: hubPoint(ROUTE.districts.techart.right - 3, 44.5) },
+    { from: hubPoint(21, 37.8), to: hubPoint(ROUTE.districts.prog.right, 37.8) },
+    { from: hubPoint(-22.5, 54.6), to: hubPoint(ROUTE.districts.art.right, 54.6) },
     // Torget: en stickväg rakt ner från huvudvägen (siktlinje mot fontänen) och en ring av tolv bitar
     // (nästan en cirkel). Innanför ringen är det öppen stenläggning att köra runt på.
     { from: onRoad(PLAZA.right), to: plazaVertex(0) },
@@ -389,12 +391,12 @@ export function buildHubRoads() {
       };
     }),
     // Bredvid vägarna till grottorna och vid bron.
-    { at: hubPoint(techartCave.right + LAMP_SIDE + 0.5, 26.5), arm: ARM_LEFT },
+    { at: hubPoint(techartCave.right + LAMP_SIDE + 0.5, 30), arm: ARM_LEFT },
     { at: hubPoint(progCave.right - 4.5, 28.7), arm: ARM_DOWN },
-    { at: hubPoint(progCave.right + LAMP_SIDE, 36), arm: ARM_LEFT },
+    { at: hubPoint(progCave.right + LAMP_SIDE, 31), arm: ARM_LEFT },
     { at: hubPoint(ART_ROAD.right - LAMP_SIDE, 21.5), arm: ARM_RIGHT }, // Vänster om Art-vägen (högra sidan är bäckens källa).
     { at: hubPoint(GAZEBO.right + LAMP_SIDE, 19.8), arm: ARM_LEFT },
-    { at: hubPoint(artCave.right - LAMP_SIDE, 42), arm: ARM_RIGHT },
+    { at: hubPoint(artCave.right - LAMP_SIDE, 45), arm: ARM_RIGHT },
   ];
   buildLamps(hub, lamps);
   return { roads, lamps, signposts };
