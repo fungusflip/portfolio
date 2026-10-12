@@ -147,11 +147,6 @@ await new Promise((resolve) => {
   fade();
 });
 disposeLoadingScene();
-// Turen har redan hunnit en bit när bilden tonas fram: annars känns starten sen efter laddningen.
-if (introTourActive()) {
-  introTour.seek(TOUR_DEFAULTS.startHold + 1.5);
-  introTour.blend = 0.6;
-}
 renderer.setAnimationLoop(gameFrame); // Från och med nu ritas spelet.
 const fadeBack = performance.now();
 (function unfade() {
@@ -282,6 +277,7 @@ const FOCUS_PITCH = 0.5;     // Kamerans lutning vid en skylt, i radianer (0.5 �
 const FOCUS_AIM = 0.9;       // Hur mycket kameran siktar på skärmen i stället för bilen (1 = helt på skärmen).
 const SCREEN_CENTER_Y = 5.6; // Ungefär hur högt skärmens mitt sitter när den har vuxit.
 const PANEL_SPACE = 480;     // Panelens bredd i pixlar (med marginal): skylten flyttas till höger om den.
+let tourPreRolled = false;
 let focusBlend = 0;          // 0 = vanlig kamera, 1 = helt inriktad på skylten. Glider mjukt.
 let panelBlend = 0;          // Samma sak för "panelen är öppen".
 const focusAim = new THREE.Vector3();   // Skärmens mitt (sparas, så att kameran kan glida tillbaka mjukt).
@@ -311,6 +307,13 @@ function gameFrame(time) {
   portals.updateTravel(delta);
   // Turen: medan den går "närmar" sig skyltarna turens plats på vägen (lamporna vaknar), inte bilen.
   // Mittlinjen ligger >6 enheter från varje ficka, så ingen skylt startar sin film av misstag.
+  if (!tourPreRolled) { // Första bilden: turen har redan hunnit en bit, annars känns starten sen efter laddningen.
+    tourPreRolled = true;
+    if (introTourActive()) {
+      introTour.seek(TOUR_DEFAULTS.startHold + 1.5);
+      introTour.blend = 0.6;
+    }
+  }
   introTour.update(delta, introTourActive());
   let billboardProbe = car.position;
   if (introTour.blend > 0.5) {
