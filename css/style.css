@@ -466,7 +466,7 @@ body.playing {
 .intro[hidden] { display: none; }
 
 .intro-card {
-  max-width: 440px;
+  max-width: 500px;
   /* Glider in underifrån när sidan laddas (se @keyframes nedan). */
   animation: intro-in 0.8s ease both;
 }
@@ -478,8 +478,8 @@ body.playing {
 /* Namnskylten: en gräddvit skylt med mörk ram, som skyltarna i världen. */
 .intro-marquee {
   display: inline-block;
-  margin: 14px 10px 22px;   /* Ramen (10 px) sticker ut, så ramens kant hamnar på samma linje som texten under. */
-  padding: 18px 28px 14px;
+  margin: 14px 10px 26px;   /* Ramen (10 px) sticker ut, så ramens kant hamnar på samma linje som texten under. */
+  padding: 22px 34px 18px;
   background: #fff3d6;
   color: #25323d;
   border-radius: 4px;
@@ -490,7 +490,7 @@ body.playing {
 .intro-name {
   font-family: 'Bungee', system-ui, sans-serif;
   font-weight: 400;          /* Bungee är redan fett. */
-  font-size: clamp(30px, 4.4vw, 48px);
+  font-size: clamp(34px, 4.8vw, 64px);
   line-height: 1;
   letter-spacing: 0.01em;
   color: #25323d;
@@ -815,7 +815,7 @@ body.list-open .touch { display: none; }
    text får annars inte plats och klipps av upptill. Gör allt lite tätare, och låt
    rutan rulla om det ändå inte räcker. */
 @media (max-height: 760px) {
-  .intro-name { font-size: 34px; }
+  .intro-name { font-size: 42px; }
   .intro-marquee { margin-bottom: 18px; padding: 14px 22px 11px; }
   .intro-text { margin: 0 0 16px; font-size: 15px; }
   .intro-tea { font-size: 15px; }
