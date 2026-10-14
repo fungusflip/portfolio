@@ -74,7 +74,7 @@ const observer = new IntersectionObserver((entries) => {
     const thumb = entry.target;
     const media = thumb.dataset.media;
     if (entry.isIntersecting && media && !thumb.firstChild) {
-      if (media.endsWith('.gif')) {
+      if (/\.(gif|jpe?g|png|webp)$/i.test(media)) { // Stillbilder och gif: en <img>, inte en <video>.
         const image = document.createElement('img');
         image.src = media;
         image.alt = '';
